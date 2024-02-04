@@ -131,21 +131,21 @@ class DeadlinesCalendarState extends State<DeadlinesCalendar> {
                 itemBuilder: (context, index) {
                   var (dt, ds) = c.shownBelow[index];
                   return ListView.builder(
-                      shrinkWrap: true,
-                      physics: const ClampingScrollPhysics(),
-                      itemCount: ds.isEmpty?0:1+ds.length,
-                      padding: const EdgeInsets.all(5),
-                      itemBuilder: (context, index) {
-                        if(index == 0) return Text("${dt.day}.${dt.month}.${dt.year}");
-                        var d = ds[index-1];
-                        return DeadlineCard(
-                          d,
-                          (d) => c.parent.editDeadlineWithoutReload(c, ogContext, d.id!),
-                          (d) => c.parent.deleteDeadlineWithoutReload(c, ogContext, d, dt),
-                          (d) => c.parent.toggleDeadlineActiveWithoutReload(c, ogContext, d),
-                          (d, nrdt, ov) => c.parent.toggleDeadlineNotificationTypeWithoutReload(c, d, nrdt, ov),
-                        );
-                      }
+                    shrinkWrap: true,
+                    physics: const ClampingScrollPhysics(),
+                    itemCount: ds.isEmpty?0:1+ds.length,
+                    padding: const EdgeInsets.all(5),
+                    itemBuilder: (context, index) {
+                      if(index == 0) return Text("${dt.day}.${dt.month}.${dt.year}");
+                      var d = ds[index-1];
+                      return DeadlineCard(
+                        d,
+                        (d) => c.parent.editDeadlineWithoutReload(c, ogContext, d.id!),
+                        (d) => c.parent.deleteDeadlineWithoutReload(c, ogContext, d, dt),
+                        (d) => c.parent.toggleDeadlineActiveWithoutReload(c, ogContext, d),
+                        (d, nrdt, ov) => c.parent.toggleDeadlineNotificationTypeWithoutReload(c, d, nrdt, ov),
+                      );
+                    }
                   );
                 },
               ),
@@ -276,7 +276,7 @@ class _DeadlineTableCalendarState extends State<DeadlineTableCalendar> {
             child = FittedBox(
                 fit: BoxFit.scaleDown,
                 alignment: Alignment.centerLeft,
-                child: Text("${(!d.startsAt!.date.isOnThisDay(day) && (day.day == 1 || day.weekday == 1)) ? "..." : "  "}${d.title}",)
+                child: Text("${(!d.startsAt!.date.isOnThisDay(day) && (day.day == 1 || day.weekday == 1)) ? "..." : "  "}${d.title}", style: TextStyle(color: Color(d.color).computeLuminance() > 0.5 ? Colors.black : Colors.white),)
             );
           }
           var radius = BorderRadius.zero;
