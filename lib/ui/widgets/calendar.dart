@@ -161,7 +161,69 @@ class DeadlinesCalendarState extends State<DeadlinesCalendar> {
             mainAxisAlignment: MainAxisAlignment.start,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              const SizedBox(width: 25,),
+              const SizedBox(width: 10,),
+              GestureDetector(
+                  child: const Icon(Icons.settings,),
+                  onTap: () async {
+                    showDialog(context: context, builder: (BuildContext context) {
+                      return AlertDialog(
+                        title: const Text("Are these settings?"),
+                        alignment: Alignment.center,
+                        titleTextStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+                        actionsAlignment: MainAxisAlignment.center,
+                        actionsOverflowAlignment: OverflowBarAlignment.center,
+                        actions: [
+                          SizedBox(width: double.infinity, child: ElevatedButton(onPressed: () async {
+                            String builder = "";
+                            for (Deadline d in await c.db.selectAll()) {
+                              if (!d.active) builder += "(\n  ";
+                              builder += "${d.title}\n";
+                              if(d.description.isNotEmpty) {
+                                builder += "    ${d.description}\n";
+                              }
+                              if (d.isTimeless()) {
+                                builder += "    ${d.importance.name}\n";
+                              } else {
+                                if (d.isOneFullDay()) {
+                                  builder += "    ${d.startsAt?.date} (all day)\n";
+                                } else if (d.hasRange()) {
+                                  builder += "    ${d.startsAt?.date}-${d.startsAt?.time} -> ${d.deadlineAt?.date}-${d.deadlineAt?.time}\n";
+                                } else {
+                                  builder += "    ${d.deadlineAt?.date}-${d.deadlineAt?.time}\n";
+                                }
+                                builder += "    repeats ${d.deadlineAt?.date.repetitionType.name}\n";
+                                if(d.removals.isNotEmpty) {
+                                  builder += "    removals ${d.removals.where((r) => !r.allFuture).map((r) => "${r.day}")}\n";
+                                  if(d.removals.where((r) => r.allFuture).isNotEmpty) {
+                                    builder += "    until ${d.removals.where((r) => r.allFuture).firstOrNull?.day}\n";
+                                  }
+                                }
+                              }
+                              if (!d.active) builder += ")\n";
+                              builder += "\n\n";
+                            }
+                            await showDialog(context: context, builder: (context) {
+                              return SimpleDialog(
+                                title: Text("Calendar as Text: "),
+                                children: [
+                                  TextField(
+                                    controller: TextEditingController(text: builder),
+                                    minLines: 10,
+                                    maxLines: 10,
+                                  )
+                                ],
+                              );
+                            },);
+
+                            Navigator.of(context).pop();
+                          }, child: const Text("save backup"))),
+                        ]
+                        // content: Text("Saved successfully"),
+                      );
+                    });
+                  }
+              ),
+              const SizedBox(width: 20,),
               DropdownButton<String>(
                 alignment: Alignment.centerRight,
                 items: ["Show Active", "Show Month"].map((String value) {
@@ -176,7 +238,7 @@ class DeadlinesCalendarState extends State<DeadlinesCalendar> {
                 }),
                 value: ["Show Active", "Show Month"][c.parent.showWhat.index],
               ),
-              const SizedBox(width: 30,),
+              const SizedBox(width: 20,),
               DropdownButton<String>(
                 alignment: Alignment.centerRight,
                 items: ["Hide Daily", "Show Daily"].map((String value) {
@@ -209,9 +271,9 @@ class DeadlineTableCalendar extends StatefulWidget {
 
 class _DeadlineTableCalendarState extends State<DeadlineTableCalendar> {
   DeadlinesCalendarController get c => widget.c;
-  
-  //todo this is very rarely not called in order of days... but this fucks up the lastDrawnAtIndex...
 
+  //calendar widget builder very rarely not called in order of days... but this fucks up the lastDrawnAtIndex...
+  //so a map is required...
   Map<(int, int, int), Widget?> widgetPerDayCache = {};
   void buildWidgetsForDays() {
     widgetPerDayCache.clear();

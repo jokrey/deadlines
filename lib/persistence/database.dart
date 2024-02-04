@@ -74,7 +74,7 @@ final class DeadlinesDatabase {
     return int.parse(o.toString());
   }
 
-  Deadline _fromSQLMap(Map<String, Object?> m, Iterable<Removal> removals) {
+  static Deadline _fromSQLMap(Map<String, Object?> m, Iterable<Removal> removals) {
     return Deadline(
       _parseInt(m["id"]), m["title"].toString(), m["description"].toString(),
       _parseInt(m["color"]), _parseInt(m["active"]) == 1,
@@ -134,6 +134,21 @@ final class DeadlinesDatabase {
     };
   }
 
+  Future<List<Deadline>> selectAll() async {
+    var rawResults = await (await db).rawQuery("SELECT * FROM deadlines d;", []);
+
+    List<Deadline> found = await Future.wait(rawResults.map((e) async => _fromSQLMap(e, (await (await db).rawQuery(
+        """SELECT *
+        FROM removals
+        WHERE
+        (
+          rm_id == ${e["id"]}
+        )
+      ;"""
+    )).map(_rFromSQLMap).toList(growable: false))).toList());
+
+    return found;
+  }
 
   Future<List<Deadline>> queryDeadlinesInMonth(int year, int month) async {
     var rawResults = await (await db).rawQuery(
