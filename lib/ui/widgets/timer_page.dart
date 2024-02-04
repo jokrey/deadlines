@@ -99,7 +99,8 @@ class _TimerWidgetState extends State<TimerWidget> {
               fromDateTime(
                 DateTime.now().add(Duration(hours: timeLeft[H], minutes: timeLeft[M], seconds: timeLeft[S])),
                 notify: notifyType
-              )
+              ),
+              null
             );
           }
         } else {

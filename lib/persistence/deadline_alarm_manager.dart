@@ -53,7 +53,10 @@ class DeadlineAlarms {
       if(next == null) {
         await staticNotify.cancel(notifyId);
       } else {
-        await staticNotify.set(notifyId, Color(d.color), d.title, d.description, nrdt);
+        await staticNotify.set(
+          notifyId, Color(d.color), d.title, d.description,
+          nrdt, (dt) => !d.isOnThisDay(dt), //if returns is on this day, then it has not been removed
+        );
       }
     }
   }

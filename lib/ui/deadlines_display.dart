@@ -25,6 +25,9 @@ enum ShownType {
 }
 class ParentController {
   final DeadlinesDatabase db = DeadlinesDatabase();
+  ParentController() {
+    db.updateAllAlarms();
+  }
 
   ShownType showWhat = ShownType.showActive;
 

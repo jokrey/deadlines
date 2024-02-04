@@ -9,8 +9,9 @@ import 'package:sqflite/sqflite.dart' as sql;
 
 final class DeadlinesDatabase {
   final Future<sql.Database> db = _initDB();
-  DeadlinesDatabase() {
-    queryDeadlinesActiveOrAfter(DateTime.now()).then((all) => all.forEach(DeadlineAlarms.updateAlarmsFor));
+
+  Future<void> updateAllAlarms() async {
+    await queryDeadlinesActiveOrAfter(DateTime.now()).then((all) => all.forEach(DeadlineAlarms.updateAlarmsFor));
   }
 
   static Future<sql.Database> _initDB() {

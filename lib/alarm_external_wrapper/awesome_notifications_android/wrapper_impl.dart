@@ -1,16 +1,13 @@
-import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:awesome_notifications/awesome_notifications.dart';
-import 'package:deadlines/alarm_external_wrapper/awesome_notifications_android/alarm_page.dart';
-import 'package:deadlines/alarm_external_wrapper/awesome_notifications_android/fullscreen_page.dart';
 import 'package:deadlines/alarm_external_wrapper/notify_wrapper.dart';
 import 'package:deadlines/main.dart';
+import 'package:deadlines/persistence/database.dart';
 import 'package:deadlines/persistence/deadline_alarm_manager.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_overlay_window/flutter_overlay_window.dart';
 import 'package:fluttertoast/fluttertoast.dart';
-import 'package:move_to_background/move_to_background.dart';
 
 import '../model.dart';
 
@@ -22,8 +19,9 @@ class AwesomeNotificationsWrapper extends NotifyWrapper {
   static const String _SNOOZE_CHANNEL_NAME = "snooze - 99999";
 
   static String currentTimeZone = "CET";
-  
+
   @override Future<void> init() async {
+    super.init();
     await AwesomeNotifications().initialize(
       // set the icon to null if you want to use the default app icon
         'resource://drawable/notify_icon',
@@ -39,7 +37,7 @@ class AwesomeNotificationsWrapper extends NotifyWrapper {
 
             enableVibration: false,
             playSound: false,
-            locked: false,
+            locked: true, //only required, because dismiss must reschedule (but dismiss action callback will not return when terminated)
 
             ledColor: Colors.blue,
             onlyAlertOnce: false,
@@ -57,7 +55,7 @@ class AwesomeNotificationsWrapper extends NotifyWrapper {
             defaultRingtoneType: DefaultRingtoneType.Notification,
             enableVibration: true,
             vibrationPattern: Int64List.fromList([0, 200, 200, 200, 200, 200, 200]),
-            locked: false,
+            locked: true, //only required, because dismiss must reschedule (but dismiss action callback will not return when terminated)
 
             ledColor: Colors.blue,
             onlyAlertOnce: false,
@@ -119,8 +117,8 @@ class AwesomeNotificationsWrapper extends NotifyWrapper {
         // Channel groups are only visual and are not required
         channelGroups: [
           NotificationChannelGroup(
-              channelGroupKey: 'deadlines',
-              channelGroupName: 'deadlines'
+            channelGroupKey: 'deadlines',
+            channelGroupName: 'deadlines'
           )
         ],
         debug: true
@@ -162,28 +160,6 @@ class AwesomeNotificationsWrapper extends NotifyWrapper {
       }
     });
 
-
-    //must be before app lifecycle listener
-    await FlutterOverlayWindow.isPermissionGranted().then((isPermissionGranted) async {
-      if(!isPermissionGranted) {
-        await FlutterOverlayWindow.requestPermission();
-      }
-    });
-
-    AppLifecycleListener(
-        onStateChange: (newState) {
-          debugPrint("newState: $newState");
-          // MoveToBackground.moveTaskToBack();
-        },
-        //enforce not shown on lock screen, by putting it to the back
-        //   -> problem: gone when unlocked, but fml what can you do
-        onPause: MoveToBackground.moveTaskToBack
-    );
-
-
-
-    FlutterOverlayWindow.closeOverlay();
-
     await AwesomeNotifications().setListeners(
         onActionReceivedMethod:         AwesomeNotificationsWrapper.onActionReceivedMethod,
         onNotificationCreatedMethod:    AwesomeNotificationsWrapper.onNotificationCreatedMethod,
@@ -200,33 +176,16 @@ class AwesomeNotificationsWrapper extends NotifyWrapper {
     // }
   }
 
-  @override Future<void> set(int notifyId, Color color, String title, String description, NotifyableRepeatableDateTime at) async {
+  @override Future<void> set(int notifyId, Color color, String title, String description, NotifyableRepeatableDateTime at, bool Function(DateTime)? shouldSkip) async {
     if(at.notifyType == NotificationType.off) {
       await cancel(notifyId);
     } else {
-      await createNotification(notifyId, color, title, description, at);
+      await createNotification(notifyId, color, title, description, at, shouldSkip);
     }
   }
 
   @override Future<void> cancel(int notifyId) async {
     await AwesomeNotifications().cancel(notifyId);
-  }
-
-  @override Route<dynamic>? handleRoute(String? name, Object? arguments) {
-    switch (name) {
-      case '/fullscreen':
-        return MaterialPageRoute(builder: (context) {
-          final (notifyPayload, wasInForeground) = arguments as (Map<String, String?>, bool);
-          return FullscreenNotificationScreen(notifyPayload: notifyPayload, wasInForeground: wasInForeground);
-        });
-
-      case '/alarm':
-        return MaterialPageRoute(builder: (context) {
-          final (notifyPayload, wasInForeground) = arguments as (Map<String, String?>, bool);
-          return AlarmNotificationScreen(notifyPayload: notifyPayload, wasInForeground: wasInForeground);
-        });
-    }
-    return null;
   }
 
   @override Future<Duration> getDurationTo(int notifyId) async {
@@ -248,7 +207,7 @@ class AwesomeNotificationsWrapper extends NotifyWrapper {
     for(var a in all) {
       int? id;
       DateTime? next;
-      if(a.schedule is NotificationCalendar && a.content != null && a.content!.id != null && a.content!.payload != null && a.content!.payload!["type"] == "${NotificationType.alarm.index}") {
+      if(a.schedule is NotificationCalendar && a.content != null && a.content!.id != null && a.content!.payload != null/* && a.content!.payload!["type"] == "${NotificationType.alarm.index}"*/) {
         id = a.content!.id!;
         a.schedule!.timeZone = "UTC"; //bug in getNextDate?
         next = await AwesomeNotifications().getNextDate(a.schedule!, fixedDate: now);
@@ -261,12 +220,55 @@ class AwesomeNotificationsWrapper extends NotifyWrapper {
   }
 
 
+  @override Future<void> snooze(int originalId, Duration snoozeDuration, Color color, String title, String body, Map<String, String?> originalPayload) async {
+    if(snoozeDuration.inHours > 2) throw ArgumentError("You snooze you loose");
+
+    Fluttertoast.showToast(msg: "Snoozed for ${snoozeDuration.inMinutes}m", toastLength: Toast.LENGTH_SHORT);
+
+    //rescheduled notification (with different id, to not reset the actual schedule), will
+    int rescheduledId = DeadlineAlarms.SNOOZE_OFFSET + DeadlineAlarms.toDeadlineId(originalId); //breaks coupling rule
+    int ongoingId = DeadlineAlarms.SNOOZE_ONGOING_OFFSET + DeadlineAlarms.toDeadlineId(originalId); //breaks coupling rule
+    Map<String, String?> newPayload = originalPayload;
+    newPayload["ongoing-is-snoozed-notification-id"] = "$ongoingId";
+    createNotification(
+      rescheduledId, color, title, body,
+      null, null, override: (DateTime.now().add(snoozeDuration), NotificationType.values[int.parse(originalPayload["type"]!)]),
+      additionalPayload: originalPayload
+    );
+
+    //ongoing notification to stop the snooze
+    AwesomeNotifications().createNotification(
+      content: NotificationContent(
+        channelKey: _SNOOZE_CHANNEL_NAME,
+        id: ongoingId, title: "Snoozed: $title",
+        payload: {"snooze-id":"$rescheduledId"},
+        category: NotificationCategory.Status,
+
+        criticalAlert: false, wakeUpScreen: false,
+        locked: true, actionType: ActionType.KeepOnTop,
+        backgroundColor: color,
+        chronometer: Duration.zero,
+        timeoutAfter: snoozeDuration,
+      ),
+      actionButtons: [
+        NotificationActionButton(
+            key: 'CANCEL-SNOOZE', label: 'Cancel Notification',
+            actionType: ActionType.SilentBackgroundAction
+        )
+      ],
+    );
+  }
 
 
 
   @pragma("vm:entry-point")
   static Future<void> onNotificationCreatedMethod(ReceivedNotification receivedNotification) async {
     debugPrint("========================================= onNotificationCreatedMethod: $receivedNotification");
+  }
+
+  @pragma("vm:entry-point")
+  static Future<void> onDismissActionReceivedMethod(ReceivedAction receivedAction) async {
+    debugPrint("========================================= onDismissActionReceivedMethod: $receivedAction");
   }
 
   @pragma("vm:entry-point")
@@ -287,20 +289,27 @@ class AwesomeNotificationsWrapper extends NotifyWrapper {
     int id = receivedNotification.id!;
     var notifyType = NotificationType.values[int.parse(receivedNotification.payload!["type"]!)];
 
+    //todo, this should neither be done here nor like this probably... breaks coupling rule
+    int dlId = DeadlineAlarms.toDeadlineId(id);
+    if(dlId != -1 && id < DeadlineAlarms.SNOOZE_OFFSET) {
+      var d = await DeadlinesDatabase().loadById(dlId);
+      if (d != null) await DeadlineAlarms.updateAlarmsFor(d);
+    }
+
     if(wasInForeground) {
       if(notifyType == NotificationType.fullscreen) {
         AwesomeNotifications().dismiss(id);
         MainApp.navigatorKey.currentState?.pushNamedAndRemoveUntil(
-            '/fullscreen',
-                (route) => (route.settings.name != '/fullscreen') || route.isFirst,
-            arguments: (receivedNotification.payload, wasInForeground)
+          '/fullscreen',
+          (route) => (route.settings.name != '/fullscreen') || route.isFirst,
+          arguments: (receivedNotification.payload, wasInForeground)
         );
       } else if(notifyType == NotificationType.alarm) {
         AwesomeNotifications().dismiss(id);
         MainApp.navigatorKey.currentState?.pushNamedAndRemoveUntil(
-            '/alarm',
-                (route) => (route.settings.name != '/alarm') || route.isFirst,
-            arguments: (receivedNotification.payload, wasInForeground)
+          '/alarm',
+          (route) => (route.settings.name != '/alarm') || route.isFirst,
+          arguments: (receivedNotification.payload, wasInForeground)
         );
       }
     } else {
@@ -308,11 +317,11 @@ class AwesomeNotificationsWrapper extends NotifyWrapper {
         // if(! await AwesomeNotifications().isNotificationActiveOnStatusBar(id: id)) return;
         AwesomeNotifications().dismiss(id);
         await FlutterOverlayWindow.showOverlay(
-            alignment: OverlayAlignment.center,
-            height: 333,
-            width: 888,
-            overlayTitle: "deadlines alarm running",
-            overlayContent: "check out the notification"
+          alignment: OverlayAlignment.center,
+          height: 333,
+          width: 888,
+          overlayTitle: "deadlines alarm running",
+          overlayContent: "check out the notification"
         );
         await FlutterOverlayWindow.shareData(receivedNotification.payload);
       }
@@ -320,41 +329,41 @@ class AwesomeNotificationsWrapper extends NotifyWrapper {
   }
 
   @pragma("vm:entry-point")
-  static Future<void> onDismissActionReceivedMethod(ReceivedAction receivedAction) async {
-    debugPrint("========================================= onDismissActionReceivedMethod: $receivedAction");
-  }
-
-  @pragma("vm:entry-point")
   static Future<void> onActionReceivedMethod(ReceivedAction receivedAction) async {
     debugPrint("========================================= onActionReceivedMethod: $receivedAction");
 
     int id = receivedAction.id!;
+
+    //todo, this should neither be done here nor like this probably... breaks coupling rule
+    int dlId = DeadlineAlarms.toDeadlineId(id);
+    if(dlId != -1 && id < DeadlineAlarms.SNOOZE_OFFSET) {
+      var d = await DeadlinesDatabase().loadById(dlId);
+      if (d != null) await DeadlineAlarms.updateAlarmsFor(d);
+    }
+
     if (receivedAction.buttonKeyPressed == "SNOOZE") {
-      snoozeNotification(id, const Duration(minutes: 5), receivedAction.backgroundColor!, receivedAction.title!, receivedAction.body!, receivedAction.payload!);
+      staticNotify.snooze(id, const Duration(minutes: 5), receivedAction.backgroundColor!, receivedAction.title!, receivedAction.body!, receivedAction.payload!);
     } else if(receivedAction.buttonKeyPressed == "CANCEL-SNOOZE") {
       int idOfScheduledSnooze = int.parse(receivedAction.payload!["snooze-id"]!);
       AwesomeNotifications().cancel(idOfScheduledSnooze);
     } else {
-      var notifyType = NotificationType.values[int.parse(
-          receivedAction.payload!["type"]!)];
+      var notifyType = NotificationType.values[int.parse(receivedAction.payload!["type"]!)];
 
-      bool wasInForeground = receivedAction.actionLifeCycle ==
-          NotificationLifeCycle.Foreground;
+      bool wasInForeground = receivedAction.actionLifeCycle == NotificationLifeCycle.Foreground;
 
       if (notifyType == NotificationType.fullscreen) {
         AwesomeNotifications().dismiss(id);
         MainApp.navigatorKey.currentState?.pushNamedAndRemoveUntil(
-            '/fullscreen',
-                (route) =>
-            (route.settings.name != '/fullscreen') || route.isFirst,
-            arguments: (receivedAction.payload, wasInForeground)
+          '/fullscreen',
+          (route) => (route.settings.name != '/fullscreen') || route.isFirst,
+          arguments: (receivedAction.payload, wasInForeground)
         );
       } else if (notifyType == NotificationType.alarm) {
         AwesomeNotifications().dismiss(id);
         MainApp.navigatorKey.currentState?.pushNamedAndRemoveUntil(
-            '/alarm',
-                (route) => (route.settings.name != '/alarm') || route.isFirst,
-            arguments: (receivedAction.payload, wasInForeground)
+          '/alarm',
+          (route) => (route.settings.name != '/alarm') || route.isFirst,
+          arguments: (receivedAction.payload, wasInForeground)
         );
       }
     }
@@ -364,7 +373,7 @@ class AwesomeNotificationsWrapper extends NotifyWrapper {
 
 
   /// additionalPayload overrides existing "id" or "type" if present
-  static Future<void> createNotification(int id, Color color, String title, String body, NotifyableRepeatableDateTime? at, {(DateTime, NotificationType)? override, Map<String, String?>? additionalPayload}) async {
+  static Future<bool> createNotification(int id, Color color, String title, String body, NotifyableRepeatableDateTime? at, bool Function(DateTime)? shouldSkip, {(DateTime, NotificationType)? override, Map<String, String?>? additionalPayload}) async {
     NotificationSchedule? schedule;
     NotificationType notifyType;
     if(override != null) {
@@ -389,58 +398,118 @@ class AwesomeNotificationsWrapper extends NotifyWrapper {
           allowWhileIdle: true, preciseAlarm: true,
 
           year: at.date.year, month: at.date.month, day: at.date.day,
-          hour: at.time.hour, minute: at.time.minute, second: at.time.second,
-          millisecond: 0,
+          hour: at.time.hour, minute: at.time.minute,
+          second: at.time.second, millisecond: 0,
         );
-      } else if(at.date.isYearly()) {
+      } else {
+        var now = DateTime.now();
+        DateTime? atConcrete = at.buildNextNotificationTime(now);
+        while(atConcrete != null && (atConcrete.isBefore(now) || (shouldSkip != null && (shouldSkip(atConcrete))))) {
+          atConcrete = at.buildNextNotificationTime(atConcrete.add(const Duration(days: 1)));
+        }
+        print("atConcrete: $atConcrete");
+        if(atConcrete == null) return false;
+
         schedule = NotificationCalendar(
           timeZone: currentTimeZone,
           allowWhileIdle: true, preciseAlarm: true,
 
-          repeats: true,
-          month: at.date.month, day: at.date.day,
-          hour: at.time.hour, minute: at.time.minute, second: at.time.second,
-          millisecond: 0,
+          year: atConcrete.year, month: atConcrete.month, day: atConcrete.day,
+          hour: atConcrete.hour, minute: atConcrete.minute, second: atConcrete.second,
         );
-      } else if(at.date.isMonthly()) {
-        schedule = NotificationCalendar(
-          timeZone: currentTimeZone,
-          allowWhileIdle: true, preciseAlarm: true,
 
-          repeats: true,
-          day: at.date.day,
-          hour: at.time.hour, minute: at.time.minute, second: at.time.second,
-          millisecond: 0,
-        );
-      } else if(at.date.isWeekly()) {
-        schedule = NotificationCalendar(
-          timeZone: currentTimeZone,
-          allowWhileIdle: true, preciseAlarm: true,
-
-          repeats: true,
-          weekday: at.date.toDateTime().weekday,
-          hour: at.time.hour, minute: at.time.minute, second: at.time.second,
-          millisecond: 0,
-        );
-      } else if(at.date.isDaily()) {
-        schedule = NotificationCalendar(
-          timeZone: currentTimeZone,
-          allowWhileIdle: true, preciseAlarm: true,
-
-          repeats: true,
-          hour: at.time.hour, minute: at.time.minute, second: at.time.second,
-          millisecond: 0,
-        );
+        if (at.date.isYearly()) {
+          // schedule = NotificationAndroidCrontab(
+          //   allowWhileIdle: true, preciseAlarm: true, timeZone: currentTimeZone,
+          //
+          //   initialDateTime: atConcrete,
+          //   repeats: true,
+          //   crontabExpression: CronHelper().yearly(referenceDateTime: atConcrete),
+          // );
+          // schedule = NotificationCalendar(
+          //   timeZone: currentTimeZone,
+          //   allowWhileIdle: true,
+          //   preciseAlarm: true,
+          //
+          //   repeats: true,
+          //   month: atConcrete.month, day: atConcrete.day,
+          //   hour: atConcrete.hour, minute: atConcrete.minute,
+          //   second: atConcrete.second, millisecond: 0,
+          // );
+        } else if (at.date.isMonthly()) {
+          // schedule = NotificationAndroidCrontab(
+          //   allowWhileIdle: true, preciseAlarm: true, timeZone: currentTimeZone,
+          //
+          //   initialDateTime: atConcrete,
+          //   repeats: true,
+          //   crontabExpression: CronHelper().monthly(referenceDateTime: atConcrete),
+          // );
+          // schedule = NotificationCalendar(
+          //   timeZone: currentTimeZone,
+          //   allowWhileIdle: true,
+          //   preciseAlarm: true,
+          //
+          //   repeats: true,
+          //   day: atConcrete.day,
+          //   hour: atConcrete.hour, minute: atConcrete.minute,
+          //   second: atConcrete.second, millisecond: 0,
+          // );
+        } else if (at.date.isWeekly()) {
+          // schedule = NotificationAndroidCrontab(
+          //   allowWhileIdle: true, preciseAlarm: true, timeZone: currentTimeZone,
+          //
+          //   initialDateTime: atConcrete,
+          //   repeats: true,
+          //   crontabExpression: CronHelper().weekly(referenceDateTime: atConcrete),
+          // );
+          // schedule = NotificationCalendar(
+          //   timeZone: currentTimeZone,
+          //   allowWhileIdle: true,
+          //   preciseAlarm: true,
+          //
+          //   repeats: true,
+          //   weekday: atConcrete.weekday,
+          //   hour: atConcrete.hour, minute: atConcrete.minute,
+          //   second: atConcrete.second, millisecond: 0,
+          // );
+        } else if (at.date.isDaily()) {
+          // schedule = NotificationAndroidCrontab(
+          //   allowWhileIdle: true, preciseAlarm: true, timeZone: currentTimeZone,
+          //
+          //   initialDateTime: atConcrete,
+          //   repeats: true,
+          //   crontabExpression: CronHelper().daily(referenceDateTime: atConcrete),
+          // );
+          // schedule = NotificationCalendar(
+          //   timeZone: currentTimeZone,
+          //   allowWhileIdle: true,
+          //   preciseAlarm: true,
+          //
+          //   repeats: true,
+          //   hour: atConcrete.hour, minute: atConcrete.minute,
+          //   second: atConcrete.second, millisecond: 0,
+          // );
+        }
       }
     } else {
       throw ArgumentError("at and it's override cannot both be null");
     }
 
+    List<NotificationActionButton> actionButtons = [
+      NotificationActionButton(
+        key: 'SNOOZE', label: 'Snooze 5m',
+        actionType: ActionType.SilentBackgroundAction,
+      ),
+      NotificationActionButton(
+        key: 'DISMISS', label: 'Dismiss',
+        actionType: at != null && at.date.isRepeating()? ActionType.SilentBackgroundAction : ActionType.DismissAction
+      )
+    ];
 
     Map<String, String?> payload = {"id":id.toString(), "type": "${notifyType.index}", "color":"${color.value}", "title": title, "body":body};
     if(additionalPayload != null) payload.addAll(additionalPayload);//overrides
     if(notifyType == NotificationType.silent) {
-      await AwesomeNotifications().createNotification(
+      return AwesomeNotifications().createNotification(
         schedule: schedule,
         content: NotificationContent(
           channelKey: _SILENT_CHANNEL_NAME,
@@ -450,19 +519,10 @@ class AwesomeNotificationsWrapper extends NotifyWrapper {
 
           criticalAlert: true, wakeUpScreen: true, locked: false,
         ),
-        actionButtons: [
-          NotificationActionButton(
-            key: 'SNOOZE', label: 'Snooze 5m',
-            actionType: ActionType.SilentBackgroundAction,
-          ),
-          NotificationActionButton(
-              key: 'DISMISS', label: 'Dismiss',
-              actionType: ActionType.DismissAction
-          )
-        ],
+        actionButtons: actionButtons,
       );
     } else if(notifyType == NotificationType.normal) {
-      await AwesomeNotifications().createNotification(
+      return AwesomeNotifications().createNotification(
         schedule: schedule,
         content: NotificationContent(
           channelKey: _NORMAL_CHANNEL_NAME,
@@ -472,19 +532,10 @@ class AwesomeNotificationsWrapper extends NotifyWrapper {
 
           criticalAlert: true, wakeUpScreen: true, locked: false,
         ),
-        actionButtons: [
-          NotificationActionButton(
-            key: 'SNOOZE', label: 'Snooze 5m',
-            actionType: ActionType.SilentBackgroundAction,
-          ),
-          NotificationActionButton(
-              key: 'DISMISS', label: 'Dismiss',
-              actionType: ActionType.DismissAction
-          )
-        ],
+        actionButtons: actionButtons,
       );
     } else if(notifyType == NotificationType.fullscreen) {
-      await AwesomeNotifications().createNotification(
+      return AwesomeNotifications().createNotification(
         schedule: schedule,
         content: NotificationContent(
           channelKey: _FULLSCREEN_CHANNEL_NAME,
@@ -495,19 +546,10 @@ class AwesomeNotificationsWrapper extends NotifyWrapper {
 
           criticalAlert: true, wakeUpScreen: true, locked: true,
         ),
-        actionButtons: [
-          NotificationActionButton(
-            key: 'SNOOZE', label: 'Snooze 5m',
-            actionType: ActionType.SilentBackgroundAction,
-          ),
-          NotificationActionButton(
-              key: 'DISMISS', label: 'Dismiss',
-              actionType: ActionType.DismissAction
-          )
-        ],
+        actionButtons: actionButtons,
       );
     } else if(notifyType == NotificationType.alarm) {
-      await AwesomeNotifications().createNotification(
+      return AwesomeNotifications().createNotification(
         schedule: schedule,
         content: NotificationContent(
           channelKey: _ALARM_CHANNEL_NAME,
@@ -518,60 +560,9 @@ class AwesomeNotificationsWrapper extends NotifyWrapper {
 
           criticalAlert: true, wakeUpScreen: true, locked: true,
         ),
-        actionButtons: [
-          NotificationActionButton(
-            key: 'SNOOZE', label: 'Snooze 5m',
-            actionType: ActionType.SilentBackgroundAction,
-          ),
-          NotificationActionButton(
-              key: 'STOP', label: 'Stop',
-              actionType: ActionType.DismissAction
-          )
-        ],
+        actionButtons: actionButtons,
       );
     }
-  }
-
-
-
-
-
-  static void snoozeNotification(int originalId, Duration snoozeDuration, Color color, String title, String body, Map<String, String?> originalPayload) {
-    if(snoozeDuration.inHours > 2) throw ArgumentError("You snooze you loose");
-
-    Fluttertoast.showToast(msg: "Snoozed for ${snoozeDuration.inMinutes}m", toastLength: Toast.LENGTH_SHORT);
-
-    //rescheduled notification (with different id, to not reset the actual schedule), will
-    int rescheduledId = DeadlineAlarms.SNOOZE_OFFSET + DeadlineAlarms.toDeadlineId(originalId); //breaks coupling rule
-    int ongoingId = DeadlineAlarms.SNOOZE_ONGOING_OFFSET + DeadlineAlarms.toDeadlineId(originalId); //breaks coupling rule
-    Map<String, String?> newPayload = originalPayload;
-    newPayload["ongoing-is-snoozed-notification-id"] = "$ongoingId";
-    createNotification(
-        rescheduledId, color, title, body,
-        null, override: (DateTime.now().add(snoozeDuration), NotificationType.values[int.parse(originalPayload["type"]!)]),
-        additionalPayload: originalPayload
-    );
-
-    //ongoing notification to stop the snooze
-    AwesomeNotifications().createNotification(
-      content: NotificationContent(
-        channelKey: _SNOOZE_CHANNEL_NAME,
-        id: ongoingId, title: "Snoozed: $title",
-        payload: {"snooze-id":"$rescheduledId"},
-        category: NotificationCategory.Status,
-
-        criticalAlert: false, wakeUpScreen: false,
-        locked: true, actionType: ActionType.KeepOnTop,
-        backgroundColor: color,
-        chronometer: snoozeDuration,
-        timeoutAfter: snoozeDuration,
-      ),
-      actionButtons: [
-        NotificationActionButton(
-            key: 'CANCEL-SNOOZE', label: 'Cancel Notification',
-            actionType: ActionType.SilentBackgroundAction
-        )
-      ],
-    );
+    return false;
   }
 }

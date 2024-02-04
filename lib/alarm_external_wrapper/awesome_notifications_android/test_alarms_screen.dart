@@ -1,14 +1,14 @@
 import 'dart:math';
 
 import 'package:audio_session/audio_session.dart';
+import 'package:deadlines/alarm_external_wrapper/alarm_page.dart';
+import 'package:deadlines/alarm_external_wrapper/fullscreen_page.dart';
+import 'package:deadlines/alarm_external_wrapper/notify_wrapper.dart';
 import '../model.dart';
-import 'alarm_page.dart';
-import 'fullscreen_page.dart';
 import 'wrapper_impl.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_overlay_window/flutter_overlay_window.dart';
 import 'package:vibration/vibration.dart';
-import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:just_audio/just_audio.dart';
 
 
@@ -81,7 +81,7 @@ class _TestAlarmsScreenState extends State<TestAlarmsScreen> {
                   onPressed: () {
                     AwesomeNotificationsWrapper.createNotification(
                       Random().nextInt(100000), Colors.blue, "title", "body",
-                      null, override: (DateTime.now(), NotificationType.silent),
+                      null, null, override: (DateTime.now(), NotificationType.silent),
                     );
                   },
                   child: const Text("silent now")
@@ -93,7 +93,7 @@ class _TestAlarmsScreenState extends State<TestAlarmsScreen> {
 
                     AwesomeNotificationsWrapper.createNotification(
                       Random().nextInt(100000), Colors.blue, "title", "body",
-                      null, override: (in10Seconds, NotificationType.silent),
+                      null, null, override: (in10Seconds, NotificationType.silent),
                     );
                   },
                   child: const Text("silent in 10 seconds")
@@ -106,7 +106,7 @@ class _TestAlarmsScreenState extends State<TestAlarmsScreen> {
                   onPressed: () {
                     AwesomeNotificationsWrapper.createNotification(
                       Random().nextInt(100000), Colors.blue, "title", "body",
-                      null, override: (DateTime.now(), NotificationType.normal),
+                      null, null, override: (DateTime.now(), NotificationType.normal),
                     );
                   },
                   child: const Text("normal now")
@@ -118,7 +118,7 @@ class _TestAlarmsScreenState extends State<TestAlarmsScreen> {
 
                     AwesomeNotificationsWrapper.createNotification(
                       Random().nextInt(100000), Colors.blue, "title", "body",
-                      null, override: (in10Seconds, NotificationType.normal),
+                      null, null, override: (in10Seconds, NotificationType.normal),
                     );
                   },
                   child: const Text("normal in 10 seconds")
@@ -131,7 +131,7 @@ class _TestAlarmsScreenState extends State<TestAlarmsScreen> {
                   onPressed: () {
                     AwesomeNotificationsWrapper.createNotification(
                       Random().nextInt(100000), Colors.blue, "title", "body",
-                      null, override: (DateTime.now(), NotificationType.fullscreen),
+                      null, null, override: (DateTime.now(), NotificationType.fullscreen),
                     );
                   },
                   child: const Text("fullscreen now")
@@ -143,7 +143,7 @@ class _TestAlarmsScreenState extends State<TestAlarmsScreen> {
 
                     AwesomeNotificationsWrapper.createNotification(
                       Random().nextInt(100000), Colors.blue, "title", "body",
-                        null, override: (in10Seconds, NotificationType.fullscreen),
+                        null, null, override: (in10Seconds, NotificationType.fullscreen),
                     );
                   },
                   child: const Text("fullscreen in 10 seconds")
@@ -156,7 +156,7 @@ class _TestAlarmsScreenState extends State<TestAlarmsScreen> {
                   onPressed: () {
                     AwesomeNotificationsWrapper.createNotification(
                       Random().nextInt(100000), Colors.blue, "title", "body",
-                      null, override: (DateTime.now(), NotificationType.alarm),
+                      null, null, override: (DateTime.now(), NotificationType.alarm),
                     );
                   },
                   child: const Text("alarm now")
@@ -168,7 +168,7 @@ class _TestAlarmsScreenState extends State<TestAlarmsScreen> {
 
                     AwesomeNotificationsWrapper.createNotification(
                       Random().nextInt(100000), Colors.blue, "title", "body",
-                      null, override: (in10Seconds, NotificationType.alarm),
+                      null, null, override: (in10Seconds, NotificationType.alarm),
                     );
                   },
                   child: const Text("alarm in 10 seconds")
@@ -214,7 +214,7 @@ class _TestAlarmsScreenState extends State<TestAlarmsScreen> {
                 audioPlayer.stop();
                 FlutterOverlayWindow.shareData("stop");
                 FlutterOverlayWindow.closeOverlay();
-                AwesomeNotifications().cancelAll();
+                staticNotify.cancel(1);
               },
               child: const Text("Cancel All")
             ),

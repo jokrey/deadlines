@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:audio_session/audio_session.dart';
 import 'package:deadlines/alarm_external_wrapper/awesome_notifications_android/wrapper_impl.dart';
+import 'package:deadlines/alarm_external_wrapper/notify_wrapper.dart';
 import 'package:deadlines/ui/widgets/card_in_list.dart';
 import 'package:deadlines/utils/utils.dart';
 import 'package:flutter/material.dart';
@@ -67,7 +68,7 @@ class _AlarmBannerState extends State<AlarmBanner> {
       Color color = notifyPayload!["color"] != null ? Color(int.parse(notifyPayload!["color"]!)) : Colors.black45;
       String title = notifyPayload!["title"] != null ? notifyPayload!["title"]! : "ALARM";
       String body = notifyPayload!["body"] != null ? notifyPayload!["body"]! : "NONE";
-      AwesomeNotificationsWrapper.snoozeNotification(id, const Duration(minutes: 5), color, title, body, notifyPayload!);
+      staticNotify.snooze(id, const Duration(minutes: 5), color, title, body, notifyPayload!);
       notifyPayload = null;
     }
   }

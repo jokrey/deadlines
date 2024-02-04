@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:audio_session/audio_session.dart';
 import 'package:deadlines/alarm_external_wrapper/awesome_notifications_android/wrapper_impl.dart';
+import 'package:deadlines/alarm_external_wrapper/notify_wrapper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_overlay_window/flutter_overlay_window.dart';
 import 'package:just_audio/just_audio.dart';
@@ -74,7 +75,7 @@ class _AlarmNotificationScreenState extends State<AlarmNotificationScreen> {
     Color color = widget.notifyPayload["color"] != null ? Color(int.parse(widget.notifyPayload["color"]!)) : Colors.black45;
     String title = widget.notifyPayload["title"] != null ? widget.notifyPayload["title"]! : "ALARM";
     String body = widget.notifyPayload["body"] != null ? widget.notifyPayload["body"]! : "NONE";
-    AwesomeNotificationsWrapper.snoozeNotification(id, const Duration(minutes: 5), color, title, body, widget.notifyPayload);
+    staticNotify.snooze(id, const Duration(minutes: 5), color, title, body, widget.notifyPayload);
   }
 
   @override Widget build(BuildContext context) {

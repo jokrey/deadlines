@@ -1,4 +1,5 @@
 import 'package:deadlines/alarm_external_wrapper/awesome_notifications_android/wrapper_impl.dart';
+import 'package:deadlines/alarm_external_wrapper/notify_wrapper.dart';
 import 'package:flutter/material.dart';
 import 'package:move_to_background/move_to_background.dart';
 import 'package:vibration/vibration.dart';
@@ -40,7 +41,7 @@ class _FullscreenNotificationScreenState extends State<FullscreenNotificationScr
     Color color = widget.notifyPayload["color"] != null ? Color(int.parse(widget.notifyPayload["color"]!)) : Colors.black45;
     String title = widget.notifyPayload["title"] != null ? widget.notifyPayload["title"]! : "ALARM";
     String body = widget.notifyPayload["body"] != null ? widget.notifyPayload["body"]! : "NONE";
-    AwesomeNotificationsWrapper.snoozeNotification(id, const Duration(minutes: 5), color, title, body, widget.notifyPayload);
+    staticNotify.snooze(id, const Duration(minutes: 5), color, title, body, widget.notifyPayload);
   }
 
   @override Widget build(BuildContext context) {

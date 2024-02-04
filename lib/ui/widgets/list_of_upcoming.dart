@@ -238,21 +238,24 @@ class _NextInDisplayState extends State<NextInDisplay> {
   }
 
   @override Widget build(BuildContext context) {
-    var text = "next in: ";
+    var text = "in: ";
     if(c.toNextAlarm==null) {
       text += "never";
     } else {
-      var inHours = c.toNextAlarm!.$2.inHours;
+      var inDays = c.toNextAlarm!.$2.inDays;
+      var inHours = c.toNextAlarm!.$2.inHours.remainder(60);
       var inMinutes = c.toNextAlarm!.$2.inMinutes.remainder(60);
       if (inHours == 0 && inMinutes == 0) {
         var inSeconds = c.toNextAlarm!.$2.inSeconds.remainder(60);
-        if(inSeconds < 5) {
+        if(inSeconds < 3) {
           text += "seconds";
         } else {
           text += "${inSeconds}s";
         }
-      } else {
+      } else if(inDays == 0) {
         text += "${pad0(inHours)}:${pad0(inMinutes)}";
+      } else {
+        text += "${inDays}d ${pad0(inHours)}:${pad0(inMinutes)}";
       }
     }
     return GestureDetector(
