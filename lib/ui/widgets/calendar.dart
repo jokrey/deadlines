@@ -30,17 +30,10 @@ class DeadlinesCalendarController extends ChildController {
   bool showDaily = false;
 
   List<Deadline> getDailyEvents(DateTime day) {
-    DateTime now = DateTime.now();
     var l = deadlinesDbCache.where((d) {
       return !d.isTimeless() && d.isOnThisDay(day) && (d.active || parent.showWhat == ShownType.showAll) /*&& (parent.showWhat != ShownType.showFuture || d.active || (d.isRepeating()/* && !day.isBefore(now)*/) || d.deadlineAt!.toDateTime().isAfter(now))*/ && (!d.deadlineAt!.date.isDaily() || showDaily);
     }).toList();
-    l.sort((a, b) {
-      int cmp = nullableCompare(a.startsAt?.time, b.startsAt?.time);
-      if(cmp == 0) {
-        cmp = nullableCompare(a.deadlineAt?.time, b.deadlineAt?.time);
-      }
-      return cmp;
-    },);
+    l.sort((a, b) => nullableCompare(a.startsAt?.time ?? a.deadlineAt?.time, b.startsAt?.time ?? b.deadlineAt?.time));
     return l;
   }
   Future updatePotentiallyVisibleDeadlinesFromDb() async {
