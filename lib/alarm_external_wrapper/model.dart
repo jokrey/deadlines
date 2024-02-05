@@ -273,7 +273,7 @@ bool includesThisDay(RepeatableDate rStart, RepeatableDate rEnd, int dYear, int 
   if(!rStart.isSameRepetitionType(rEnd)) throw ArgumentError("must be of same repetition type");
   
   if(!rStart.isRepeating()) {
-    if(!rStart.isBeforeWithinRepetition(rEnd)) throw ArgumentError("start must be before end");
+    if(rStart.isAfterWithinRepetition(rEnd)) throw ArgumentError("start must not be after end");
     return (rStart.year != dYear? dYear > rStart.year : rStart.month != dMonth? dMonth > rStart.month : dDay >= rStart.day) &&
            (rEnd.year != dYear? dYear < rEnd.year : rEnd.month != dMonth? dMonth < rEnd.month : dDay <= rEnd.day);
   }
