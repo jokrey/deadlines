@@ -243,7 +243,7 @@ class _NextInDisplayState extends State<NextInDisplay> {
       text += "never";
     } else {
       var inDays = c.toNextAlarm!.$2.inDays;
-      var inHours = c.toNextAlarm!.$2.inHours.remainder(60);
+      var inHours = c.toNextAlarm!.$2.inHours.remainder(24);
       var inMinutes = c.toNextAlarm!.$2.inMinutes.remainder(60);
       if (inHours == 0 && inMinutes == 0) {
         var inSeconds = c.toNextAlarm!.$2.inSeconds.remainder(60);
