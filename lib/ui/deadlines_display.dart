@@ -46,6 +46,7 @@ class ParentController {
         builder: (context) => EditDeadlineWidget(toEdit ?? Deadline(null, "", "", Colors.blue.value, true, null, newAt==null?null:fromDateTime(newAt), Importance.normal, const []))
       ),
     );
+    print("newDeadline: $newDeadline");
     if(newDeadline == null) {
       Fluttertoast.showToast(
         msg: "Canceled...",
@@ -59,6 +60,7 @@ class ParentController {
     if(toEdit != null) {
       doo = callingChild.removeFromCache(toEdit);
     }
+    print("doo: $doo");
     if(!doo) return false;
 
     if(newDeadline.id == null) {
@@ -66,7 +68,7 @@ class ParentController {
     } else {
       await db.updateDeadline(newDeadline);
     }
-    print("add to cache");
+    print("add to cache: $newDeadline");
     callingChild.addToCache(newDeadline);
     callingChild.updateShownList();
     return true;

@@ -291,13 +291,9 @@ class EditDeadlineWidgetState extends State<EditDeadlineWidget> {
                     setState(() {
                       if (result != null) {
                         if (isOneFullDay) {
-                          startsAt = startsAt!.copyWith(year: result.year,
-                              month: result.month,
-                              day: result.day);
+                          startsAt = startsAt!.copyWith(year: result.year, month: result.month, day: result.day);
                         }
-                        deadlineAt = deadlineAt!.copyWith(year: result.year,
-                            month: result.month,
-                            day: result.day);
+                        deadlineAt = deadlineAt!.copyWith(year: result.year, month: result.month, day: result.day);
                       }
                     })
                 ),
@@ -433,65 +429,65 @@ class EditDeadlineWidgetState extends State<EditDeadlineWidget> {
       ));
       if (repetitionType == RepetitionType.monthly) {
         var monthsInYear = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-        columnChildren.add(Row(
+        columnChildren.add(SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: monthsInYear.indexed.map((v) {
               var (i, e) = v;
               return CircledTextCheckbox(
-                  text: e,
-                  initial: removals.indexWhere((r) => !r.allFuture && r.day.isYearly() && r.day.month == i + 1) != -1,
-                  checkedColor: null,
-                  notCheckedColor: color,
-                  callback: (isChecked) {
-                    var newR = Removal(RepeatableDate(deadlineAt!.year, i + 1, deadlineAt!.day, repetitionType: RepetitionType.yearly), false);
-                    var indexOfBefore = removals.indexWhere((r) =>
-                    !r.allFuture && r.day.isYearly() && r.day.month == i + 1);
-                    if (indexOfBefore == -1) {
-                      if (removals.where(((r) => !r.allFuture && r.day.isYearly())).length >= monthsInYear.length - 1) {
-                        return false; //cannot unselect ALL
-                      }
-                      setState(() => removals.add(newR));
-                      return true;
-                    } else {
-                      setState(() => removals.removeAt(indexOfBefore));
-                      return false;
+                text: e,
+                initial: removals.indexWhere((r) => !r.allFuture && r.day.isYearly() && r.day.month == i + 1) != -1,
+                checkedColor: null,
+                notCheckedColor: color,
+                callback: (isChecked) {
+                  var newR = Removal(RepeatableDate(deadlineAt!.year, i + 1, deadlineAt!.day, repetitionType: RepetitionType.yearly), false);
+                  var indexOfBefore = removals.indexWhere((r) =>
+                  !r.allFuture && r.day.isYearly() && r.day.month == i + 1);
+                  if (indexOfBefore == -1) {
+                    if (removals.where(((r) => !r.allFuture && r.day.isYearly())).length >= monthsInYear.length - 1) {
+                      return false; //cannot unselect ALL
                     }
+                    setState(() => removals.add(newR));
+                    return true;
+                  } else {
+                    setState(() => removals.removeAt(indexOfBefore));
+                    return false;
                   }
+                }
               );
             }).toList(growable: false)
-        ));
+        )));
       }
       if (repetitionType == RepetitionType.daily) {
         var daysInWeek = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-        columnChildren.add(Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: daysInWeek.indexed.map((v) {
-              var (i, e) = v;
-              return CircledTextCheckbox(
-                  text: e,
-                  initial: removals.indexWhere((r) => !r.allFuture && r.day.isWeekly() && r.day.toDateTime().weekday == i + 1) != -1,
-                  checkedColor: null,
-                  notCheckedColor: color,
-                  callback: (isChecked) {
-                    var d = (startsAt ?? deadlineAt!).copyWith();
-                    while (d.weekday != i + 1) {
-                      d = d.add(const Duration(days: 1));
-                    }
-                    var newR = Removal(RepeatableDate(d.year, d.month, d.day, repetitionType: RepetitionType.weekly), false);
-                    var indexOfBefore = removals.indexWhere((r) => !r.allFuture && r.day.isWeekly() && r.day.toDateTime().weekday == i + 1);
-                    if (indexOfBefore == -1) {
-                      if (removals.where(((r) => !r.allFuture && r.day.isWeekly())).length >= daysInWeek.length - 1) {
-                        return false; //cannot unselect ALL
-                      }
-                      setState(() => removals.add(newR));
-                      return true;
-                    } else {
-                      setState(() => removals.removeAt(indexOfBefore));
-                      return false;
-                    }
+        columnChildren.add(SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: daysInWeek.indexed.map((v) {
+            var (i, e) = v;
+            return CircledTextCheckbox(
+              text: e,
+              initial: removals.indexWhere((r) => !r.allFuture && r.day.isWeekly() && r.day.toDateTime().weekday == i + 1) != -1,
+              checkedColor: null,
+              notCheckedColor: color,
+              callback: (isChecked) {
+                var d = (startsAt ?? deadlineAt!).copyWith();
+                while (d.weekday != i + 1) {
+                  d = d.add(const Duration(days: 1));
+                }
+                var newR = Removal(RepeatableDate(d.year, d.month, d.day, repetitionType: RepetitionType.weekly), false);
+                var indexOfBefore = removals.indexWhere((r) => !r.allFuture && r.day.isWeekly() && r.day.toDateTime().weekday == i + 1);
+                if (indexOfBefore == -1) {
+                  if (removals.where(((r) => !r.allFuture && r.day.isWeekly())).length >= daysInWeek.length - 1) {
+                    return false; //cannot unselect ALL
                   }
-              );
-            }).toList(growable: false))
+                  setState(() => removals.add(newR));
+                  return true;
+                } else {
+                  setState(() => removals.removeAt(indexOfBefore));
+                  return false;
+                }
+              }
+            );
+          }).toList(growable: false)))
         );
       }
 
@@ -590,18 +586,23 @@ class _CircledTextCheckboxState extends State<CircledTextCheckbox> {
     _isChecked = widget.initial;
   }
   @override Widget build(BuildContext context) {
+    var w = MediaQuery.of(context).size.width / 8;
     return InkWell(
       onTap: () => setState(() {
         _isChecked = widget.callback(!_isChecked);
       }),
       child: Container(
+        width: w,
+        height: w,
         decoration: BoxDecoration (
           shape: BoxShape.circle,
           border: Border.all(
             color: _isChecked ? widget.checkedColor ?? Theme.of(context).primaryTextTheme.bodySmall?.color ?? Colors.black : widget.notCheckedColor ?? Theme.of(context).primaryTextTheme.bodySmall?.color ?? Colors.black  ,
           ),
         ),
-        padding: const EdgeInsets.all(10),
+        alignment: Alignment.center,
+        margin: const EdgeInsets.all(3),
+        padding: const EdgeInsets.all(7),
         child: Text(
           widget.text,
           style: TextStyle(

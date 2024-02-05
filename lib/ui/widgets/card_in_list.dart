@@ -143,23 +143,25 @@ String dateText(RepeatableDateTime d1, RepeatableDateTime d2, {required bool isF
       s += "${camel(d1.date.repetitionType.name)}: ";
     }
     if(d1.date.isWeekly()) {
-      s += "${DateFormat('EEEE').format(d1.date.toDateTime())}s";
+      s += "${DateFormat('EEEE').format(d1.date.toDateTime())}s ";
     }
   }
 
   if(d1 != d2 && !isFirst) s += "-";
 
-  if(!d1.date.isRepeating()) {
-    s += "${pad0(d1.date.day)}.${pad0(d1.date.month)}.${pad0(d1.date.year)}";
-  } else if (d1.date.isYearly()) {
-    s += "${pad0(d1.date.day)}.${pad0(d1.date.month)}.";
-  } else if (d1.date.isMonthly()) {
-    s += "${pad0(d1.date.day)}.";
-  } else if (!isFirst && d1.date != d2.date && d1.date.isWeekly()) {
-    s += "${DateFormat('EEEE').format(d1.date.toDateTime())}s";
+  if(isFirst || !d1.date.isSameDay(d2.date)) {
+    if (!d1.date.isRepeating()) {
+      s += "${pad0(d1.date.day)}.${pad0(d1.date.month)}.${pad0(d1.date.year)} ";
+    } else if (d1.date.isYearly()) {
+      s += "${pad0(d1.date.day)}.${pad0(d1.date.month)}. ";
+    } else if (d1.date.isMonthly()) {
+      s += "${pad0(d1.date.day)}. ";
+    } else if (!isFirst && d1.date != d2.date && d1.date.isWeekly()) {
+      s += "${DateFormat('EEEE').format(d1.date.toDateTime())}s ";
+    }
   }
   // if(d1.time != d2.time && !isFirst) s += "-";
-  s += " ${d1.time.hour.toString().padLeft(2, '0')}:${d1.time.minute.toString().padLeft(2, '0')}";
+  s += "${d1.time.hour.toString().padLeft(2, '0')}:${d1.time.minute.toString().padLeft(2, '0')}";
   // if(d1.time != d2.time && isFirst) s += "-";
   // if(d1 != d2 && isFirst) s += "-";
   return s;
