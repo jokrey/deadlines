@@ -244,6 +244,7 @@ class AwesomeNotificationsWrapper extends NotifyWrapper {
         payload: {"snooze-id":"$rescheduledId"},
         category: NotificationCategory.Status,
 
+        autoDismissible: false,
         criticalAlert: false, wakeUpScreen: false,
         locked: true, actionType: ActionType.KeepOnTop,
         backgroundColor: color,
@@ -517,6 +518,7 @@ class AwesomeNotificationsWrapper extends NotifyWrapper {
           payload: payload, backgroundColor: color,
           category: NotificationCategory.Reminder,
 
+          autoDismissible: false,
           criticalAlert: true, wakeUpScreen: true, locked: false,
         ),
         actionButtons: actionButtons,
@@ -530,6 +532,7 @@ class AwesomeNotificationsWrapper extends NotifyWrapper {
           payload: payload, backgroundColor: color,
           category: NotificationCategory.Reminder,
 
+          autoDismissible: false,
           criticalAlert: true, wakeUpScreen: true, locked: false,
         ),
         actionButtons: actionButtons,
@@ -544,6 +547,7 @@ class AwesomeNotificationsWrapper extends NotifyWrapper {
           category: NotificationCategory.Reminder,
           fullScreenIntent: true,
 
+          autoDismissible: false,
           criticalAlert: true, wakeUpScreen: true, locked: true,
         ),
         actionButtons: actionButtons,
@@ -558,6 +562,7 @@ class AwesomeNotificationsWrapper extends NotifyWrapper {
           category: NotificationCategory.Alarm,
           fullScreenIntent: true,
 
+          autoDismissible: false,
           criticalAlert: true, wakeUpScreen: true, locked: true,
         ),
         actionButtons: actionButtons,
