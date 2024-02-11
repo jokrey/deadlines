@@ -85,7 +85,7 @@ class Time implements Comparable<Time> {
     return other is Time && hour == other.hour && minute == other.minute && second == other.second;
   }
   @override int get hashCode => Object.hash(hour, minute, second);
-  @override String toString() => "$hour:$minute:$second";
+  @override String toString() => "${pad0(hour)}:${pad0(minute)}:${pad0(second)}";
 
   @override int compareTo(Time other) {
     return hour != other.hour ? hour - other.hour : minute != other.minute ? minute - other.minute : second - other.second;
