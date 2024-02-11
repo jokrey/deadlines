@@ -206,26 +206,23 @@ class RepeatableDate implements Comparable<RepeatableDate> {
 
     if(isYearly()) {
       var ret = raw.copyWith(year: reference.year, hour: time?.hour, minute: time?.minute, second: time?.second);
-      if(ret.isBefore(raw)) return ret;
+      if(ret.isBefore(reference)) return ret;
       return raw.copyWith(year: ret.year - 1);
     }
     if(isMonthly()) {
       var ret = raw.copyWith(year: reference.year, month: reference.month, hour: time?.hour, minute: time?.minute, second: time?.second);
-      if(ret.isBefore(raw)) return ret;
+      if(ret.isBefore(reference)) return ret;
       return raw.copyWith(year: reference.month == 1 ? reference.year - 1 : reference.year, month: reference.month == 1 ? 12 : reference.month - 1);
     }
     if(isWeekly()) {
       var weekday = raw.weekday;
       var ret = reference.copyWith(hour: time?.hour, minute: time?.minute, second: time?.second, millisecond: 0, microsecond: 0);
-      //todo, this could be math:
-      while(!raw.isBefore(reference) && ret.weekday != weekday) {
-        ret = ret.subtract(const Duration(days: 1));
-      }
-      return ret;
+      if(ret.isBefore(reference)) return ret;
+      else return reference.subtract(Duration(days: weekday < reference.weekday ? reference.weekday - weekday : (reference.weekday - weekday) + 7));
     }
     if(isDaily()) {
       var ret = raw.copyWith(year: reference.year, month: reference.month, day: reference.day, hour: time?.hour, minute: time?.minute, second: time?.second);
-      if(ret.isBefore(raw)) return ret;
+      if(ret.isBefore(reference)) return ret;
       return ret.subtract(const Duration(days: 1));
     }
     return null;
@@ -236,26 +233,23 @@ class RepeatableDate implements Comparable<RepeatableDate> {
 
     if(isYearly()) {
       var ret = raw.copyWith(year: reference.year, hour: time?.hour, minute: time?.minute, second: time?.second);
-      if(ret.isAfter(raw)) return ret;
+      if(ret.isAfter(reference)) return ret;
       return raw.copyWith(year: ret.year + 1);
     }
     if(isMonthly()) {
       var ret = raw.copyWith(year: reference.year, month: reference.month, hour: time?.hour, minute: time?.minute, second: time?.second);
-      if(ret.isAfter(raw)) return ret;
+      if(ret.isAfter(reference)) return ret;
       return raw.copyWith(year: ret.month == 12 ? ret.year + 1 : ret.year, month: ret.month == 12 ? 1 : ret.month + 1);
     }
     if(isWeekly()) {
       var weekday = raw.weekday;
       var ret = reference.copyWith(hour: time?.hour, minute: time?.minute, second: time?.second, millisecond: 0, microsecond: 0);
-      //todo, this could be math:
-      while(!raw.isAfter(reference) && ret.weekday != weekday) {
-        ret = ret.add(const Duration(days: 1));
-      }
-      return ret;
+      if(ret.isAfter(reference)) return ret;
+      else return reference.add(Duration(days: weekday > reference.weekday ? reference.weekday - weekday : 7 - (reference.weekday - weekday) ));
     }
     if(isDaily()) {
       var ret = raw.copyWith(year: reference.year, month: reference.month, day: reference.day, hour: time?.hour, minute: time?.minute, second: time?.second);
-      if(ret.isAfter(raw)) return ret;
+      if(ret.isAfter(reference)) return ret;
       return ret.add(const Duration(days: 1));
     }
     return null;
