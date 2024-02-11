@@ -1,4 +1,5 @@
 import 'package:flutter/cupertino.dart';
+import 'package:table_calendar/table_calendar.dart';
 
 NotifyableRepeatableDateTime fromDateTime(DateTime dt, {RepetitionType rep = RepetitionType.none, NotificationType notify = NotificationType.off}) {
   return NotifyableRepeatableDateTime(
@@ -42,8 +43,19 @@ class NotifyableRepeatableDateTime extends RepeatableDateTime {
       NotifyableRepeatableDateTime withNextNotifyType() => withNotifyType(NotificationType.values[(notifyType.index+1) % NotificationType.values.length]);
   NotifyableRepeatableDateTime withNotifyType(NotificationType ov) => NotifyableRepeatableDateTime(date, time, ov);
 
-  DateTime? buildNextNotificationTime(DateTime reference) {
-    return date.nextOccurrenceAfter(reference)?.copyWith(hour: time.hour, minute: time.minute);
+  DateTime? nextOccurrenceAfter(DateTime reference) {
+    if(!date.isRepeating()) {
+      var at = toDateTime();
+      return at.isAfter(reference) ? at : null;
+    } else {
+      var nextDay = date.nextOccurrenceAfter(reference);
+      var nextTime = nextDay?.copyWith(hour: time.hour, minute: time.minute);
+      if(nextTime != null && !nextTime.isAfter(reference)) {
+        return date.nextOccurrenceAfter(reference.add(const Duration(days: 1)))?.copyWith(hour: time.hour, minute: time.minute);
+      } else {
+        return nextTime;
+      }
+    }
   }
 }
 

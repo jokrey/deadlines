@@ -403,9 +403,9 @@ class AwesomeNotificationsWrapper extends NotifyWrapper {
         );
       } else {
         var now = DateTime.now();
-        DateTime? atConcrete = at.buildNextNotificationTime(now);
+        DateTime? atConcrete = at.nextOccurrenceAfter(now);
         while(atConcrete != null && (atConcrete.isBefore(now) || (shouldSkip != null && (shouldSkip(atConcrete))))) {
-          atConcrete = at.buildNextNotificationTime(atConcrete.add(const Duration(days: 1)));
+          atConcrete = at.nextOccurrenceAfter(atConcrete.add(const Duration(days: 1)));
         }
         print("atConcrete: $atConcrete");
         if(atConcrete == null) return false;

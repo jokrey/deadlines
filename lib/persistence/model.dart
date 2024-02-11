@@ -183,7 +183,7 @@ class Deadline implements Comparable<Deadline> {
     if(isTimeless() || ! (startsAt ?? deadlineAt!).date.isInitialOnOrBefore(day)) return false;
     if(hasRange()) {
       if(! includesThisDay(startsAt!.date, deadlineAt!.date, day.year, day.month, day.day, deadlineAt!.date.isWeekly()?day.weekday:-1)) return false;
-      var nextDeadline = deadlineAt!.buildNextNotificationTime(day);
+      var nextDeadline = deadlineAt!.nextOccurrenceAfter(day);
       return nextDeadline == null || !removals.any((r) => r.makesInvalid(nextDeadline));
     } else {
       return (

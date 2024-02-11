@@ -49,7 +49,7 @@ class DeadlineAlarms {
     } else if(nrdt.notifyType == NotificationType.off) {
       await staticNotify.cancel(notifyId);
     } else {
-      var next = nrdt.buildNextNotificationTime(DateTime.now());
+      var next = nrdt.nextOccurrenceAfter(DateTime.now());
       if(next == null) {
         await staticNotify.cancel(notifyId);
       } else {
