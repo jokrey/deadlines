@@ -56,12 +56,9 @@ class ParentController {
       return false;
     }
 
-    bool doo = true;
     if(toEdit != null) {
-      doo = callingChild.removeFromCache(toEdit);
+      callingChild.removeFromCache(toEdit);
     }
-    print("doo: $doo");
-    if(!doo) return false;
 
     if(newDeadline.id == null) {
       newDeadline = await db.createDeadline(newDeadline);
@@ -174,17 +171,14 @@ class ParentController {
     }
   }
 
-  Future<bool> updateWithoutUndoUI(ChildController callingChild, Deadline d, Deadline dNew) async {
-    bool doo = callingChild.removeFromCache(d);
-    if(!doo) return false;
+  Future<void> updateWithoutUndoUI(ChildController callingChild, Deadline d, Deadline dNew) async {
+    callingChild.removeFromCache(d);
     await db.updateDeadline(dNew);
     callingChild.addToCache(dNew);
     callingChild.updateShownList();
-    return true;
   }
   Future<void> updateWithUndoUI(ChildController callingChild, BuildContext context, String msg, Deadline d, Deadline dNew) async {
-    bool doo = await updateWithoutUndoUI(callingChild, d, dNew);
-    if(!doo) return;
+    await updateWithoutUndoUI(callingChild, d, dNew);
     undoUI(
       msg, Color(d.color), context,
       () => updateWithoutUndoUI(callingChild, dNew, d),

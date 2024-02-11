@@ -35,7 +35,8 @@ class UpcomingDeadlinesListController extends ChildController {
     deadlinesDbCache.add(d);
   }
   @override bool removeFromCache(Deadline d) {
-    return deadlinesDbCache.remove(d);
+    deadlinesDbCache.removeWhere((e) => e.id == d.id,);
+    return true;
   }
 
   @override void updateShownList() {
