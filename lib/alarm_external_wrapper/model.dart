@@ -1,5 +1,5 @@
+import 'package:deadlines/ui/widgets/card_in_list.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:table_calendar/table_calendar.dart';
 
 NotifyableRepeatableDateTime fromDateTime(DateTime dt, {RepetitionType rep = RepetitionType.none, NotificationType notify = NotificationType.off}) {
   return NotifyableRepeatableDateTime(
@@ -235,28 +235,28 @@ class RepeatableDate implements Comparable<RepeatableDate> {
     if(raw.isAfter(reference)) return raw;
 
     if(isYearly()) {
-      reference = raw.copyWith(year: reference.year, hour: time?.hour, minute: time?.minute, second: time?.second);
-      if(reference.isAfter(raw)) return reference;
-      return raw.copyWith(year: reference.year + 1);
+      var ret = raw.copyWith(year: reference.year, hour: time?.hour, minute: time?.minute, second: time?.second);
+      if(ret.isAfter(raw)) return ret;
+      return raw.copyWith(year: ret.year + 1);
     }
     if(isMonthly()) {
-      reference = raw.copyWith(year: reference.year, month: reference.month, hour: time?.hour, minute: time?.minute, second: time?.second);
-      if(reference.isAfter(raw)) return reference;
-      return raw.copyWith(year: reference.month == 12 ? reference.year + 1 : reference.year, month: reference.month == 12 ? 1 : reference.month + 1);
+      var ret = raw.copyWith(year: reference.year, month: reference.month, hour: time?.hour, minute: time?.minute, second: time?.second);
+      if(ret.isAfter(raw)) return ret;
+      return raw.copyWith(year: ret.month == 12 ? ret.year + 1 : ret.year, month: ret.month == 12 ? 1 : ret.month + 1);
     }
     if(isWeekly()) {
       var weekday = raw.weekday;
-      var from = reference.copyWith(hour: time?.hour, minute: time?.minute, second: time?.second);
+      var ret = reference.copyWith(hour: time?.hour, minute: time?.minute, second: time?.second, millisecond: 0, microsecond: 0);
       //todo, this could be math:
-      while(!raw.isAfter(reference) && from.weekday != weekday) {
-        from = from.add(const Duration(days: 1));
+      while(!raw.isAfter(reference) && ret.weekday != weekday) {
+        ret = ret.add(const Duration(days: 1));
       }
-      return from;
+      return ret;
     }
     if(isDaily()) {
-      reference = raw.copyWith(year: reference.year, month: reference.month, day: reference.day, hour: time?.hour, minute: time?.minute, second: time?.second);
-      if(reference.isAfter(raw)) return reference;
-      return reference.add(const Duration(days: 1));
+      var ret = raw.copyWith(year: reference.year, month: reference.month, day: reference.day, hour: time?.hour, minute: time?.minute, second: time?.second);
+      if(ret.isAfter(raw)) return ret;
+      return ret.add(const Duration(days: 1));
     }
     return null;
   }
