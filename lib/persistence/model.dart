@@ -209,14 +209,14 @@ class Deadline implements Comparable<Deadline> {
     if(!isRepeating()) throw StateError("must be repeating");
     NotifyableRepeatableDateTime? newStartsAt;
     if (startsAt != null) {
-      dayToResetTo = startsAt!.date.nextOccurrenceAfter(dayToResetTo.add(const Duration(days: 1)))!;
+      dayToResetTo = startsAt!.nextOccurrenceAfter(dayToResetTo.add(const Duration(days: 1)))!;
       newStartsAt = NotifyableRepeatableDateTime(
           RepeatableDate(dayToResetTo.year, dayToResetTo.month, dayToResetTo.day, repetition: 1, repetitionType: startsAt!.date.repetitionType),
           startsAt!.time, startsAt!.notifyType
       );
-      dayToResetTo = deadlineAt!.date.nextOccurrenceAfter(dayToResetTo)!;
+      dayToResetTo = deadlineAt!.nextOccurrenceAfter(dayToResetTo)!;
     } else {
-      dayToResetTo = deadlineAt!.date.nextOccurrenceAfter(dayToResetTo.add(const Duration(days: 1)))!;
+      dayToResetTo = deadlineAt!.nextOccurrenceAfter(dayToResetTo.add(const Duration(days: 1)))!;
     }
     var newDeadlineAt = NotifyableRepeatableDateTime(
       RepeatableDate(dayToResetTo.year, dayToResetTo.month, dayToResetTo.day, repetition: 1, repetitionType: deadlineAt!.date.repetitionType),

@@ -85,7 +85,7 @@ class ParentController {
           actionsOverflowAlignment: OverflowBarAlignment.center,
           actions: [
             SizedBox(width: double.infinity, child: ElevatedButton(onPressed: () {
-              var dNew = d.copyRemoveOccurrence(RepeatableDate.from(d.deadlineAt!.date.nextOccurrenceAfter(day)!));
+              var dNew = d.copyRemoveOccurrence(RepeatableDate.from(d.deadlineAt!.nextOccurrenceAfter(day)!));
               updateWithUndoUI(callingChild, context, "${d.title} on ${day.day}.${day.month}.${day.year} has been deleted", d, dNew);
 
               Navigator.of(context).pop();
@@ -108,7 +108,7 @@ class ParentController {
             d.deadlineAt!.date.isDaily()?
             [
               SizedBox(width: double.infinity, child: ElevatedButton(onPressed: () {
-                var dNew = d.copyRemoveOccurrence(RepeatableDate.from(d.deadlineAt!.date.nextOccurrenceAfter(day)!, repetitionType: RepetitionType.weekly));
+                var dNew = d.copyRemoveOccurrence(RepeatableDate.from(d.deadlineAt!.nextOccurrenceAfter(day)!, repetitionType: RepetitionType.weekly));
                 updateWithUndoUI(callingChild, context, "${d.title} on every ${DateFormat('EEEE').format(day)} has been deleted", d, dNew);
 
                 Navigator.of(context).pop();
@@ -117,7 +117,7 @@ class ParentController {
             d.deadlineAt!.date.isMonthly()?
             [
               SizedBox(width: double.infinity, child: ElevatedButton(onPressed: () {
-                var dNew = d.copyRemoveOccurrence(RepeatableDate.from(d.deadlineAt!.date.nextOccurrenceAfter(day)!, repetitionType: RepetitionType.yearly));
+                var dNew = d.copyRemoveOccurrence(RepeatableDate.from(d.deadlineAt!.nextOccurrenceAfter(day)!, repetitionType: RepetitionType.yearly));
                 updateWithUndoUI(callingChild, context, "${d.title} on every ${DateFormat('MMMM').format(day)} has been deleted", d, dNew);
 
                 Navigator.of(context).pop();
