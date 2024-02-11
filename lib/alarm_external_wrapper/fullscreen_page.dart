@@ -89,6 +89,7 @@ class _FullscreenNotificationScreenState extends State<FullscreenNotificationScr
                   ),
                   RawMaterialButton(
                     onPressed: () {
+                      wasFinished = true;
                       Vibration.cancel();
 
                       Navigator.pop(context);
