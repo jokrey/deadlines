@@ -291,7 +291,7 @@ class AwesomeNotificationsWrapper extends NotifyWrapper {
 
     //todo, this should neither be done here nor like this probably... breaks coupling rule
     int dlId = DeadlineAlarms.toDeadlineId(id);
-    if(dlId != -1 && id < DeadlineAlarms.SNOOZE_OFFSET) {
+    if(dlId != -1 && id < DeadlineAlarms.SNOOZE_OFFSET && (notifyType == NotificationType.fullscreen || notifyType == NotificationType.alarm)) {
       var d = await DeadlinesDatabase().loadById(dlId);
       if (d != null) await DeadlineAlarms.updateAlarmsFor(d);
     }

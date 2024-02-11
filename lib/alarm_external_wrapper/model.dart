@@ -42,21 +42,6 @@ class NotifyableRepeatableDateTime extends RepeatableDateTime {
 
       NotifyableRepeatableDateTime withNextNotifyType() => withNotifyType(NotificationType.values[(notifyType.index+1) % NotificationType.values.length]);
   NotifyableRepeatableDateTime withNotifyType(NotificationType ov) => NotifyableRepeatableDateTime(date, time, ov);
-
-  DateTime? nextOccurrenceAfter(DateTime reference) {
-    if(!date.isRepeating()) {
-      var at = toDateTime();
-      return at.isAfter(reference) ? at : null;
-    } else {
-      var nextDay = date.nextOccurrenceAfter(reference);
-      var nextTime = nextDay?.copyWith(hour: time.hour, minute: time.minute);
-      if(nextTime != null && !nextTime.isAfter(reference)) {
-        return date.nextOccurrenceAfter(reference.add(const Duration(days: 1)))?.copyWith(hour: time.hour, minute: time.minute);
-      } else {
-        return nextTime;
-      }
-    }
-  }
 }
 
 @immutable
@@ -81,6 +66,8 @@ class RepeatableDateTime implements Comparable<RepeatableDateTime> {
   }
 
   bool isOverdue() => !date.isRepeating() && toDateTime().isBefore(DateTime.now());
+
+  DateTime? nextOccurrenceAfter(DateTime reference) => date.nextOccurrenceAfter(reference, time);
 }
 
 class Time implements Comparable<Time> {
@@ -243,23 +230,23 @@ class RepeatableDate implements Comparable<RepeatableDate> {
     }
     return null;
   }
-  DateTime? nextOccurrenceAfter(DateTime reference) {
-    var raw = toDateTime();
+  DateTime? nextOccurrenceAfter(DateTime reference, [Time? time]) {
+    var raw = toDateTime().copyWith(hour: time?.hour, minute: time?.minute, second: time?.second);
     if(raw.isAfter(reference)) return raw;
 
     if(isYearly()) {
-      reference = raw.copyWith(year: reference.year);
+      reference = raw.copyWith(year: reference.year, hour: time?.hour, minute: time?.minute, second: time?.second);
       if(reference.isAfter(raw)) return reference;
       return raw.copyWith(year: reference.year + 1);
     }
     if(isMonthly()) {
-      reference = raw.copyWith(year: reference.year, month: reference.month);
+      reference = raw.copyWith(year: reference.year, month: reference.month, hour: time?.hour, minute: time?.minute, second: time?.second);
       if(reference.isAfter(raw)) return reference;
       return raw.copyWith(year: reference.month == 12 ? reference.year + 1 : reference.year, month: reference.month == 12 ? 1 : reference.month + 1);
     }
     if(isWeekly()) {
       var weekday = raw.weekday;
-      var from = reference;
+      var from = reference.copyWith(hour: time?.hour, minute: time?.minute, second: time?.second);
       //todo, this could be math:
       while(!raw.isAfter(reference) && from.weekday != weekday) {
         from = from.add(const Duration(days: 1));
@@ -267,7 +254,7 @@ class RepeatableDate implements Comparable<RepeatableDate> {
       return from;
     }
     if(isDaily()) {
-      reference = raw.copyWith(year: reference.year, month: reference.month, day: reference.day);
+      reference = raw.copyWith(year: reference.year, month: reference.month, day: reference.day, hour: time?.hour, minute: time?.minute, second: time?.second);
       if(reference.isAfter(raw)) return reference;
       return reference.add(const Duration(days: 1));
     }
