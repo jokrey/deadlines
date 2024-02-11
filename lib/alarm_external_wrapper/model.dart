@@ -200,33 +200,33 @@ class RepeatableDate implements Comparable<RepeatableDate> {
   }
 
 
-  DateTime? lastOccurrenceBefore(DateTime reference) {
-    var raw = toDateTime();
+  DateTime? lastOccurrenceBefore(DateTime reference, [Time? time]) {
+    var raw = toDateTime().copyWith(hour: time?.hour, minute: time?.minute, second: time?.second);
     if(raw.isBefore(reference)) return raw;
 
     if(isYearly()) {
-      reference = raw.copyWith(year: reference.year);
-      if(reference.isBefore(raw)) return reference;
-      return raw.copyWith(year: reference.year - 1);
+      var ret = raw.copyWith(year: reference.year, hour: time?.hour, minute: time?.minute, second: time?.second);
+      if(ret.isBefore(raw)) return ret;
+      return raw.copyWith(year: ret.year - 1);
     }
     if(isMonthly()) {
-      reference = raw.copyWith(year: reference.year, month: reference.month);
-      if(reference.isBefore(raw)) return reference;
+      var ret = raw.copyWith(year: reference.year, month: reference.month, hour: time?.hour, minute: time?.minute, second: time?.second);
+      if(ret.isBefore(raw)) return ret;
       return raw.copyWith(year: reference.month == 1 ? reference.year - 1 : reference.year, month: reference.month == 1 ? 12 : reference.month - 1);
     }
     if(isWeekly()) {
       var weekday = raw.weekday;
-      var from = reference;
+      var ret = reference.copyWith(hour: time?.hour, minute: time?.minute, second: time?.second, millisecond: 0, microsecond: 0);
       //todo, this could be math:
-      while(!raw.isBefore(reference) && from.weekday != weekday) {
-        from = from.subtract(const Duration(days: 1));
+      while(!raw.isBefore(reference) && ret.weekday != weekday) {
+        ret = ret.subtract(const Duration(days: 1));
       }
-      return from;
+      return ret;
     }
     if(isDaily()) {
-      reference = raw.copyWith(year: reference.year, month: reference.month, day: reference.day);
-      if(reference.isBefore(raw)) return reference;
-      return reference.subtract(const Duration(days: 1));
+      var ret = raw.copyWith(year: reference.year, month: reference.month, day: reference.day, hour: time?.hour, minute: time?.minute, second: time?.second);
+      if(ret.isBefore(raw)) return ret;
+      return ret.subtract(const Duration(days: 1));
     }
     return null;
   }
