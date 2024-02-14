@@ -192,6 +192,9 @@ class Deadline implements Comparable<Deadline> {
       ) && !removals.any((r) => r.makesInvalid(day));
     }
   }
+  bool willRepeatAfter(DateTime day) {
+    return isRepeating() && removals.where((e) => e.allFuture && e.day.isBeforeThisDay(day)).isEmpty;
+  }
 
   bool isTimeless() => deadlineAt == null;
 

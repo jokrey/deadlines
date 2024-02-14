@@ -81,7 +81,7 @@ class _TestAlarmsScreenState extends State<TestAlarmsScreen> {
                   onPressed: () {
                     AwesomeNotificationsWrapper.createNotification(
                       Random().nextInt(100000), Colors.blue, "title", "body",
-                      null, null, override: (DateTime.now(), NotificationType.silent),
+                      null, null, null, override: (DateTime.now(), NotificationType.silent),
                     );
                   },
                   child: const Text("silent now")
@@ -93,7 +93,7 @@ class _TestAlarmsScreenState extends State<TestAlarmsScreen> {
 
                     AwesomeNotificationsWrapper.createNotification(
                       Random().nextInt(100000), Colors.blue, "title", "body",
-                      null, null, override: (in10Seconds, NotificationType.silent),
+                      null, null, null, override: (in10Seconds, NotificationType.silent),
                     );
                   },
                   child: const Text("silent in 10 seconds")
@@ -106,7 +106,7 @@ class _TestAlarmsScreenState extends State<TestAlarmsScreen> {
                   onPressed: () {
                     AwesomeNotificationsWrapper.createNotification(
                       Random().nextInt(100000), Colors.blue, "title", "body",
-                      null, null, override: (DateTime.now(), NotificationType.normal),
+                      null, null, null, override: (DateTime.now(), NotificationType.normal),
                     );
                   },
                   child: const Text("normal now")
@@ -118,7 +118,7 @@ class _TestAlarmsScreenState extends State<TestAlarmsScreen> {
 
                     AwesomeNotificationsWrapper.createNotification(
                       Random().nextInt(100000), Colors.blue, "title", "body",
-                      null, null, override: (in10Seconds, NotificationType.normal),
+                      null, null, null, override: (in10Seconds, NotificationType.normal),
                     );
                   },
                   child: const Text("normal in 10 seconds")
@@ -131,7 +131,7 @@ class _TestAlarmsScreenState extends State<TestAlarmsScreen> {
                   onPressed: () {
                     AwesomeNotificationsWrapper.createNotification(
                       Random().nextInt(100000), Colors.blue, "title", "body",
-                      null, null, override: (DateTime.now(), NotificationType.fullscreen),
+                      null, null, null, override: (DateTime.now(), NotificationType.fullscreen),
                     );
                   },
                   child: const Text("fullscreen now")
@@ -143,7 +143,7 @@ class _TestAlarmsScreenState extends State<TestAlarmsScreen> {
 
                     AwesomeNotificationsWrapper.createNotification(
                       Random().nextInt(100000), Colors.blue, "title", "body",
-                        null, null, override: (in10Seconds, NotificationType.fullscreen),
+                        null, null, null, override: (in10Seconds, NotificationType.fullscreen),
                     );
                   },
                   child: const Text("fullscreen in 10 seconds")
@@ -156,7 +156,7 @@ class _TestAlarmsScreenState extends State<TestAlarmsScreen> {
                   onPressed: () {
                     AwesomeNotificationsWrapper.createNotification(
                       Random().nextInt(100000), Colors.blue, "title", "body",
-                      null, null, override: (DateTime.now(), NotificationType.alarm),
+                      null, null, null, override: (DateTime.now(), NotificationType.alarm),
                     );
                   },
                   child: const Text("alarm now")
@@ -168,7 +168,7 @@ class _TestAlarmsScreenState extends State<TestAlarmsScreen> {
 
                     AwesomeNotificationsWrapper.createNotification(
                       Random().nextInt(100000), Colors.blue, "title", "body",
-                      null, null, override: (in10Seconds, NotificationType.alarm),
+                      null, null, null, override: (in10Seconds, NotificationType.alarm),
                     );
                   },
                   child: const Text("alarm in 10 seconds")

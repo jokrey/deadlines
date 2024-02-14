@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:deadlines/alarm_external_wrapper/model.dart';
 import 'package:deadlines/alarm_external_wrapper/notify_wrapper.dart';
 import 'package:deadlines/persistence/model.dart';
+import 'package:flutter/cupertino.dart';
 
 class DeadlineAlarms {
   static const DEADLINE_OFFSET = 100000; //uses range [100000, 200000]
@@ -55,7 +56,7 @@ class DeadlineAlarms {
       } else {
         await staticNotify.set(
           notifyId, Color(d.color), d.title, d.description,
-          nrdt, (dt) => !d.isOnThisDay(dt), //if returns is on this day, then it has not been removed
+          nrdt, (dt) => !d.isOnThisDay(dt), (dt) => !d.willRepeatAfter(dt)//if returns is on this day, then it has not been removed
         );
       }
     }

@@ -176,11 +176,15 @@ class AwesomeNotificationsWrapper extends NotifyWrapper {
     // }
   }
 
-  @override Future<void> set(int notifyId, Color color, String title, String description, NotifyableRepeatableDateTime at, bool Function(DateTime)? shouldSkip) async {
+  @override Future<void> set(int notifyId, Color color, String title, String description, NotifyableRepeatableDateTime at, bool Function(DateTime)? shouldSkip, bool Function(DateTime)? shouldStop) async {
     if(at.notifyType == NotificationType.off) {
       await cancel(notifyId);
     } else {
-      await createNotification(notifyId, color, title, description, at, shouldSkip);
+      bool success = await createNotification(notifyId, color, title, description, at, shouldSkip, shouldStop);
+      if(!success) {
+        print("cancel");
+        await cancel(notifyId);
+      }
     }
   }
 
@@ -232,7 +236,7 @@ class AwesomeNotificationsWrapper extends NotifyWrapper {
     newPayload["ongoing-is-snoozed-notification-id"] = "$ongoingId";
     createNotification(
       rescheduledId, color, title, body,
-      null, null, override: (DateTime.now().add(snoozeDuration), NotificationType.values[int.parse(originalPayload["type"]!)]),
+      null, null, null, override: (DateTime.now().add(snoozeDuration), NotificationType.values[int.parse(originalPayload["type"]!)]),
       additionalPayload: originalPayload
     );
 
@@ -374,7 +378,7 @@ class AwesomeNotificationsWrapper extends NotifyWrapper {
 
 
   /// additionalPayload overrides existing "id" or "type" if present
-  static Future<bool> createNotification(int id, Color color, String title, String body, NotifyableRepeatableDateTime? at, bool Function(DateTime)? shouldSkip, {(DateTime, NotificationType)? override, Map<String, String?>? additionalPayload}) async {
+  static Future<bool> createNotification(int id, Color color, String title, String body, NotifyableRepeatableDateTime? at, bool Function(DateTime)? shouldSkip, bool Function(DateTime)? shouldStop, {(DateTime, NotificationType)? override, Map<String, String?>? additionalPayload}) async {
     NotificationSchedule? schedule;
     NotificationType notifyType;
     if(override != null) {
@@ -405,14 +409,18 @@ class AwesomeNotificationsWrapper extends NotifyWrapper {
       } else {
         var now = DateTime.now();
         DateTime? atConcrete = at.nextOccurrenceAfter(now);
-        while(atConcrete != null && (atConcrete.isBefore(now) || (shouldSkip != null && (shouldSkip(atConcrete))))) {
+        while(atConcrete != null && (atConcrete.isBefore(now) || (shouldSkip != null && shouldSkip(atConcrete)))) {
           var n = at.nextOccurrenceAfter(atConcrete.add(const Duration(days: 1)));
+          if(n != null && shouldStop != null && shouldStop(n)) {
+            return false;
+          }
           if(n == atConcrete) {
             print("bug here");
             atConcrete = null;
           } else {
             atConcrete = n;
           }
+          print("atConcrete: $atConcrete");
         }
         if(atConcrete == null) return false;
 
@@ -515,7 +523,7 @@ class AwesomeNotificationsWrapper extends NotifyWrapper {
     Map<String, String?> payload = {"id":id.toString(), "type": "${notifyType.index}", "color":"${color.value}", "title": title, "body":body};
     if(additionalPayload != null) payload.addAll(additionalPayload);//overrides
     if(notifyType == NotificationType.silent) {
-      return AwesomeNotifications().createNotification(
+      await AwesomeNotifications().createNotification(
         schedule: schedule,
         content: NotificationContent(
           channelKey: _SILENT_CHANNEL_NAME,
@@ -528,8 +536,9 @@ class AwesomeNotificationsWrapper extends NotifyWrapper {
         ),
         actionButtons: actionButtons,
       );
+      return true;
     } else if(notifyType == NotificationType.normal) {
-      return AwesomeNotifications().createNotification(
+      await AwesomeNotifications().createNotification(
         schedule: schedule,
         content: NotificationContent(
           channelKey: _NORMAL_CHANNEL_NAME,
@@ -542,8 +551,9 @@ class AwesomeNotificationsWrapper extends NotifyWrapper {
         ),
         actionButtons: actionButtons,
       );
+      return true;
     } else if(notifyType == NotificationType.fullscreen) {
-      return AwesomeNotifications().createNotification(
+      await AwesomeNotifications().createNotification(
         schedule: schedule,
         content: NotificationContent(
           channelKey: _FULLSCREEN_CHANNEL_NAME,
@@ -557,8 +567,9 @@ class AwesomeNotificationsWrapper extends NotifyWrapper {
         ),
         actionButtons: actionButtons,
       );
+      return true;
     } else if(notifyType == NotificationType.alarm) {
-      return AwesomeNotifications().createNotification(
+      await AwesomeNotifications().createNotification(
         schedule: schedule,
         content: NotificationContent(
           channelKey: _ALARM_CHANNEL_NAME,
@@ -572,6 +583,7 @@ class AwesomeNotificationsWrapper extends NotifyWrapper {
         ),
         actionButtons: actionButtons,
       );
+      return true;
     }
     return false;
   }
