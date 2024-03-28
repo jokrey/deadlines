@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:audio_session/audio_session.dart';
-import 'package:deadlines/alarm_external_wrapper/awesome_notifications_android/wrapper_impl.dart';
 import 'package:deadlines/alarm_external_wrapper/notify_wrapper.dart';
 import 'package:deadlines/ui/widgets/card_in_list.dart';
 import 'package:deadlines/utils/utils.dart';

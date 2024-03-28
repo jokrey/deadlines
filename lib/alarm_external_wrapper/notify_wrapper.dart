@@ -1,11 +1,9 @@
 import 'package:deadlines/alarm_external_wrapper/awesome_notifications_android/wrapper_impl.dart';
-import 'package:deadlines/persistence/model.dart';
 import 'package:flutter_overlay_window/flutter_overlay_window.dart';
 import 'package:move_to_background/move_to_background.dart';
 
 import 'alarm_page.dart';
 import 'fullscreen_page.dart';
-import 'local_notifications_android/wrapper_impl.dart';
 
 import 'model.dart';
 import 'package:flutter/material.dart';

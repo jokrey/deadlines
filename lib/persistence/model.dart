@@ -121,11 +121,9 @@
 // }
 
 
-import 'dart:ui';
 import 'package:deadlines/alarm_external_wrapper/model.dart';
 import 'package:deadlines/utils/utils.dart';
 import 'package:flutter/foundation.dart';
-import 'package:table_calendar/table_calendar.dart';
 
 @immutable
 class Deadline implements Comparable<Deadline> {

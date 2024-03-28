@@ -1,4 +1,3 @@
-import 'package:deadlines/alarm_external_wrapper/awesome_notifications_android/wrapper_impl.dart';
 import 'package:deadlines/alarm_external_wrapper/notify_wrapper.dart';
 import 'package:flutter/material.dart';
 import 'package:move_to_background/move_to_background.dart';
