@@ -344,8 +344,15 @@ class _DeadlineTableCalendarState extends State<DeadlineTableCalendar> {
     var events = c.getDailyEvents(day);
 
     if(events.isNotEmpty) {
-      Iterable<Deadline> oneDayEvents = events.where((d) => (d.isOneDay() && !d.isOneFullDay() && d.importance != Importance.critical));
-      List<Deadline> multiDayEvents = events.where((d) => (!d.isOneDay() || d.isOneFullDay() || d.importance == Importance.critical)).toList(growable: false);
+      Iterable<Deadline> oneDayEvents = events.where((d) => (d.isOneDay() && d.importance != Importance.critical));
+      List<Deadline> multiDayEvents = sorted(
+        events.where((d) => (!d.isOneDay() || d.importance == Importance.critical)),
+        (a, b) {
+          var compare = a.importance.index.compareTo(b.importance.index);
+          if(compare != 0) return compare;
+          return a.compareTo(b);
+        }
+      );
       print("multiDayEvents: $multiDayEvents");
 
       List<Widget> children = [];
