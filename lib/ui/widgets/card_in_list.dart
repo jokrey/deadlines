@@ -30,7 +30,7 @@ class DeadlineCard extends StatelessWidget {
         return false; //remains visible
       },
       child: Card(
-        shadowColor: d.isOverdue()? Colors.red : appropriateColor,
+        shadowColor: d.isOverdue()? const Color(0xFFF94144) : appropriateColor,
         elevation: d.isOverdue()? 6 : 3,
         child: Stack(
           alignment: Alignment.center,
@@ -65,7 +65,7 @@ class DeadlineCard extends StatelessWidget {
 
             ),]
             +
-            (d.active? [] : [Container(height: 4, color: appropriateColor)]),
+            (d.active? (d.isOverdue() ? [Positioned.fill(child: Container(decoration: ShapeDecoration(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)), color: const Color(0xFFF94144).withAlpha(7)),))] : []) : [Container(height: 4, color: appropriateColor)]),
         ),
       ),
     );
@@ -117,7 +117,7 @@ class DeadlineCard extends StatelessWidget {
         ),
       ]
       +
-      (d1.isOverdue()? [Positioned(left: 0, right: 0, child: Container(height: 2, color: darken(Colors.red, 35).withAlpha(105)))] : []),
+      (d1.isOverdue()? [Positioned(left: 0, right: 0, child: Container(height: 2, color: darken(const Color(0xFFF94144), 35).withAlpha(105)))] : []),
     );
   }
 }
