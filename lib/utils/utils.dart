@@ -8,8 +8,13 @@ int nullableCompare(Comparable? o1, Comparable? o2) {
   return -1;
 }
 
-List<T> sort<T>(List<T> list) {
-  list.sort();
+List<T> sort<T>(List<T> list, [int Function(T, T)? compare]) {
+  list.sort(compare);
+  return list;
+}
+List<T> sorted<T>(Iterable<T> iterable, [int Function(T, T)? compare]) {
+  var list = iterable.toList(growable: false);
+  list.sort(compare);
   return list;
 }
 
@@ -30,6 +35,10 @@ bool iterEquals(Iterable elements1, Iterable elements2) {
     if (!hasNext) return true;
     if (iter1.current != iter2.current) return false;
   }
+}
+
+DateTime stripTime(DateTime dt) {
+  return DateTime(dt.year, dt.month, dt.day);
 }
 
 ///https://stackoverflow.com/a/60191441

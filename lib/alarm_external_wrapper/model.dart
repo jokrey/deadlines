@@ -67,6 +67,7 @@ class RepeatableDateTime implements Comparable<RepeatableDateTime> {
 
   bool isOverdue() => !date.isRepeating() && toDateTime().isBefore(DateTime.now());
 
+  DateTime? lastOccurrenceBefore(DateTime reference) => date.lastOccurrenceBefore(reference, time);
   DateTime? nextOccurrenceAfter(DateTime reference) => date.nextOccurrenceAfter(reference, time);
 }
 

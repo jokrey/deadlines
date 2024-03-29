@@ -9,6 +9,7 @@ import 'package:deadlines/persistence/model.dart';
 import 'package:deadlines/ui/widgets/timer_page.dart';
 import 'package:deadlines/utils/utils.dart';
 import 'package:flutter/material.dart';
+import 'package:table_calendar/table_calendar.dart';
 import '../../persistence/deadline_alarm_manager.dart';
 
 
@@ -45,25 +46,54 @@ class UpcomingDeadlinesListController extends ChildController {
       var now = DateTime.now();
       shownBelow.clear();
       shownBelow.add((camel(Importance.critical.name), deadlinesDbCache.where((d) => d.isTimeless() && d.importance == Importance.critical).toList(growable: false)));
+
+      //todo: improve readability and maintainability of this insanity:
       List<Deadline> oneTimeEvents = deadlinesDbCache.where((d) => !d.isTimeless() && !d.isRepeating()).toList();
-      Map<DateTime, List<Deadline>> nonRepeatingOnEachDay = {};
+      Map<(DateTime, DateTime), List<Deadline>> nonRepeatingOnEachDay = {};
       for (var d in oneTimeEvents) {
         if (!(d.active || parent.showWhat == ShownType.showAll)) continue;
-        var c = (d.startsAt ?? d.deadlineAt!).toDateTime();
-        do {
-          if(d.active || (parent.showWhat == ShownType.showAll && c.isAfter(now))) {
-            nonRepeatingOnEachDay.update(c, (v) => v + [d], ifAbsent: () => [d]);
-          }
-          c = c.add(const Duration(days: 1));
-        } while(!c.isAfter(d.deadlineAt!.date.toDateTime()));
+        var cutOff = (d.startsAt ?? d.deadlineAt!).toDateTime();
+        var c1 = DateTime(cutOff.year, cutOff.month, cutOff.day);
+        var c2 = c1;
+        if(d.startsAt != null && !d.startsAt!.date.isSameDay(d.deadlineAt!.date)) {
+          c2 = d.deadlineAt!.date.toDateTime();
+        }
+        if(d.active || (parent.showWhat == ShownType.showAll && cutOff.isAfter(now))) {
+          nonRepeatingOnEachDay.update((c1, c2), (v) => v + [d], ifAbsent: () => [d]);
+        }
       }
       var nonRepeatingOnEachDaySorted = nonRepeatingOnEachDay.entries.map(
-        (e) => (e.key, sort(e.value))
+        (e) => (e.key, sort(e.value, (a, b) {
+          if(a.startsAt != null && a.startsAt!.isOverdue()) {
+            return a.deadlineAt!.compareTo(b.deadlineAt!);
+          }
+          return a.compareTo(b);
+        },))
       ).toList();
-      nonRepeatingOnEachDaySorted.sort((a, b) => a.$1.compareTo(b.$1),);
+      nonRepeatingOnEachDaySorted.sort((a, b) {
+        if(a.$1.$1.isAfter(now)) {
+          var diffA = a.$1.$1.difference(a.$1.$2).inDays;
+          var diffB = b.$1.$1.difference(b.$1.$2).inDays;
+          if(diffA == diffB) {
+            var compare = a.$1.$2.compareTo(b.$1.$2);
+            if(compare != 0) return compare;
+          }
+          var compare = a.$1.$1.compareTo(b.$1.$1);
+          if(compare == 0) return diffB - diffA;
+          return compare;
+        }
+        var compare = a.$1.$1.compareTo(b.$1.$1);
+        if(compare == 0) {
+          var diffA = a.$1.$1.difference(a.$1.$2).inDays;
+          var diffB = b.$1.$1.difference(b.$1.$2).inDays;
+          return diffB - diffA;
+        }
+        return compare;
+      },);
       shownBelow.addAll(nonRepeatingOnEachDaySorted.map(
-        (e) => ("${e.$1.day}.${e.$1.month}.${e.$1.year}", e.$2))
+        (e) => (isSameDay(e.$1.$1, e.$1.$2)? "${pad0(e.$1.$1.day)}.${pad0(e.$1.$1.month)}.${e.$1.$1.year}" : "${pad0(e.$1.$1.day)}.${pad0(e.$1.$1.month)}.${e.$1.$1.year} - ${pad0(e.$1.$2.day)}.${pad0(e.$1.$2.month)}.${e.$1.$2.year}", e.$2))
       );
+
       shownBelow.add((camel(Importance.important.name), deadlinesDbCache.where((d) => d.isTimeless() && d.importance == Importance.important).toList(growable: false)));
 
       List<Deadline> repeating = deadlinesDbCache.where((d) => d.isRepeating()).toList();
