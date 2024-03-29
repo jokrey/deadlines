@@ -331,11 +331,15 @@ class AwesomeNotificationsWrapper extends NotifyWrapper {
 
     int id = receivedAction.id!;
 
-    //todo, this should neither be done here nor like this probably... breaks coupling rule
-    int dlId = DeadlineAlarms.toDeadlineId(id);
-    if(dlId != -1 && id < DeadlineAlarms.SNOOZE_OFFSET) {
-      var d = await DeadlinesDatabase().loadById(dlId);
-      if (d != null) await DeadlineAlarms.updateAlarmsFor(d);
+    try {
+      //todo, this should neither be done here nor like this probably... breaks coupling rule
+      int dlId = DeadlineAlarms.toDeadlineId(id);
+      if (dlId != -1 && id < DeadlineAlarms.SNOOZE_OFFSET) {
+        var d = await DeadlinesDatabase().loadById(dlId);
+        if (d != null) await DeadlineAlarms.updateAlarmsFor(d);
+      }
+    } catch (e) {
+      print(e);
     }
 
     if (receivedAction.buttonKeyPressed == "SNOOZE") {

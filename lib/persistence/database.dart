@@ -3,7 +3,6 @@ import 'dart:io';
 
 import 'package:deadlines/alarm_external_wrapper/model.dart';
 import 'package:deadlines/persistence/deadline_alarm_manager.dart';
-import 'package:permission_handler/permission_handler.dart';
 
 import 'model.dart';
 import 'package:sqflite/sqflite.dart' as sql;
@@ -17,8 +16,10 @@ final class DeadlinesDatabase {
 
   static Future<sql.Database> _initDB() async {
     String path;
-    if(Platform.isAndroid && (await Permission.manageExternalStorage.isGranted || await Permission.manageExternalStorage.request().isGranted)) {
-      path = "/storage/emulated/0/Deadlines/deadlines.db"; //for private use (with MANAGE_EXTERNAL_STORAGE permission)
+    if(Platform.isAndroid) {
+      //Only for private use (with MANAGE_EXTERNAL_STORAGE permission)
+      //required Permission.manageExternalStorage.request() in main
+      path = "/storage/emulated/0/Deadlines/deadlines.db";
     } else {
       path = "deadlines.db"; //for public use (WITHOUT MANAGE_EXTERNAL_STORAGE permission)
     }
