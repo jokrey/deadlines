@@ -353,7 +353,6 @@ class _DeadlineTableCalendarState extends State<DeadlineTableCalendar> {
           return a.compareTo(b);
         }
       );
-      print("multiDayEvents: $multiDayEvents");
 
       List<Widget> children = [];
 
@@ -401,11 +400,11 @@ class _DeadlineTableCalendarState extends State<DeadlineTableCalendar> {
             );
           }
           var radius = BorderRadius.zero;
-          if (d.importance == Importance.critical) {
+          if ((d.startsAt?.date.isOnThisDay(day) ?? false) && (d.deadlineAt?.date.isOnThisDay(day) ?? false)) {
             radius = const BorderRadius.all(Radius.circular(5));
-          } else if (d.startsAt!.date.isOnThisDay(day)) {
+          } else if (d.startsAt?.date.isOnThisDay(day) ?? false) {
             radius = const BorderRadius.only(topLeft: Radius.circular(5), bottomLeft: Radius.circular(5));
-          } else if (d.deadlineAt!.date.isOnThisDay(day)) {
+          } else if (d.deadlineAt?.date.isOnThisDay(day) ?? false) {
             radius = const BorderRadius.only(topRight: Radius.circular(5), bottomRight: Radius.circular(5));
           }
           children.add(Container(
