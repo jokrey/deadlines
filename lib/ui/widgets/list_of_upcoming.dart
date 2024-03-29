@@ -111,7 +111,6 @@ class UpcomingDeadlinesListController extends ChildController {
             newList.add(d);
             lastDeadline = d;
           }
-          print("newList: $newList");
           return (isSameDay(r1, r2)? "${pad0(r1.day)}.${pad0(r1.month)}.${r1.year}" : "${pad0(r1.day)}.${pad0(r1.month)}.${r1.year} - ${pad0(r2.day)}.${pad0(r2.month)}.${r2.year}", newList);
         })
       );
