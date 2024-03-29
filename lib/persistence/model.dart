@@ -200,10 +200,12 @@ class Deadline implements Comparable<Deadline> {
 
   bool isOverdue() => active && !isTimeless() && deadlineAt!.isOverdue();
 
-  bool isOneFullDay() => startsAt != null && deadlineAt != null &&
-        startsAt!.date.isSameDay(deadlineAt!.date) &&
-        startsAt!.time.hour == 0 && startsAt!.time.minute == 0 &&
-        deadlineAt!.time.hour == 23 && deadlineAt!.time.minute == 59;
+  bool isOneFullDay() => rangeRepresentsOneFullDay(startsAt, deadlineAt);
+  static bool rangeRepresentsOneFullDay(RepeatableDateTime? d1, RepeatableDateTime? d2) =>
+      d1 != null && d2 != null &&
+      d1.date.isSameDay(d2.date) &&
+      d1.time.hour == 0 && d1.time.minute == 0 &&
+      d2.time.hour == 23 && d2.time.minute == 59;
 
 
   Deadline copyResetFirstOccurrenceTo(DateTime dayToResetTo) {
@@ -237,8 +239,8 @@ class Deadline implements Comparable<Deadline> {
 
   Deadline copyWithNextNotifyType(bool modifyStartsAt) => Deadline(
     id, title, description, color, active,
-    modifyStartsAt && startsAt!=null?startsAt!.withNextNotifyType():startsAt,
-    !modifyStartsAt && deadlineAt!=null?deadlineAt!.withNextNotifyType():deadlineAt,
+    modifyStartsAt && startsAt!=null?startsAt!.withNextNotifyType(isOneFullDay()? [NotificationType.off, NotificationType.silent] : NotificationType.values):startsAt,
+    !modifyStartsAt && deadlineAt!=null?deadlineAt!.withNextNotifyType(isOneFullDay()? [NotificationType.off, NotificationType.silent] : NotificationType.values):deadlineAt,
     importance,
     removals
   );

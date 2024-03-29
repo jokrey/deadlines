@@ -44,23 +44,25 @@ class DeadlineCard extends StatelessWidget {
                 delete(d),
                 // }),
               ),
-              title: Text(d.title),
-              subtitle: d.description.isEmpty ? null : Text(d.description.replaceAll("\n", "- "), softWrap: true, maxLines: 2,),
+              title: Text(d.title, softWrap: false, maxLines: 1),
+              subtitle: d.description.isEmpty ? null : Text(d.description, softWrap: false, maxLines: 3,),
               trailing:
                 d.isTimeless() ?
                   const Text("ToDo")
                 :
-                !d.hasRange() ?
-                  buildDateTimeWidget(d.deadlineAt!, d.deadlineAt!, isFirst: true)
-                    :
-                  Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.end,
+                d.deadlineAt!.date.isRepeating() && (!d.deadlineAt!.date.isWeekly() || (d.hasRange() && !d.isOneFullDay())) ?
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      buildDateTimeWidget(d.startsAt!, d.deadlineAt!, isFirst: true),
-                      buildDateTimeWidget(d.deadlineAt!, d.startsAt!, isFirst: false)
+                      Text("${camel(d.deadlineAt!.date.repetitionType.name)} "),
+                      buildDateTimeWidgets()
                     ],
-                  ),
+                  )
+                    :
+                  buildDateTimeWidgets()
+
             ),]
             +
             (d.active? [] : [Container(height: 4, color: appropriateColor)]),
@@ -69,7 +71,20 @@ class DeadlineCard extends StatelessWidget {
     );
   }
 
-  Widget buildDateTimeWidget(NotifyableRepeatableDateTime d1, NotifyableRepeatableDateTime d2, {required bool isFirst}) {
+  Widget buildDateTimeWidgets() =>
+    !d.hasRange() || d.isOneFullDay() ?
+      buildDateTimeWidget(d.deadlineAt!, d.deadlineAt!, isFirst: true, isOneFullDay: d.isOneFullDay())
+        :
+      Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          buildDateTimeWidget(d.startsAt!, d.deadlineAt!, isFirst: true),
+          buildDateTimeWidget(d.deadlineAt!, d.startsAt!, isFirst: false)
+        ],
+      );
+
+  Widget buildDateTimeWidget(NotifyableRepeatableDateTime d1, NotifyableRepeatableDateTime d2, {required bool isFirst, bool isOneFullDay = false}) {
     return Stack(
       alignment: Alignment.center,
       children: <Widget>[
@@ -77,7 +92,7 @@ class DeadlineCard extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              dateText(d1, d2, isFirst: isFirst),
+              dateText(d1, d2, isFirst: isFirst, isOneFullDay: isOneFullDay),
               textAlign: TextAlign.right,
             ),
             const SizedBox(width: 15,),
@@ -136,33 +151,52 @@ Future<bool> confirmDialog(BuildContext context, Deadline d) {
 
 String pad0(int i) => i.toString().padLeft(2, "0");
 String camel(String s) => s.substring(0, 1).toUpperCase() + s.substring(1);
-String dateText(RepeatableDateTime d1, RepeatableDateTime d2, {required bool isFirst}) {
+String dateText(RepeatableDateTime d1, RepeatableDateTime d2, {required bool isFirst, bool isOneFullDay = false}) {
   String s = "";
-  if(isFirst) {
-    if(d1.date.isRepeating() && (!d1.date.isWeekly() || d1.date != d2.date)) {
-      s += "${camel(d1.date.repetitionType.name)}: ";
-    }
-    if(d1.date.isWeekly()) {
-      s += "${DateFormat('EEEE').format(d1.date.toDateTime())}s ";
+  if(!d1.date.isRepeating() && d1.date == d2.date) {
+    //date label above anyways, no need to print date
+  } else {
+    if(isFirst) {
+      if (d1.date.isWeekly()) {
+        s += "${DateFormat('EEEE').format(d1.date.toDateTime())}s ";
+      } else {
+        if((!d1.date.isRepeating() && (d1.date.year != d2.date.year || d1.date.month != d2.date.month || d1.date.day != d2.date.day)) || d1.date.isYearly() || d1.date.isMonthly()) {
+          s+="${pad0(d1.date.day)}.";
+        }
+        if((!d1.date.isRepeating() && d1.date.year != d2.date.year || d1.date.month != d2.date.month) || d1.date.isYearly()) {
+          s+="${pad0(d1.date.month)}.";
+        }
+        if(!d1.date.isRepeating() && d1.date.year != d2.date.year) {
+          s+=pad0(d1.date.year);
+        }
+        s += " ";
+      }
+    } else {
+      if(d1 != d2) s += "-";
+
+      if(!d1.date.isSameDay(d2.date)) {
+        if (d1.date.isWeekly()) {
+          s += "${DateFormat('EEEE').format(d1.date.toDateTime())}s ";
+        } else {
+          if((!d1.date.isRepeating() && (d1.date.year != d2.date.year || d1.date.month != d2.date.month || d1.date.day != d2.date.day)) || d1.date.isYearly() || d1.date.isMonthly()) {
+            s+="${pad0(d1.date.day)}.";
+          }
+          if((!d1.date.isRepeating() && d1.date.year != d2.date.year || d1.date.month != d2.date.month) || d1.date.isYearly()) {
+            s+="${pad0(d1.date.month)}.";
+          }
+          if(!d1.date.isRepeating() && d1.date.year != d2.date.year) {
+            s+=pad0(d1.date.year);
+          }
+          s += " ";
+        }
+      }
     }
   }
 
-  if(d1 != d2 && !isFirst) s += "-";
-
-  if(isFirst || !d1.date.isSameDay(d2.date)) {
-    if (!d1.date.isRepeating()) {
-      s += "${pad0(d1.date.day)}.${pad0(d1.date.month)}.${pad0(d1.date.year)} ";
-    } else if (d1.date.isYearly()) {
-      s += "${pad0(d1.date.day)}.${pad0(d1.date.month)}. ";
-    } else if (d1.date.isMonthly()) {
-      s += "${pad0(d1.date.day)}. ";
-    } else if (!isFirst && d1.date != d2.date && d1.date.isWeekly()) {
-      s += "${DateFormat('EEEE').format(d1.date.toDateTime())}s ";
-    }
+  if(isOneFullDay) {
+    s+="all day";
+  } else {
+    s += "${pad0(d1.time.hour)}:${pad0(d1.time.minute)}";
   }
-  // if(d1.time != d2.time && !isFirst) s += "-";
-  s += "${d1.time.hour.toString().padLeft(2, '0')}:${d1.time.minute.toString().padLeft(2, '0')}";
-  // if(d1.time != d2.time && isFirst) s += "-";
-  // if(d1 != d2 && isFirst) s += "-";
   return s;
 }

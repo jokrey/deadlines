@@ -37,9 +37,8 @@ bool iterEquals(Iterable elements1, Iterable elements2) {
   }
 }
 
-DateTime stripTime(DateTime dt) {
-  return DateTime(dt.year, dt.month, dt.day);
-}
+DateTime stripTime(DateTime dt) => DateTime(dt.year, dt.month, dt.day);
+DateTime withTime(DateTime dt, [int hour = 0, int minute = 0, int second = 0]) => DateTime(dt.year, dt.month, dt.day, hour, minute, second);
 
 ///https://stackoverflow.com/a/60191441
 Color darken(Color c, [int percent = 10]) {

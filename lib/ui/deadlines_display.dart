@@ -4,6 +4,7 @@ import 'package:deadlines/ui/widgets/list_of_upcoming.dart';
 import 'package:deadlines/ui/widgets/calendar.dart';
 import 'package:deadlines/persistence/database.dart';
 import 'package:deadlines/persistence/model.dart';
+import 'package:deadlines/utils/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:intl/intl.dart';
@@ -43,7 +44,10 @@ class ParentController {
     var newDeadline = await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => EditDeadlineWidget(toEdit ?? Deadline(null, "", "", Colors.blue.value, true, null, newAt==null?null:fromDateTime(newAt), Importance.normal, const []))
+        builder: (context) => EditDeadlineWidget(
+          toEdit ?? Deadline(null, "", "", Colors.blue.value, true, null, newAt==null?null:fromDateTime(withTime(newAt, DateTime.now().hour+1), notify: NotificationType.silent), Importance.important, const []),
+          autofocusTitle: toEdit == null,
+        )
       ),
     );
     print("newDeadline: $newDeadline");

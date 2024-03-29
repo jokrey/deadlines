@@ -40,7 +40,7 @@ class NotifyableRepeatableDateTime extends RepeatableDateTime {
   @override int get hashCode => Object.hash(super.hashCode, notifyType);
   @override String toString() => "NRDT[${notifyType.index}, $date-$time]";
 
-      NotifyableRepeatableDateTime withNextNotifyType() => withNotifyType(NotificationType.values[(notifyType.index+1) % NotificationType.values.length]);
+  NotifyableRepeatableDateTime withNextNotifyType([List<NotificationType> allowed = NotificationType.values]) => withNotifyType(allowed[(allowed.indexOf(notifyType)+1) % allowed.length]);
   NotifyableRepeatableDateTime withNotifyType(NotificationType ov) => NotifyableRepeatableDateTime(date, time, ov);
 }
 

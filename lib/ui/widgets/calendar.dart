@@ -346,13 +346,14 @@ class _DeadlineTableCalendarState extends State<DeadlineTableCalendar> {
     var events = c.getDailyEvents(day);
 
     if(events.isNotEmpty) {
-      Iterable<Deadline> oneDayEvents = events.where((d) => (d.isOneDay() && !d.isOneFullDay()));
-      List<Deadline> multiDayEvents = events.where((d) => (!d.isOneDay() || d.isOneFullDay())).toList(growable: false);
+      Iterable<Deadline> oneDayEvents = events.where((d) => (d.isOneDay() && !d.isOneFullDay() && d.importance != Importance.critical));
+      List<Deadline> multiDayEvents = events.where((d) => (!d.isOneDay() || d.isOneFullDay() || d.importance == Importance.critical)).toList(growable: false);
+      print("multiDayEvents: $multiDayEvents");
 
       List<Widget> children = [];
 
       for(Deadline d in multiDayEvents) {
-        if(d.startsAt?.date.isOnThisDay(day) ?? false) {
+        if(d.startsAt?.date.isOnThisDay(day) ?? d.startsAt == null) {
           bool found = false;
           for(var (i, lastAt) in lastDrawnAtIndex.indexed) {
             if(lastAt == null) {
@@ -387,15 +388,15 @@ class _DeadlineTableCalendarState extends State<DeadlineTableCalendar> {
       for (Deadline? d in multiDayEventsDraw.take(2)) {
         if(d != null) {
           FittedBox? child;
-          if (d.startsAt!.date.isOnThisDay(day) || day.day == 1 || day.weekday == 1) {
+          if (d.startsAt?.date.isOnThisDay(day) ?? d.startsAt == null || day.day == 1 || day.weekday == 1) {
             child = FittedBox(
                 fit: BoxFit.scaleDown,
                 alignment: Alignment.centerLeft,
-                child: Text("${(!d.startsAt!.date.isOnThisDay(day) && (day.day == 1 || day.weekday == 1)) ? "..." : "  "}${d.title}", style: TextStyle(color: Color(d.color).computeLuminance() > 0.5 ? Colors.black : Colors.white),)
+                child: Text("${(!(d.startsAt?.date.isOnThisDay(day) ?? d.startsAt == null) && (day.day == 1 || day.weekday == 1)) ? "..." : "  "}${d.title}", style: TextStyle(color: Color(d.color).computeLuminance() > 0.5 ? Colors.black : Colors.white),)
             );
           }
           var radius = BorderRadius.zero;
-          if (d.isOneFullDay()) {
+          if (d.isOneFullDay() || d.importance == Importance.critical) {
             radius = const BorderRadius.all(Radius.circular(5));
           } else if (d.startsAt!.date.isOnThisDay(day)) {
             radius = const BorderRadius.only(topLeft: Radius.circular(5), bottomLeft: Radius.circular(5));
@@ -480,12 +481,12 @@ class _DeadlineTableCalendarState extends State<DeadlineTableCalendar> {
       ),
       onDaySelected: (selectedDay, focusedDay) {
         if (isSameDay(c._selectedDay, selectedDay)) return;
-        c._selectedDay = DateTime(selectedDay.year, selectedDay.month, selectedDay.day, DateTime.now().hour, DateTime.now().minute);
-        c._focusedDay = DateTime(focusedDay.year, focusedDay.month, focusedDay.day, DateTime.now().hour, DateTime.now().minute);
+        c._selectedDay = selectedDay;
+        c._focusedDay = focusedDay;
         c.updateShownList();
       },
       onPageChanged: (focusedDay) {
-        c._focusedDay = DateTime(focusedDay.year, focusedDay.month, focusedDay.day, DateTime.now().hour, DateTime.now().minute);
+        c._focusedDay = focusedDay;
         c._selectedDay = null;
         c.updatePotentiallyVisibleDeadlinesFromDb().then((_) => setState(() {
           c.updateShownList();

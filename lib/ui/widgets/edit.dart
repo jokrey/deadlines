@@ -9,13 +9,13 @@ import 'package:table_calendar/table_calendar.dart';
 
 class EditDeadlineWidget extends StatefulWidget {
   final Deadline original;
-  const EditDeadlineWidget(this.original, {super.key});
+  final bool autofocusTitle;
+  const EditDeadlineWidget(this.original, {this.autofocusTitle = false, super.key});
 
-  @override State<StatefulWidget> createState() => EditDeadlineWidgetState(original);
+  @override State<StatefulWidget> createState() => EditDeadlineWidgetState();
 }
 
 class EditDeadlineWidgetState extends State<EditDeadlineWidget> {
-  final Deadline original;
   TextEditingController titleInputController = TextEditingController();
   bool wasTitleEmpty = true;
   TextEditingController descriptionInputController = TextEditingController();
@@ -35,26 +35,28 @@ class EditDeadlineWidgetState extends State<EditDeadlineWidget> {
       startsAt!.hour == 0 && startsAt!.minute == 0 &&
       deadlineAt!.hour == 23 && deadlineAt!.minute == 59;
 
-  EditDeadlineWidgetState(this.original) {
-    titleInputController.text = original.title;
-    descriptionInputController.text = original.description;
-    deadlineAt = original.deadlineAt?.toDateTime();
-    deadlineAtNotifyType = original.deadlineAt?.notifyType;
-    if(original.startsAt != null) {
-      startsAt = original.startsAt!.toDateTime();
-      startsAtNotifyType = original.startsAt!.notifyType;
+  @override void initState() {
+    super.initState();
+
+    titleInputController.text = widget.original.title;
+    descriptionInputController.text = widget.original.description;
+    deadlineAt = widget.original.deadlineAt?.toDateTime();
+    deadlineAtNotifyType = widget.original.deadlineAt?.notifyType;
+    if(widget.original.startsAt != null) {
+      startsAt = widget.original.startsAt!.toDateTime();
+      startsAtNotifyType = widget.original.startsAt!.notifyType;
     }
-    color = Color(original.color);
-    repetitionType = original.deadlineAt?.date.repetitionType;
-    repetition = original.deadlineAt?.date.repetition;
+    color = Color(widget.original.color);
+    repetitionType = widget.original.deadlineAt?.date.repetitionType;
+    repetition = widget.original.deadlineAt?.date.repetition;
 
     if(isOneFullDay && startsAtNotifyType != null) {
       var temp = deadlineAtNotifyType;
       deadlineAtNotifyType = startsAtNotifyType!;
       startsAtNotifyType = temp;
     }
-    importance = original.importance;
-    removals = original.removals.toSet().toList();
+    importance = widget.original.importance;
+    removals = widget.original.removals.toSet().toList();
     removals.sort();
   }
 
@@ -85,7 +87,7 @@ class EditDeadlineWidgetState extends State<EditDeadlineWidget> {
           var fn = startsAt==null?null:fromDateTime(startsAt!, rep:repetitionType!, notify: startsAtNotifyType!);
           var ft = deadlineAt==null?null:fromDateTime(deadlineAt!, rep:repetitionType!, notify: deadlineAtNotifyType!);
           if(fn == null && ft == null) removals.clear();
-          var newD = Deadline(original.id, titleInputController.text, descriptionInputController.text, color.value, true, fn, ft, importance, removals);
+          var newD = Deadline(widget.original.id, titleInputController.text, descriptionInputController.text, color.value, true, fn, ft, importance, removals);
           Navigator.pop(context, newD);
         },
       ),
@@ -113,6 +115,7 @@ class EditDeadlineWidgetState extends State<EditDeadlineWidget> {
                   style: const TextStyle(fontSize: 20),
                   textAlign: TextAlign.center,
                   decoration: const InputDecoration(hintText: "Title"),
+                  autofocus: widget.autofocusTitle,
                 ),
                 const SizedBox(height: 25,),
                 Container(
@@ -136,7 +139,24 @@ class EditDeadlineWidgetState extends State<EditDeadlineWidget> {
                     decoration: const InputDecoration(hintText: "Description"),
                   ),
                 ),
-                const SizedBox(height: 25,),
+                const SizedBox(height: 15,),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    Text(deadlineAt == null?"ToDo:":"Importance:"),
+                    DropdownButton<Importance>(
+                      items: Importance.values.map((Importance v) {
+                        return DropdownMenuItem<Importance>(
+                          value: v,
+                          child: Text(v.name),
+                        );
+                      }).toList(),
+                      onChanged: (newlySelected) => setState(() {if(newlySelected != null) importance = newlySelected;}),
+                      value: importance,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10,),
                 Flexible(
                   child: GridView.builder(
                     shrinkWrap: true, // new line
@@ -172,25 +192,10 @@ class EditDeadlineWidgetState extends State<EditDeadlineWidget> {
     List<Widget> columnChildren = [];
 
     if(deadlineAt == null) {
-      columnChildren.add(Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          const Text("ToDo:"),
-          DropdownButton<Importance>(
-            items: Importance.values.map((Importance v) {
-              return DropdownMenuItem<Importance>(
-                value: v,
-                child: Text(v.name),
-              );
-            }).toList(),
-            onChanged: (newlySelected) => setState(() {if(newlySelected != null) importance = newlySelected;}),
-            value: importance,
-          ),
-        ],
-      ));
       columnChildren.add(TextButton(
         onPressed: () => setState(() {
-          deadlineAt = DateTime.now();
+          var now = DateTime.now();
+          deadlineAt = DateTime(now.year, now.month, now.day, now.hour + 1);
           deadlineAtNotifyType = NotificationType.off;
           repetitionType = RepetitionType.none;
           repetition = 1;
@@ -210,9 +215,11 @@ class EditDeadlineWidgetState extends State<EditDeadlineWidget> {
                     startsAtNotifyType!,
                         () {
                       setState(() {
-                        startsAtNotifyType =
-                        NotificationType.values[(startsAtNotifyType!.index +
-                            1) % NotificationType.values.length];
+                        if(isOneFullDay) {
+                          startsAtNotifyType = startsAtNotifyType == NotificationType.off? NotificationType.silent : NotificationType.off;
+                        } else {
+                          startsAtNotifyType = NotificationType.values[(startsAtNotifyType!.index + 1) % NotificationType.values.length];
+                        }
                       });
                     }
                 ),
@@ -249,6 +256,22 @@ class EditDeadlineWidgetState extends State<EditDeadlineWidget> {
             ),
           ],
         ));
+      } else {
+        rowChildren.add(TextButton(
+            onPressed: () =>
+                setState(() {
+                  if(startsAt == null) {
+                    startsAt = deadlineAt!.copyWith();
+                    deadlineAt = deadlineAt!.add(const Duration(hours: 1));
+                    startsAtNotifyType = NotificationType.off;
+                  } else if(isOneFullDay) {
+                    deadlineAt = deadlineAt!.add(const Duration(days: 1));
+                    startsAtNotifyType = NotificationType.off;
+                    deadlineAtNotifyType = NotificationType.off;
+                  }
+                }),
+            child: const Text("Add Start Date")
+        ));
       }
 
       rowChildren.add(Column(
@@ -277,9 +300,11 @@ class EditDeadlineWidgetState extends State<EditDeadlineWidget> {
                       deadlineAtNotifyType!,
                           () {
                         setState(() {
-                          deadlineAtNotifyType =
-                          NotificationType.values[(deadlineAtNotifyType!.index +
-                              1) % NotificationType.values.length];
+                          if(isOneFullDay) {
+                            deadlineAtNotifyType = deadlineAtNotifyType == NotificationType.off? NotificationType.silent : NotificationType.off;
+                          } else {
+                            deadlineAtNotifyType = NotificationType.values[(deadlineAtNotifyType!.index + 1) % NotificationType.values.length];
+                          }
                         });
                       }
                   ),
@@ -297,12 +322,14 @@ class EditDeadlineWidgetState extends State<EditDeadlineWidget> {
                       }
                     })
                 ),
-              ]
-              +
-              (startsAt == null || isOneFullDay ?
+              ],
+            ),
+          ]
+          +
+            (
+              startsAt == null || isOneFullDay ?
               [Row(
                 children: [
-                  const SizedBox(width: 5,),
                   const Text("All Day"),
                   Checkbox(
                     value: isOneFullDay,
@@ -318,20 +345,19 @@ class EditDeadlineWidgetState extends State<EditDeadlineWidget> {
                           startsAt = null;
                           startsAtNotifyType = null;
                           var now = DateTime.now();
-                          deadlineAt = deadlineAt!.copyWith(
-                              hour: now.hour, minute: now.minute);
+                          deadlineAt = deadlineAt!.copyWith(hour: now.hour, minute: now.minute);
+                          if(deadlineAtNotifyType != NotificationType.off) {
+                            deadlineAtNotifyType = NotificationType.silent;
+                          }
                         }
                       });
                     },
                   )
                 ],
-              )
-              ]
-                  :
+              )]
+                :
               []
-              ),
-            ),
-          ]
+            )
           +
           (!isOneFullDay ?
           [NicerTimePickerWidget(
@@ -354,18 +380,6 @@ class EditDeadlineWidgetState extends State<EditDeadlineWidget> {
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: rowChildren,
       ));
-
-      if (startsAt == null || isOneFullDay) {
-        columnChildren.add(TextButton(
-            onPressed: () =>
-                setState(() {
-                  startsAt = deadlineAt!.copyWith();
-                  deadlineAt = deadlineAt!.add(const Duration(hours: 1));
-                  startsAtNotifyType = NotificationType.off;
-                }),
-            child: const Text("Add Start Date")
-        ));
-      }
 
       columnChildren.add(Row(
           mainAxisAlignment: MainAxisAlignment.center,
