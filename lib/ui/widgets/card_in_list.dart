@@ -117,7 +117,7 @@ class DeadlineCard extends StatelessWidget {
         ),
       ]
       +
-      (d1.isOverdue()? [Positioned(left: 0, right: 0, child: Container(height: 2, color: darken(Colors.red, 35)))] : []),
+      (d1.isOverdue()? [Positioned(left: 0, right: 0, child: Container(height: 2, color: darken(Colors.red, 35).withAlpha(105)))] : []),
     );
   }
 }

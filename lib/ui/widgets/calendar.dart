@@ -255,7 +255,7 @@ class DeadlinesCalendarState extends State<DeadlinesCalendar> {
                             }
                             await showDialog(context: context, builder: (context) {
                               return SimpleDialog(
-                                title: Text("Calendar as Text: "),
+                                title: const Text("Calendar as Text: "),
                                 children: [
                                   TextField(
                                     controller: TextEditingController(text: builder),
@@ -343,7 +343,22 @@ class _DeadlineTableCalendarState extends State<DeadlineTableCalendar> {
   Widget? buildWidgetForDay(DateTime day, List<Deadline?> lastDrawnAtIndex) {
     var events = c.getDailyEvents(day);
 
+    const double rowHeight = 6;
+    double assumedBoxWidth = MediaQuery.of(context).size.width / 8;
+
+    List<Widget> children = [];
+
+    ShapeDecoration? decoration;
+    if(isSameDay(c._selectedDay, day)) {
+      decoration = const ShapeDecoration(shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(5))), color: Color(0xFF5C6BC0));
+    } else if(isSameDay(DateTime.now(), day)) {
+      decoration = const ShapeDecoration(shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(5))), color: Color(0x5F5C6BC0));
+    }
+    children.add(Text("${day.day}", style: TextStyle(fontSize: 14, color: day.weekday >= 6? Colors.white60 : null),));
+
+
     if(events.isNotEmpty) {
+
       List<Deadline> oneDayNormalEvents = sorted(events.where((d) => (d.isOneDay() && d.importance == Importance.normal)));
       List<Deadline> oneDayImportantEvents = sorted(events.where((d) => (d.isOneDay() && d.importance == Importance.important)));
 
@@ -351,9 +366,8 @@ class _DeadlineTableCalendarState extends State<DeadlineTableCalendar> {
       List<Deadline> multiDayNormalEvents = sorted(events.where((d) => (!d.isOneDay() && d.importance == Importance.normal)));
       List<Deadline> multiDayImportantEvents = sorted(events.where((d) => (!d.isOneDay() && d.importance == Importance.important)));
 
+      List<Deadline> shortEventsSorted = oneDayImportantEvents + oneDayNormalEvents;
       List<Deadline> wideEventsSorted = criticalEvents + multiDayImportantEvents + multiDayNormalEvents;
-
-      List<Widget> children = [];
 
       for(Deadline d in wideEventsSorted) {
         if(d.startsAt?.date.isOnThisDay(day) ?? d.startsAt == null) {
@@ -387,41 +401,83 @@ class _DeadlineTableCalendarState extends State<DeadlineTableCalendar> {
           if(i != -1) lastDrawnAtIndex[lastDrawnAtIndex.indexOf(d)] = null;
         }
       }
+      while(lastDrawnAtIndex.isNotEmpty && lastDrawnAtIndex.last == null) {
+        lastDrawnAtIndex.removeLast();
+      }
+
+      shortEventContainerFor(Deadline d) {
+        return d.importance == Importance.important ?
+        Container(
+          margin: const EdgeInsets.only(left: 0.4, right: 0.4, bottom: 1),
+          width: rowHeight * 2,
+          height: rowHeight,
+          decoration: ShapeDecoration(shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(rowHeight/2))), color: Color(d.color)),
+          child: FittedBox(
+              fit: BoxFit.fitHeight,
+              alignment: Alignment.centerLeft,
+              clipBehavior: Clip.hardEdge,
+              child: Text(" ${d.title} ", style: TextStyle(color: getForegroundForColor(Color(d.color)),))
+          ),
+        )
+            :
+        Container(
+          margin: const EdgeInsets.only(left: 0.4, right: 0.4, bottom: 1),
+          width: rowHeight,
+          height: rowHeight,
+          decoration: ShapeDecoration(shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(rowHeight/2))), color: Color(d.color)),
+        );
+      }
 
       for (Deadline? d in multiDayEventsDraw.take(2)) {
         if(d != null) {
           FittedBox? child;
-          if (d.startsAt?.date.isOnThisDay(day) ?? d.startsAt == null || day.day == 1 || day.weekday == 1) {
+          if ((d.startsAt?.date.isOnThisDay(day) ?? d.startsAt == null) || day.day == 1 || day.weekday == 1) {
             child = FittedBox(
-              fit: BoxFit.scaleDown,
+              fit: BoxFit.fitHeight,
+              clipBehavior: Clip.hardEdge,
               alignment: Alignment.centerLeft,
-              child: Text("${(!(d.startsAt?.date.isOnThisDay(day) ?? d.startsAt == null) && (day.day == 1 || day.weekday == 1)) ? "..." : " "}${d.title.substring(0, min(20, d.title.length))} ", style: TextStyle(color: getForegroundForColor(Color(d.color)),))
+              child: Text("${(!(d.startsAt?.date.isOnThisDay(day) ?? d.startsAt == null) && (day.day == 1 || day.weekday == 1)) ? "..." : " "}${d.title} ", style: TextStyle(color: getForegroundForColor(Color(d.color)),))
             );
           }
           var radius = BorderRadius.zero;
           if ((d.startsAt?.date.isOnThisDay(day) ?? true) && (d.deadlineAt?.date.isOnThisDay(day) ?? true)) {
-            radius = const BorderRadius.all(Radius.circular(2.5));
+            radius = const BorderRadius.all(Radius.circular(rowHeight/2));
           } else if (d.startsAt?.date.isOnThisDay(day) ?? false) {
-            radius = const BorderRadius.only(topLeft: Radius.circular(2.5), bottomLeft: Radius.circular(2.5));
+            radius = const BorderRadius.only(topLeft: Radius.circular(rowHeight/2), bottomLeft: Radius.circular(rowHeight/2));
           } else if (d.deadlineAt?.date.isOnThisDay(day) ?? false) {
-            radius = const BorderRadius.only(topRight: Radius.circular(2.5), bottomRight: Radius.circular(2.5));
+            radius = const BorderRadius.only(topRight: Radius.circular(rowHeight/2), bottomRight: Radius.circular(rowHeight/2));
           }
           children.add(Container(
             margin: const EdgeInsets.only(bottom: 1),
             width: double.maxFinite,
-            height: 5,
+            height: rowHeight,
             decoration: ShapeDecoration(shape: RoundedRectangleBorder(borderRadius: radius), color: Color(d.color)),
             child: child,
           ));
         } else {
-          children.add(Container(
-            margin: const EdgeInsets.only(bottom: 1),
-            width: double.maxFinite,
-            height: 5,
-          ));
+          List<Container> rowChildren = [];
+          double occupiedWidth = 0;
+          while(occupiedWidth + rowHeight*2 < assumedBoxWidth && shortEventsSorted.isNotEmpty) {
+            var container = shortEventContainerFor(shortEventsSorted.removeAt(0));
+            occupiedWidth += container.constraints!.minWidth;
+            rowChildren.add(container);
+          }
+          if(rowChildren.isNotEmpty) {
+            children.add(Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: rowChildren,
+            ));
+          } else {
+            children.add(Container(
+              margin: const EdgeInsets.only(bottom: 1),
+              width: double.maxFinite,
+              height: rowHeight,
+            ));
+          }
         }
       }
-      for (Deadline? d in multiDayEventsDraw.skip(2).take(2)) {
+      for (Deadline? d in multiDayEventsDraw.skip(2)) {
         children.add(Container(
           margin: const EdgeInsets.only(bottom: 1),
           width: double.maxFinite,
@@ -430,42 +486,40 @@ class _DeadlineTableCalendarState extends State<DeadlineTableCalendar> {
         ));
       }
 
-      children.add(ExtendedWrap(
-        alignment: WrapAlignment.center,
-        maxLines: 4 - min(2, criticalEvents.length),
-        children: (oneDayImportantEvents + oneDayNormalEvents).take(30).map((d) =>
-          d.importance == Importance.important ?
-            Container(
-              margin: const EdgeInsets.all(1),
-              width: 10,
-              height: 5,
-              decoration: ShapeDecoration(shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(2.5))), color: Color(d.color)),
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.centerLeft,
-                child: Text(" ${d.title.substring(0, min(5, d.title.length))} ", style: TextStyle(color: getForegroundForColor(Color(d.color)),))
-              ),
-            )
-            :
-            Container(
-              margin: const EdgeInsets.all(1),
-              width: 5,
-              height: 5,
-              decoration: ShapeDecoration(shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(2.5))), color: Color(d.color)),
-            )
-        ).toList(),
-      ));
+      while(shortEventsSorted.isNotEmpty) {
+        List<Container> rowChildren = [];
+        double occupiedWidth = 0;
+        while(occupiedWidth + rowHeight * 2 < assumedBoxWidth && shortEventsSorted.isNotEmpty) {
+          var container = shortEventContainerFor(shortEventsSorted.removeAt(0));
+          occupiedWidth += container.constraints!.minWidth;
+          rowChildren.add(container);
+        }
+        if(rowChildren.isNotEmpty) {
+          children.add(Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: rowChildren,
+          ));
+        }
+      }
+    }
 
-      return Container(
-        alignment: Alignment.topCenter,
-        padding: const EdgeInsets.only(top: 22),
-        child: Wrap(
-          alignment: WrapAlignment.center,
-          children: children
-        )
-      );
+
+    var container = AnimatedContainer(
+      duration: const Duration(milliseconds: 250),
+      decoration: decoration,
+      alignment: Alignment.topCenter,
+      padding: const EdgeInsets.only(bottom: rowHeight/1.8),
+      child: Wrap(
+        alignment: WrapAlignment.center,
+        clipBehavior: Clip.hardEdge,
+        children: children,
+      ),
+    );
+    if(!isSameMonth(c._focusedDay, day)) {
+      return Opacity(opacity: 0.2, child: container);
     } else {
-      return null;
+      return container;
     }
   }
 
@@ -489,15 +543,17 @@ class _DeadlineTableCalendarState extends State<DeadlineTableCalendar> {
       eventLoader: (day) {return const [];},
       startingDayOfWeek: StartingDayOfWeek.monday,
       calendarStyle: const CalendarStyle(
-        outsideDaysVisible: false,
+        outsideDaysVisible: true,
         cellAlignment: Alignment.topCenter,
         cellMargin: EdgeInsets.only(top: 3),
-        selectedDecoration: ShapeDecoration(shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(5))), color: Color(0xFF5C6BC0)),
-        todayDecoration: ShapeDecoration(shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(5))), color: Color(0xFF9FA8DA)),
       ),
       onDaySelected: (selectedDay, focusedDay) {
         if (isSameDay(c._selectedDay, selectedDay)) return;
-        c._selectedDay = selectedDay;
+        if(isSameMonth(selectedDay, focusedDay)) {
+          c._selectedDay = selectedDay;
+        } else {
+          c._selectedDay = null;
+        }
         c._focusedDay = focusedDay;
         c.updateShownList();
       },
@@ -509,7 +565,7 @@ class _DeadlineTableCalendarState extends State<DeadlineTableCalendar> {
         }));
       },
       calendarBuilders: CalendarBuilders(
-        markerBuilder: (context, day, events) => widgetPerDayCache[(day.year, day.month, day.day)],
+        prioritizedBuilder: (context, day, events) => widgetPerDayCache[(day.year, day.month, day.day)],
       ),
     );
   }
