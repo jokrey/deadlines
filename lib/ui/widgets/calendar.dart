@@ -237,9 +237,7 @@ class DeadlinesCalendarState extends State<DeadlinesCalendar> {
                               if (d.isTimeless()) {
                                 builder += "    ${d.importance.name}\n";
                               } else {
-                                if (d.isOneFullDay()) {
-                                  builder += "    ${d.startsAt?.date} (all day)\n";
-                                } else if (d.hasRange()) {
+                                if (d.hasRange()) {
                                   builder += "    ${d.startsAt?.date}-${d.startsAt?.time} -> ${d.deadlineAt?.date}-${d.deadlineAt?.time}\n";
                                 } else {
                                   builder += "    ${d.deadlineAt?.date}-${d.deadlineAt?.time}\n";
@@ -396,7 +394,7 @@ class _DeadlineTableCalendarState extends State<DeadlineTableCalendar> {
             );
           }
           var radius = BorderRadius.zero;
-          if (d.isOneFullDay() || d.importance == Importance.critical) {
+          if (d.importance == Importance.critical) {
             radius = const BorderRadius.all(Radius.circular(5));
           } else if (d.startsAt!.date.isOnThisDay(day)) {
             radius = const BorderRadius.only(topLeft: Radius.circular(5), bottomLeft: Radius.circular(5));

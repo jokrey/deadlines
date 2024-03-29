@@ -50,7 +50,7 @@ class DeadlineCard extends StatelessWidget {
                 d.isTimeless() ?
                   const Text("ToDo")
                 :
-                d.deadlineAt!.date.isRepeating() && (!d.deadlineAt!.date.isWeekly() || (d.hasRange() && !d.isOneFullDay())) ?
+                d.deadlineAt!.date.isRepeating() && (!d.deadlineAt!.date.isWeekly() || d.hasRange()) ?
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     mainAxisAlignment: MainAxisAlignment.end,
@@ -72,8 +72,8 @@ class DeadlineCard extends StatelessWidget {
   }
 
   Widget buildDateTimeWidgets() =>
-    !d.hasRange() || d.isOneFullDay() ?
-      buildDateTimeWidget(d.deadlineAt!, d.deadlineAt!, isFirst: true, isOneFullDay: d.isOneFullDay())
+    !d.hasRange() ?
+      buildDateTimeWidget(d.deadlineAt!, d.deadlineAt!, isFirst: true)
         :
       Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -84,7 +84,7 @@ class DeadlineCard extends StatelessWidget {
         ],
       );
 
-  Widget buildDateTimeWidget(NotifyableRepeatableDateTime d1, NotifyableRepeatableDateTime d2, {required bool isFirst, bool isOneFullDay = false}) {
+  Widget buildDateTimeWidget(NotifyableRepeatableDateTime d1, NotifyableRepeatableDateTime d2, {required bool isFirst}) {
     return Stack(
       alignment: Alignment.center,
       children: <Widget>[
@@ -92,7 +92,7 @@ class DeadlineCard extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              dateText(d1, d2, isFirst: isFirst, isOneFullDay: isOneFullDay),
+              dateText(d1, d2, isFirst: isFirst),
               textAlign: TextAlign.right,
             ),
             const SizedBox(width: 15,),
@@ -151,7 +151,7 @@ Future<bool> confirmDialog(BuildContext context, Deadline d) {
 
 String pad0(int i) => i.toString().padLeft(2, "0");
 String camel(String s) => s.substring(0, 1).toUpperCase() + s.substring(1);
-String dateText(RepeatableDateTime d1, RepeatableDateTime d2, {required bool isFirst, bool isOneFullDay = false}) {
+String dateText(RepeatableDateTime d1, RepeatableDateTime d2, {required bool isFirst}) {
   String s = "";
   if(!d1.date.isRepeating() && d1.date == d2.date) {
     //date label above anyways, no need to print date
@@ -193,10 +193,6 @@ String dateText(RepeatableDateTime d1, RepeatableDateTime d2, {required bool isF
     }
   }
 
-  if(isOneFullDay) {
-    s+="all day";
-  } else {
-    s += "${pad0(d1.time.hour)}:${pad0(d1.time.minute)}";
-  }
+  s += "${pad0(d1.time.hour)}:${pad0(d1.time.minute)}";
   return s;
 }

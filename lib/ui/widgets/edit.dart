@@ -30,11 +30,6 @@ class EditDeadlineWidgetState extends State<EditDeadlineWidget> {
   late Importance importance;
   late List<Removal> removals;
 
-  bool get isOneFullDay => startsAt != null && deadlineAt != null &&
-      isSameDay(startsAt, deadlineAt) &&
-      startsAt!.hour == 0 && startsAt!.minute == 0 &&
-      deadlineAt!.hour == 23 && deadlineAt!.minute == 59;
-
   @override void initState() {
     super.initState();
 
@@ -50,11 +45,6 @@ class EditDeadlineWidgetState extends State<EditDeadlineWidget> {
     repetitionType = widget.original.deadlineAt?.date.repetitionType;
     repetition = widget.original.deadlineAt?.date.repetition;
 
-    if(isOneFullDay && startsAtNotifyType != null) {
-      var temp = deadlineAtNotifyType;
-      deadlineAtNotifyType = startsAtNotifyType!;
-      startsAtNotifyType = temp;
-    }
     importance = widget.original.importance;
     removals = widget.original.removals.toSet().toList();
     removals.sort();
@@ -79,11 +69,6 @@ class EditDeadlineWidgetState extends State<EditDeadlineWidget> {
       floatingActionButton: !allowSave?null: FloatingActionButton(
         child: const Icon(Icons.save),
         onPressed: () {
-          if(isOneFullDay) {
-            var temp = deadlineAtNotifyType;
-            deadlineAtNotifyType = startsAtNotifyType!;
-            startsAtNotifyType = temp;
-          }
           var fn = startsAt==null?null:fromDateTime(startsAt!, rep:repetitionType!, notify: startsAtNotifyType!);
           var ft = deadlineAt==null?null:fromDateTime(deadlineAt!, rep:repetitionType!, notify: deadlineAtNotifyType!);
           if(fn == null && ft == null) removals.clear();
@@ -206,7 +191,7 @@ class EditDeadlineWidgetState extends State<EditDeadlineWidget> {
 
     if(deadlineAt != null) {
       List<Widget> rowChildren = [];
-      if (startsAt != null && !isOneFullDay) {
+      if (startsAt != null) {
         rowChildren.add(Column(
           children: [
             Row(
@@ -215,11 +200,7 @@ class EditDeadlineWidgetState extends State<EditDeadlineWidget> {
                     startsAtNotifyType!,
                         () {
                       setState(() {
-                        if(isOneFullDay) {
-                          startsAtNotifyType = startsAtNotifyType == NotificationType.off? NotificationType.silent : NotificationType.off;
-                        } else {
-                          startsAtNotifyType = NotificationType.values[(startsAtNotifyType!.index + 1) % NotificationType.values.length];
-                        }
+                        startsAtNotifyType = NotificationType.values[(startsAtNotifyType!.index + 1) % NotificationType.values.length];
                       });
                     }
                 ),
@@ -260,121 +241,62 @@ class EditDeadlineWidgetState extends State<EditDeadlineWidget> {
         rowChildren.add(TextButton(
             onPressed: () =>
                 setState(() {
-                  if(startsAt == null) {
-                    startsAt = deadlineAt!.copyWith();
-                    deadlineAt = deadlineAt!.add(const Duration(hours: 1));
-                    startsAtNotifyType = NotificationType.off;
-                  } else if(isOneFullDay) {
-                    deadlineAt = deadlineAt!.add(const Duration(days: 1));
-                    startsAtNotifyType = NotificationType.off;
-                    deadlineAtNotifyType = NotificationType.off;
-                  }
+                  startsAt = deadlineAt!.copyWith();
+                  deadlineAt = deadlineAt!.add(const Duration(hours: 1));
+                  startsAtNotifyType = NotificationType.off;
                 }),
             child: const Text("Add Start Date")
         ));
       }
 
-      rowChildren.add(Column(
-          children:
-          <Widget>[
-            Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  GestureDetector(
-                    onTap: () =>
-                        setState(() {
-                          startsAt = null;
-                          startsAtNotifyType = null;
-                          deadlineAt = null;
-                          deadlineAtNotifyType = null;
-                          repetitionType = null;
-                          repetition = null;
-                          removals.clear();
-                        }),
-                    child: const Icon(Icons.remove_circle_rounded, size: 15,),
-                  ),
-                  const SizedBox(width: 10,),
-                  const Text("Deadline", textAlign: TextAlign.center,),
-                  const SizedBox(width: 10,),
-                  buildNotificationSelector(
-                      deadlineAtNotifyType!,
-                          () {
-                        setState(() {
-                          if(isOneFullDay) {
-                            deadlineAtNotifyType = deadlineAtNotifyType == NotificationType.off? NotificationType.silent : NotificationType.off;
-                          } else {
-                            deadlineAtNotifyType = NotificationType.values[(deadlineAtNotifyType!.index + 1) % NotificationType.values.length];
-                          }
-                        });
-                      }
-                  ),
-                ]
+      rowChildren.add(Column(children: <Widget>[
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            GestureDetector(
+              onTap: () =>
+                setState(() {
+                  startsAt = null;
+                  startsAtNotifyType = null;
+                  deadlineAt = null;
+                  deadlineAtNotifyType = null;
+                  repetitionType = null;
+                  repetition = null;
+                  removals.clear();
+                }),
+              child: const Icon(Icons.remove_circle_rounded, size: 15,),
             ),
-            Row(
-              children: <Widget>[
-                NicerDatePickerWidget(deadlineAt, (result) =>
-                    setState(() {
-                      if (result != null) {
-                        if (isOneFullDay) {
-                          startsAt = startsAt!.copyWith(year: result.year, month: result.month, day: result.day);
-                        }
-                        deadlineAt = deadlineAt!.copyWith(year: result.year, month: result.month, day: result.day);
-                      }
-                    })
-                ),
-              ],
+            const SizedBox(width: 10,),
+            const Text("Deadline", textAlign: TextAlign.center,),
+            const SizedBox(width: 10,),
+            buildNotificationSelector(
+              deadlineAtNotifyType!,
+              () {
+                setState(() {
+                  deadlineAtNotifyType = NotificationType.values[(deadlineAtNotifyType!.index + 1) % NotificationType.values.length];
+                });
+              }
             ),
           ]
-          +
-            (
-              startsAt == null || isOneFullDay ?
-              [Row(
-                children: [
-                  const Text("All Day"),
-                  Checkbox(
-                    value: isOneFullDay,
-                    onChanged: (newValue) {
-                      setState(() {
-                        if (newValue == true) {
-                          startsAt =
-                              deadlineAt!.copyWith(hour: 0, minute: 0);
-                          deadlineAt =
-                              deadlineAt!.copyWith(hour: 23, minute: 59);
-                          startsAtNotifyType = NotificationType.off;
-                        } else {
-                          startsAt = null;
-                          startsAtNotifyType = null;
-                          var now = DateTime.now();
-                          deadlineAt = deadlineAt!.copyWith(hour: now.hour, minute: now.minute);
-                          if(deadlineAtNotifyType != NotificationType.off) {
-                            deadlineAtNotifyType = NotificationType.silent;
-                          }
-                        }
-                      });
-                    },
-                  )
-                ],
-              )]
-                :
-              []
-            )
-          +
-          (!isOneFullDay ?
-          [NicerTimePickerWidget(
-            deadlineAt!.hour, deadlineAt!.minute,
-            onChanged: (h, m) {
-              bool beforeWasAfter = startsAt == null ||
-                  deadlineAt!.isAfter(startsAt!);
-              deadlineAt = deadlineAt!.copyWith(hour: h, minute: m);
-              if (beforeWasAfter != (startsAt == null ||
-                  deadlineAt!.isAfter(startsAt!))) setState(() {});
-            },
-          ),
-          ]
-              :
-          []
-          )
-      ));
+        ),
+        NicerDatePickerWidget(deadlineAt, (result) =>
+            setState(() {
+              if (result != null) {
+                deadlineAt = deadlineAt!.copyWith(year: result.year, month: result.month, day: result.day);
+              }
+            })
+        ),
+        NicerTimePickerWidget(
+          deadlineAt!.hour, deadlineAt!.minute,
+          onChanged: (h, m) {
+            bool beforeWasAfter = startsAt == null ||
+                deadlineAt!.isAfter(startsAt!);
+            deadlineAt = deadlineAt!.copyWith(hour: h, minute: m);
+            if (beforeWasAfter != (startsAt == null ||
+                deadlineAt!.isAfter(startsAt!))) setState(() {});
+          },
+        ),
+      ]));
 
       columnChildren.add(Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
