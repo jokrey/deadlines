@@ -46,6 +46,7 @@ class UpcomingDeadlinesListController extends ChildController {
       var now = DateTime.now();
       shownBelow.clear();
       shownBelow.add(("ToDo(${camel(Importance.critical.name)})", deadlinesDbCache.where((d) => d.isTimeless() && d.importance == Importance.critical).toList(growable: false)));
+      if(shownBelow.last.$2.isNotEmpty) shownBelow.add(("", []));
 
       //todo: improve readability and maintainability of this insanity:
       List<Deadline> oneTimeEvents = deadlinesDbCache.where((d) => !d.isTimeless() && !d.isRepeating()).toList();
@@ -92,6 +93,7 @@ class UpcomingDeadlinesListController extends ChildController {
         }
         return compare;
       },);
+
       Deadline? lastDeadline;
       shownBelow.addAll(nonRepeatingOnEachDaySorted.map(
         (e) {
@@ -99,7 +101,7 @@ class UpcomingDeadlinesListController extends ChildController {
           var list = e.$2;
           var newList = <Deadline?>[];
           for(Deadline d in list) {
-            if(lastDeadline != null && !d.isOverdue() && (lastDeadline?.deadlineAt)?.date.month != (d.deadlineAt)?.date.month) {
+            if(lastDeadline != null && !d.isOverdue() && (lastDeadline?.startsAt??lastDeadline?.deadlineAt)?.date.month != (d.startsAt??d.deadlineAt)?.date.month) {
               newList.add(null);
             }
             if(lastDeadline != null && lastDeadline?.isOverdue() != d.isOverdue()) {
@@ -113,8 +115,10 @@ class UpcomingDeadlinesListController extends ChildController {
           return (isSameDay(r1, r2)? "${pad0(r1.day)}.${pad0(r1.month)}.${r1.year}" : "${pad0(r1.day)}.${pad0(r1.month)}.${r1.year} - ${pad0(r2.day)}.${pad0(r2.month)}.${r2.year}", newList);
         })
       );
+      if(shownBelow.last.$2.isNotEmpty) shownBelow.add(("", []));
 
       shownBelow.add(("ToDo(${camel(Importance.important.name)})", deadlinesDbCache.where((d) => d.isTimeless() && d.importance == Importance.important).toList(growable: false)));
+      if(shownBelow.last.$2.isNotEmpty) shownBelow.add(("", []));
 
       List<Deadline> repeating = deadlinesDbCache.where((d) => d.isRepeating()).toList();
       Map<RepetitionType, List<Deadline>> repeatingByType = {};
@@ -125,8 +129,10 @@ class UpcomingDeadlinesListController extends ChildController {
       var repeatingByTypeSorted = repeatingByType.entries.map((e) => (e.key, sort(e.value))).toList();
       repeatingByTypeSorted.sort((a, b) => b.$1.index - a.$1.index,);
       shownBelow.addAll(repeatingByTypeSorted.map((e) => (camel(e.$1.name), e.$2)));
+      if(shownBelow.last.$2.isNotEmpty) shownBelow.add(("", []));
 
       shownBelow.add(("ToDo(${camel(Importance.normal.name)})", deadlinesDbCache.where((d) => d.isTimeless() && (d.importance == Importance.normal)).toList(growable: false)));
+      if(shownBelow.last.$2.isNotEmpty) shownBelow.add(("", []));
     });
 
     //wait required, because createNotification does not wait until notification actually registered to return future...
