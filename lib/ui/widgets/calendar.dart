@@ -344,19 +344,18 @@ class _DeadlineTableCalendarState extends State<DeadlineTableCalendar> {
     var events = c.getDailyEvents(day);
 
     if(events.isNotEmpty) {
-      Iterable<Deadline> oneDayEvents = events.where((d) => (d.isOneDay() && d.importance != Importance.critical));
-      List<Deadline> multiDayEvents = sorted(
-        events.where((d) => (!d.isOneDay() || d.importance == Importance.critical)),
-        (a, b) {
-          var compare = a.importance.index.compareTo(b.importance.index);
-          if(compare != 0) return compare;
-          return a.compareTo(b);
-        }
-      );
+      List<Deadline> oneDayNormalEvents = sorted(events.where((d) => (d.isOneDay() && d.importance == Importance.normal)));
+      List<Deadline> oneDayImportantEvents = sorted(events.where((d) => (d.isOneDay() && d.importance == Importance.important)));
+
+      List<Deadline> criticalEvents = sorted(events.where((d) => d.importance == Importance.critical));
+      List<Deadline> multiDayNormalEvents = sorted(events.where((d) => (!d.isOneDay() && d.importance == Importance.normal)));
+      List<Deadline> multiDayImportantEvents = sorted(events.where((d) => (!d.isOneDay() && d.importance == Importance.important)));
+
+      List<Deadline> wideEventsSorted = criticalEvents + multiDayImportantEvents + multiDayNormalEvents;
 
       List<Widget> children = [];
 
-      for(Deadline d in multiDayEvents) {
+      for(Deadline d in wideEventsSorted) {
         if(d.startsAt?.date.isOnThisDay(day) ?? d.startsAt == null) {
           bool found = false;
           for(var (i, lastAt) in lastDrawnAtIndex.indexed) {
@@ -382,7 +381,7 @@ class _DeadlineTableCalendarState extends State<DeadlineTableCalendar> {
       List<Deadline?> multiDayEventsDraw = [];
       multiDayEventsDraw.addAll(lastDrawnAtIndex);
 
-      for(Deadline d in multiDayEvents) {
+      for(Deadline d in wideEventsSorted) {
         if(d.deadlineAt != null && d.deadlineAt!.date.isOnThisDay(day)) {
           var i = lastDrawnAtIndex.indexOf(d);
           if(i != -1) lastDrawnAtIndex[lastDrawnAtIndex.indexOf(d)] = null;
@@ -394,23 +393,23 @@ class _DeadlineTableCalendarState extends State<DeadlineTableCalendar> {
           FittedBox? child;
           if (d.startsAt?.date.isOnThisDay(day) ?? d.startsAt == null || day.day == 1 || day.weekday == 1) {
             child = FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.centerLeft,
-                child: Text("${(!(d.startsAt?.date.isOnThisDay(day) ?? d.startsAt == null) && (day.day == 1 || day.weekday == 1)) ? "..." : "  "}${d.title}", style: TextStyle(color: Color(d.color).computeLuminance() > 0.5 ? Colors.black : Colors.white),)
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text("${(!(d.startsAt?.date.isOnThisDay(day) ?? d.startsAt == null) && (day.day == 1 || day.weekday == 1)) ? "..." : " "}${d.title.substring(0, min(20, d.title.length))} ", style: TextStyle(color: getForegroundForColor(Color(d.color)),))
             );
           }
           var radius = BorderRadius.zero;
-          if ((d.startsAt?.date.isOnThisDay(day) ?? false) && (d.deadlineAt?.date.isOnThisDay(day) ?? false)) {
-            radius = const BorderRadius.all(Radius.circular(5));
+          if ((d.startsAt?.date.isOnThisDay(day) ?? true) && (d.deadlineAt?.date.isOnThisDay(day) ?? true)) {
+            radius = const BorderRadius.all(Radius.circular(2.5));
           } else if (d.startsAt?.date.isOnThisDay(day) ?? false) {
-            radius = const BorderRadius.only(topLeft: Radius.circular(5), bottomLeft: Radius.circular(5));
+            radius = const BorderRadius.only(topLeft: Radius.circular(2.5), bottomLeft: Radius.circular(2.5));
           } else if (d.deadlineAt?.date.isOnThisDay(day) ?? false) {
-            radius = const BorderRadius.only(topRight: Radius.circular(5), bottomRight: Radius.circular(5));
+            radius = const BorderRadius.only(topRight: Radius.circular(2.5), bottomRight: Radius.circular(2.5));
           }
           children.add(Container(
             margin: const EdgeInsets.only(bottom: 1),
             width: double.maxFinite,
-            height: 7,
+            height: 5,
             decoration: ShapeDecoration(shape: RoundedRectangleBorder(borderRadius: radius), color: Color(d.color)),
             child: child,
           ));
@@ -418,7 +417,7 @@ class _DeadlineTableCalendarState extends State<DeadlineTableCalendar> {
           children.add(Container(
             margin: const EdgeInsets.only(bottom: 1),
             width: double.maxFinite,
-            height: 7,
+            height: 5,
           ));
         }
       }
@@ -433,14 +432,27 @@ class _DeadlineTableCalendarState extends State<DeadlineTableCalendar> {
 
       children.add(ExtendedWrap(
         alignment: WrapAlignment.center,
-        maxLines: 4 - min(2, multiDayEvents.length),
-        children: oneDayEvents.take(30).map((d) =>
-          Container(
-            margin: const EdgeInsets.all(1),
-            width: 5,
-            height: 5,
-            decoration: BoxDecoration(shape: BoxShape.circle, color: Color(d.color)),
-          )
+        maxLines: 4 - min(2, criticalEvents.length),
+        children: (oneDayImportantEvents + oneDayNormalEvents).take(30).map((d) =>
+          d.importance == Importance.important ?
+            Container(
+              margin: const EdgeInsets.all(1),
+              width: 10,
+              height: 5,
+              decoration: ShapeDecoration(shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(2.5))), color: Color(d.color)),
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text(" ${d.title.substring(0, min(5, d.title.length))} ", style: TextStyle(color: getForegroundForColor(Color(d.color)),))
+              ),
+            )
+            :
+            Container(
+              margin: const EdgeInsets.all(1),
+              width: 5,
+              height: 5,
+              decoration: ShapeDecoration(shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(2.5))), color: Color(d.color)),
+            )
         ).toList(),
       ));
 
