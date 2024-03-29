@@ -240,7 +240,7 @@ class AwesomeNotificationsWrapper extends NotifyWrapper {
     AwesomeNotifications().createNotification(
       content: NotificationContent(
         channelKey: _SNOOZE_CHANNEL_NAME,
-        id: ongoingId, title: "Snoozed: $title",
+        id: ongoingId, title: "Snoozed for ${snoozeDuration.inMinutes}m: $title",
         payload: {"snooze-id":"$rescheduledId"},
         category: NotificationCategory.Status,
 
@@ -343,7 +343,7 @@ class AwesomeNotificationsWrapper extends NotifyWrapper {
     } else if(receivedAction.buttonKeyPressed == "CANCEL-SNOOZE") {
       int idOfScheduledSnooze = int.parse(receivedAction.payload!["snooze-id"]!);
       AwesomeNotifications().cancel(idOfScheduledSnooze);
-    } else {
+    } else if(receivedAction.channelKey != _SNOOZE_CHANNEL_NAME) {
       var notifyType = NotificationType.values[int.parse(receivedAction.payload!["type"]!)];
 
       bool wasInForeground = receivedAction.actionLifeCycle == NotificationLifeCycle.Foreground;
