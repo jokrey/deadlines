@@ -10,7 +10,7 @@ class DeadlineAlarms {
   static const SNOOZE_OFFSET = DEADLINE_OFFSET * 3; //uses range [300000, 400000]
   static const SNOOZE_ONGOING_OFFSET = DEADLINE_OFFSET * 4; //uses range [400000, 500000]
   static const TIMER_OFFSET = DEADLINE_OFFSET * 10; //uses range [300000, 300006]
-  static int toDeadlineId(int notifyId) => notifyId > TIMER_OFFSET ? -1 : notifyId % DEADLINE_OFFSET - 1;
+  static int toDeadlineId(int notifyId) => notifyId > TIMER_OFFSET ? -1 : (notifyId % DEADLINE_OFFSET) - 1;
   static int toNotificationId(int deadlineId, bool isForStartsAt) {
     if(deadlineId >= DEADLINE_OFFSET) throw ArgumentError("cannot have deadlineId > $DEADLINE_OFFSET");
     if(deadlineId < 0) throw ArgumentError("cannot have deadlineId < 0");
