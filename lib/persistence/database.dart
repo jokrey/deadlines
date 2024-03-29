@@ -17,7 +17,7 @@ final class DeadlinesDatabase {
 
   static Future<sql.Database> _initDB() async {
     String path;
-    if(Platform.isAndroid && await Permission.manageExternalStorage.request().isGranted) {
+    if(Platform.isAndroid && (await Permission.manageExternalStorage.isGranted || await Permission.manageExternalStorage.request().isGranted)) {
       path = "/storage/emulated/0/Deadlines/deadlines.db"; //for private use (with MANAGE_EXTERNAL_STORAGE permission)
     } else {
       path = "deadlines.db"; //for public use (WITHOUT MANAGE_EXTERNAL_STORAGE permission)
