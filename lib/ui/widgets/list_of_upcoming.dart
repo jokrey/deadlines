@@ -45,7 +45,7 @@ class UpcomingDeadlinesListController extends ChildController {
     setState!(() {
       var now = DateTime.now();
       shownBelow.clear();
-      shownBelow.add((camel(Importance.critical.name), deadlinesDbCache.where((d) => d.isTimeless() && d.importance == Importance.critical).toList(growable: false)));
+      shownBelow.add(("ToDo(${camel(Importance.critical.name)})", deadlinesDbCache.where((d) => d.isTimeless() && d.importance == Importance.critical).toList(growable: false)));
 
       //todo: improve readability and maintainability of this insanity:
       List<Deadline> oneTimeEvents = deadlinesDbCache.where((d) => !d.isTimeless() && !d.isRepeating()).toList();
@@ -94,7 +94,7 @@ class UpcomingDeadlinesListController extends ChildController {
         (e) => (isSameDay(e.$1.$1, e.$1.$2)? "${pad0(e.$1.$1.day)}.${pad0(e.$1.$1.month)}.${e.$1.$1.year}" : "${pad0(e.$1.$1.day)}.${pad0(e.$1.$1.month)}.${e.$1.$1.year} - ${pad0(e.$1.$2.day)}.${pad0(e.$1.$2.month)}.${e.$1.$2.year}", e.$2))
       );
 
-      shownBelow.add((camel(Importance.important.name), deadlinesDbCache.where((d) => d.isTimeless() && d.importance == Importance.important).toList(growable: false)));
+      shownBelow.add(("ToDo(${camel(Importance.important.name)})", deadlinesDbCache.where((d) => d.isTimeless() && d.importance == Importance.important).toList(growable: false)));
 
       List<Deadline> repeating = deadlinesDbCache.where((d) => d.isRepeating()).toList();
       Map<RepetitionType, List<Deadline>> repeatingByType = {};
@@ -105,7 +105,8 @@ class UpcomingDeadlinesListController extends ChildController {
       var repeatingByTypeSorted = repeatingByType.entries.map((e) => (e.key, sort(e.value))).toList();
       repeatingByTypeSorted.sort((a, b) => b.$1.index - a.$1.index,);
       shownBelow.addAll(repeatingByTypeSorted.map((e) => (camel(e.$1.name), e.$2)));
-      shownBelow.add((camel(Importance.normal.name), deadlinesDbCache.where((d) => d.isTimeless() && (d.importance == Importance.normal)).toList(growable: false)));
+
+      shownBelow.add(("ToDo(${camel(Importance.normal.name)})", deadlinesDbCache.where((d) => d.isTimeless() && (d.importance == Importance.normal)).toList(growable: false)));
     });
 
     //wait required, because createNotification does not wait until notification actually registered to return future...
