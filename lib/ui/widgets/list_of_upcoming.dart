@@ -19,7 +19,7 @@ class UpcomingDeadlinesListController extends ChildController {
   UpcomingDeadlinesListController(this.parent);
 
   final List<Deadline> deadlinesDbCache = [];
-  final List<(String, List<Deadline>)> shownBelow = [];
+  final List<(String, List<Deadline?>)> shownBelow = [];
 
   double scrollOffset = -1;
   Function(VoidCallback)? setState;
@@ -71,6 +71,8 @@ class UpcomingDeadlinesListController extends ChildController {
         },))
       ).toList();
       nonRepeatingOnEachDaySorted.sort((a, b) {
+        var compare = (a.$1.$1.isAfter(now)?1:0).compareTo((b.$1.$1.isAfter(now)?1:0));
+        if(compare == 0) return a.$1.$2.compareTo(b.$1.$2);
         if(a.$1.$1.isAfter(now)) {
           var diffA = a.$1.$1.difference(a.$1.$2).inDays;
           var diffB = b.$1.$1.difference(b.$1.$2).inDays;
@@ -82,7 +84,7 @@ class UpcomingDeadlinesListController extends ChildController {
           if(compare == 0) return diffB - diffA;
           return compare;
         }
-        var compare = a.$1.$1.compareTo(b.$1.$1);
+        compare = a.$1.$1.compareTo(b.$1.$1);
         if(compare == 0) {
           var diffA = a.$1.$1.difference(a.$1.$2).inDays;
           var diffB = b.$1.$1.difference(b.$1.$2).inDays;
@@ -90,8 +92,26 @@ class UpcomingDeadlinesListController extends ChildController {
         }
         return compare;
       },);
+      Deadline? lastDeadline;
       shownBelow.addAll(nonRepeatingOnEachDaySorted.map(
-        (e) => (isSameDay(e.$1.$1, e.$1.$2)? "${pad0(e.$1.$1.day)}.${pad0(e.$1.$1.month)}.${e.$1.$1.year}" : "${pad0(e.$1.$1.day)}.${pad0(e.$1.$1.month)}.${e.$1.$1.year} - ${pad0(e.$1.$2.day)}.${pad0(e.$1.$2.month)}.${e.$1.$2.year}", e.$2))
+        (e) {
+          var (r1, r2) = e.$1;
+          var list = e.$2;
+          var newList = <Deadline?>[];
+          for(Deadline d in list) {
+            if(lastDeadline != null && !d.isOverdue() && (lastDeadline?.deadlineAt)?.date.month != (d.deadlineAt)?.date.month) {
+              newList.add(null);
+            }
+            if(lastDeadline != null && lastDeadline?.isOverdue() != d.isOverdue()) {
+              newList.add(null);
+              newList.add(null);
+            }
+            newList.add(d);
+            lastDeadline = d;
+          }
+          print("newList: $newList");
+          return (isSameDay(r1, r2)? "${pad0(r1.day)}.${pad0(r1.month)}.${r1.year}" : "${pad0(r1.day)}.${pad0(r1.month)}.${r1.year} - ${pad0(r2.day)}.${pad0(r2.month)}.${r2.year}", newList);
+        })
       );
 
       shownBelow.add(("ToDo(${camel(Importance.important.name)})", deadlinesDbCache.where((d) => d.isTimeless() && d.importance == Importance.important).toList(growable: false)));
@@ -176,23 +196,32 @@ class UpcomingDeadlinesListState extends State<UpcomingDeadlinesList> {
               itemCount: c.shownBelow.length,
               itemBuilder: (context, index) {
                 var (label, ds) = c.shownBelow[index];
-                return ListView.builder(
-                  shrinkWrap: true,
-                  physics: const ClampingScrollPhysics(),
-                  itemCount: ds.isEmpty?0:1+ds.length,
-                  padding: const EdgeInsets.all(5),
-                  itemBuilder: (context, index) {
-                    if(index == 0) return Text(label);
-                    var d = ds[index-1];
-                    return DeadlineCard(
-                      d,
-                      (d) => c.parent.editDeadlineWithoutReload(c, ogContext, d.id!),
-                      (d) => c.parent.deleteDeadlineWithoutReload(c, ogContext, d, null),
-                      (d) => c.parent.toggleDeadlineActiveWithoutReload(c, ogContext, d),
-                      (d, nrdt, ov) => c.parent.toggleDeadlineNotificationTypeWithoutReload(c, d, nrdt, ov),
-                    );
-                  }
-                );
+                var firstNonNullIndex = ds.takeWhile((d) => d == null).length;
+                if(label.isEmpty) {
+                  return const SizedBox(height: 25,);
+                } else {
+                  return ListView.builder(
+                    shrinkWrap: true,
+                    physics: const ClampingScrollPhysics(),
+                    itemCount: ds.isEmpty ? 0 : 1 + ds.length,
+                    padding: const EdgeInsets.all(5),
+                    itemBuilder: (context, index) {
+                      if (index == firstNonNullIndex) return Text(label);
+                      var d = ds[index < firstNonNullIndex? index:index - 1];
+                      if(d == null) {
+                        return const SizedBox(height: 25,);
+                      } else {
+                        return DeadlineCard(
+                          d, 
+                          (d) => c.parent.editDeadlineWithoutReload(c, ogContext, d.id!),
+                          (d) => c.parent.deleteDeadlineWithoutReload(c, ogContext, d, null),
+                          (d) => c.parent.toggleDeadlineActiveWithoutReload(c, ogContext, d),
+                          (d, nrdt, ov) => c.parent.toggleDeadlineNotificationTypeWithoutReload(c, d, nrdt, ov),
+                        );
+                      }
+                    }
+                  );
+                }
               },
             ),
           ),
