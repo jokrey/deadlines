@@ -65,7 +65,7 @@ class DeadlineCard extends StatelessWidget {
 
             ),]
             +
-            (d.active? (d.isOverdue() ? [IgnorePointer(child: Positioned.fill(child: Container(decoration: ShapeDecoration(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)), color: const Color(0xFFF94144).withAlpha(7)),)))] : []) : [IgnorePointer(child: Container(height: 4, color: appropriateColor))]),
+            (d.active? (d.isOverdue() ? [Positioned.fill(child: IgnorePointer(child: Container(decoration: ShapeDecoration(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)), color: const Color(0xFFF94144).withAlpha(7)),)))] : []) : [IgnorePointer(child: Container(height: 4, color: appropriateColor))]),
         ),
       ),
     );
