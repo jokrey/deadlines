@@ -1,8 +1,13 @@
+// import 'dart:convert';
 // import 'dart:typed_data';
 //
 // import 'package:deadlines/alarm_external_wrapper/notify_wrapper.dart';
+// import 'package:deadlines/main.dart';
+// import 'package:deadlines/persistence/database.dart';
+// import 'package:deadlines/persistence/deadline_alarm_manager.dart';
 // import 'package:flutter/material.dart';
 // import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+// import 'package:fluttertoast/fluttertoast.dart';
 // import 'package:timezone/timezone.dart' as tz;
 // import 'package:timezone/data/latest.dart' as tz;
 //
@@ -11,6 +16,7 @@
 //
 // @pragma('vm:entry-point')
 // void forBackgroundNotifies(NotificationResponse details) {
+//   print("forBackgroundNotifies");
 //   (staticNotify as LocalNotificationsWrapper).onActionReceivedMethod(details);
 // }
 //
@@ -21,32 +27,27 @@
 //   static const String _ALARM_CHANNEL_NAME = "alarm";
 //   static const String _SNOOZE_CHANNEL_NAME = "snooze";
 //
-//   late FlutterLocalNotificationsPlugin plugin;
+//   FlutterLocalNotificationsPlugin? plugin;
 //   bool isInForeground = false;
 //
 //   @override Future<void> init() async {
 //     super.init();
 //
 //     tz.initializeTimeZones();
-//     tz.setLocalLocation(tz.getLocation(DateTime.now().timeZoneName));
+//     // tz.setLocalLocation(tz.getLocation(await FlutterTimezone.getLocalTimezone()));
 //
 //     plugin = FlutterLocalNotificationsPlugin();
-//     await plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()?.requestNotificationsPermission();
+//     try {
+//       if (await plugin!.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()?.canScheduleExactNotifications() != true) {
+//         await plugin!.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()?.requestNotificationsPermission();
+//       }
+//     } catch (e) {
+//       print(e);
+//     }
 //
 //     const AndroidInitializationSettings initializationSettingsAndroid = AndroidInitializationSettings('@drawable/notify_icon');
-//     final DarwinInitializationSettings initializationSettingsDarwin = DarwinInitializationSettings(
-//       //onDidReceiveLocalNotification: (id, title, body, payload) => onDidReceiveLocalNotificationIOS(context, id, title, body, payload),
-//       requestAlertPermission: true,
-//       requestSoundPermission: true,
-//     );
-//     const LinuxInitializationSettings initializationSettingsLinux = LinuxInitializationSettings(
-//         defaultActionName: 'Open notification');
-//     final InitializationSettings initializationSettings = InitializationSettings(
-//         android: initializationSettingsAndroid,
-//         iOS: initializationSettingsDarwin,
-//         macOS: initializationSettingsDarwin,
-//         linux: initializationSettingsLinux);
-//     var result = await plugin.initialize(
+//     const InitializationSettings initializationSettings = InitializationSettings(android: initializationSettingsAndroid);
+//     var result = await plugin!.initialize(
 //       initializationSettings,
 //       onDidReceiveNotificationResponse: (details) {
 //         print("onDidReceiveNotificationResponse: $details");
@@ -55,9 +56,8 @@
 //       onDidReceiveBackgroundNotificationResponse: forBackgroundNotifies,
 //     );
 //
-//
 //     if (result == true) {
-//       plugin.getNotificationAppLaunchDetails().then((details) {
+//       plugin!.getNotificationAppLaunchDetails().then((details) {
 //         if (details != null && details.notificationResponse != null) {
 //           onActionReceivedMethod(details.notificationResponse!);
 //         }
@@ -67,125 +67,40 @@
 //
 //
 //
-//   @override Future<void> set(int notifyId, Color color, String title, String description, NotifyableRepeatableDateTime at) async {
-//     var atConcrete = at.buildNextNotificationTime(DateTime.now());
+//   @override Future<void> set(int notifyId, Color color, String title, String description, NotifyableRepeatableDateTime at, bool Function(DateTime)? shouldSkip, bool Function(DateTime)? shouldStop) async {
+//     var now = DateTime.now();
+//     DateTime? atConcrete = at.nextOccurrenceAfter(now);
+//     while(atConcrete != null && (atConcrete.isBefore(now) || (shouldSkip != null && shouldSkip(atConcrete)))) {
+//       var n = at.nextOccurrenceAfter(atConcrete.add(const Duration(days: 1)));
+//       if(n != null && shouldStop != null && shouldStop(n)) {
+//         await cancel(notifyId);
+//         return;
+//       }
+//       if(n == atConcrete) {
+//         print("bug here");
+//         atConcrete = null;
+//       } else {
+//         atConcrete = n;
+//       }
+//       print("atConcrete: $atConcrete");
+//     }
+//
 //     if(at.notifyType == NotificationType.off || atConcrete == null) {
 //       await cancel(notifyId);
 //     } else {
-//       NotificationDetails? details;
-//       if(at.notifyType == NotificationType.silent) {
-//         details = NotificationDetails(
-//             android: AndroidNotificationDetails(
-//               _SILENT_CHANNEL_NAME, _SILENT_CHANNEL_NAME,
-//               channelDescription: _SILENT_CHANNEL_NAME,
-//               importance: Importance.high,
-//               priority: Priority.defaultPriority,
-//               ongoing: false,
-//               fullScreenIntent: false,
-//               onlyAlertOnce: false,
-//               enableVibration: false,
-//               color: color,
-//               ledColor: color,
-//               actions: [
-//                 AndroidNotificationAction("SNOOZE", 'Snooze 5m',),
-//                 AndroidNotificationAction("DISMISS", 'Dismiss',),
-//               ]
-//             ),
-//             iOS: null, linux: null, macOS: null
-//         );
-//       }
-//       if(at.notifyType == NotificationType.normal) {
-//         details = NotificationDetails(
-//             android: AndroidNotificationDetails(
-//               _NORMAL_CHANNEL_NAME, _NORMAL_CHANNEL_NAME,
-//               channelDescription: _NORMAL_CHANNEL_NAME,
-//               importance: Importance.high,
-//               priority: Priority.defaultPriority,
-//               ongoing: false,
-//               fullScreenIntent: false,
-//               onlyAlertOnce: false,
-//               enableVibration: true,
-//               vibrationPattern: Int64List.fromList(
-//                   [0, 200, 200, 200, 200, 200, 200]),
-//               playSound: true,
-//               color: color,
-//               ledColor: color,
-//               actions: [
-//                 AndroidNotificationAction("SNOOZE", 'Snooze 5m',),
-//                 AndroidNotificationAction("DISMISS", 'Dismiss',),
-//               ]
-//             ),
-//             iOS: null, linux: null, macOS: null
-//         );
-//       }
-//       if(at.notifyType == NotificationType.fullscreen) {
-//         details = NotificationDetails(
-//             android: AndroidNotificationDetails(
-//               _FULLSCREEN_CHANNEL_NAME, _FULLSCREEN_CHANNEL_NAME,
-//               channelDescription: _FULLSCREEN_CHANNEL_NAME,
-//               importance: Importance.high,
-//               priority: Priority.high,
-//               ongoing: true,
-//               fullScreenIntent: true,
-//               onlyAlertOnce: false,
-//               enableVibration: true,
-//               vibrationPattern: Int64List.fromList(
-//                   [0, 200, 200, 200, 200, 200, 200]),
-//               playSound: true,
-//               color: color,
-//               ledColor: color,
-//               actions: [
-//                 AndroidNotificationAction("SNOOZE", 'Snooze 5m',),
-//                 AndroidNotificationAction("DISMISS", 'Dismiss',),
-//               ]
-//             ),
-//             iOS: null, linux: null, macOS: null
-//         );
-//       }
-//       if(at.notifyType == NotificationType.alarm) {
-//         details = NotificationDetails(
-//             android: AndroidNotificationDetails(
-//               _ALARM_CHANNEL_NAME, _ALARM_CHANNEL_NAME,
-//               channelDescription: _ALARM_CHANNEL_NAME,
-//               importance: Importance.high,
-//               priority: Priority.high,
-//               ongoing: true,
-//               fullScreenIntent: true,
-//               onlyAlertOnce: false,
-//               enableVibration: true,
-//               vibrationPattern: Int64List.fromList([0, 200, 200, 200, 200, 200, 200]),
-//               playSound: true,
-//               color: color,
-//               ledColor: color,
-//               actions: [
-//                 AndroidNotificationAction("SNOOZE", 'Snooze 5m',),
-//                 AndroidNotificationAction("DISMISS", 'Dismiss',),
-//               ]
-//             ),
-//             iOS: null, linux: null, macOS: null
-//         );
-//       }
-//
-//       plugin.zonedSchedule(
-//         notifyId, title, description, tz.TZDateTime.from(atConcrete, tz.local), details!,
-//         uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.wallClockTime
-//       );
+//       createNotification(notifyId, color, title, description, at, shouldSkip, shouldStop);
 //     }
 //   }
 //
 //   @override Future<void> cancel(int notifyId) async {
-//     await plugin.cancel(notifyId);
-//   }
-//
-//   @override Future<void> snooze(int originalId, Duration snoozeDuration, Color color, String title, String body, Map<String, String?> originalPayload) async {
-//     // TODO: implement snooze
+//     await plugin!.cancel(notifyId);
 //   }
 //
 //
 //
 //   @override Future<Duration> getDurationTo(int notifyId) async {
-//     var notifyWithId = (await plugin.pendingNotificationRequests()).where((e) => e.id == notifyId).firstOrNull;
-//     AndroidFlutterLocalNotificationsPlugin? androidPlugin = plugin.resolvePlatformSpecificImplementation();
+//     var notifyWithId = (await plugin!.pendingNotificationRequests()).where((e) => e.id == notifyId).firstOrNull;
+//     AndroidFlutterLocalNotificationsPlugin? androidPlugin = plugin!.resolvePlatformSpecificImplementation();
 //     var c = await androidPlugin?.getNotificationChannels();
 //
 //     return Duration.zero;
@@ -220,298 +135,262 @@
 //
 //
 //
+//   Future<bool> createNotification(int id, Color color, String title, String body, NotifyableRepeatableDateTime? at, bool Function(DateTime)? shouldSkip, bool Function(DateTime)? shouldStop, {(DateTime, NotificationType)? override, Map<String, dynamic>? additionalPayload}) async {
+//     NotificationType? notifyType;
+//     DateTime? atConcrete;
 //
-//   // Future<void> onNotificationDisplayedMethod(ReceivedNotification receivedNotification) async {
-//   //   debugPrint("========================================= onNotificationDisplayedMethod: $receivedNotification");
-//   //
-//   //   //problem: this is usually called after on-action when screen is off
-//   //   //         -> requires specialized, deeply coupled and hacky handling
-//   //   //  also: it sometimes is not... It is a fairly classic race condition in which both versions must be accounted for
-//   //
-//   //   if(receivedNotification.payload != null && receivedNotification.payload!.containsKey("ongoing-is-snoozed-notification-id")) {
-//   //     int ongoingId = int.parse(receivedNotification.payload!["ongoing-is-snoozed-notification-id"]!);
-//   //     AwesomeNotifications().cancel(ongoingId);
-//   //   }
-//   //
-//   //   bool wasInForeground = receivedNotification.displayedLifeCycle == NotificationLifeCycle.Foreground;
-//   //
-//   //   int id = receivedNotification.id!;
-//   //   var notifyType = NotificationType.values[int.parse(receivedNotification.payload!["type"]!)];
-//   //
-//   //   if(wasInForeground) {
-//   //     if(notifyType == NotificationType.fullscreen) {
-//   //       plugin.cancel(id);
-//   //       MainApp.navigatorKey.currentState?.pushNamedAndRemoveUntil(
-//   //           '/fullscreen',
-//   //               (route) => (route.settings.name != '/fullscreen') || route.isFirst,
-//   //           arguments: (receivedNotification.payload, wasInForeground)
-//   //       );
-//   //     } else if(notifyType == NotificationType.alarm) {
-//   //       plugin.cancel(id);
-//   //       MainApp.navigatorKey.currentState?.pushNamedAndRemoveUntil(
-//   //           '/alarm',
-//   //               (route) => (route.settings.name != '/alarm') || route.isFirst,
-//   //           arguments: (receivedNotification.payload, wasInForeground)
-//   //       );
-//   //     }
-//   //   } else {
-//   //     if (notifyType == NotificationType.alarm) {
-//   //       plugin.cancel(id);
-//   //       await FlutterOverlayWindow.showOverlay(
-//   //           alignment: OverlayAlignment.center,
-//   //           height: 333,
-//   //           width: 888,
-//   //           overlayTitle: "deadlines alarm running",
-//   //           overlayContent: "check out the notification"
-//   //       );
-//   //       await FlutterOverlayWindow.shareData(receivedNotification.payload);
-//   //     }
-//   //   }
-//   // }
-//   //
-//   // Future<void> onActionReceivedMethod(NotificationResponse receivedAction) async {
-//   //   debugPrint("========================================= onActionReceivedMethod: $receivedAction");
-//   //
-//   //   if (receivedAction.actionId == "SNOOZE") {
-//   //     snooze(const Duration(minutes: 5), receivedAction.backgroundColor!, receivedAction.title!, receivedAction.body!, receivedAction.payload!);
-//   //   } else if(receivedAction.actionId == "CANCEL-SNOOZE") {
-//   //     int idOfScheduledSnooze = int.parse(receivedAction.payload!["snooze-id"]!);
-//   //     plugin.cancel(idOfScheduledSnooze);
-//   //   }
-//   //
-//   //
-//   //   int id = receivedAction.id!;
-//   //   var notifyType = NotificationType.values[int.parse(receivedAction.payload!["type"])];
-//   //
-//   //   if (notifyType == NotificationType.fullscreen) {
-//   //     plugin.cancel(id);
-//   //     MainApp.navigatorKey.currentState?.pushNamedAndRemoveUntil(
-//   //         '/fullscreen',
-//   //             (route) => (route.settings.name != '/fullscreen') || route.isFirst,
-//   //         arguments: (receivedAction.payload, isInForeground)
-//   //     );
-//   //   } else if (notifyType == NotificationType.alarm) {
-//   //     plugin.cancel(id);
-//   //     MainApp.navigatorKey.currentState?.pushNamedAndRemoveUntil(
-//   //         '/alarm',
-//   //             (route) => (route.settings.name != '/alarm') || route.isFirst,
-//   //         arguments: (receivedAction.payload, isInForeground)
-//   //     );
-//   //   }
-//   // }
-//   //
-//   //
-//   //
-//   //
-//   // /// additionalPayload overrides existing "id" or "type" if present
-//   // static Future<void> showNotification(int id, Color color, String title, String body, NotifyableRepeatableDateTime? at, {(DateTime, NotificationType)? override, Map<String, String?>? additionalPayload}) async {
-//   //   NotificationSchedule? schedule;
-//   //   NotificationType notifyType;
-//   //   if(override != null) {
-//   //     var (date, type) = override;
-//   //     notifyType = type;
-//   //     if(!date.isAfter(DateTime.now())) {
-//   //       schedule = null; //show right away
-//   //     } else {
-//   //       schedule = NotificationCalendar(
-//   //         timeZone: date.timeZoneName,
-//   //         allowWhileIdle: true, preciseAlarm: true,
-//   //
-//   //         year: date.year, month: date.month, day: date.day,
-//   //         hour: date.hour, minute: date.minute, second: date.second,
-//   //       );
-//   //     }
-//   //   } else if(at != null) {
-//   //     notifyType = at.notifyType;
-//   //     if(!at.date.isRepeating()) {
-//   //       schedule = NotificationCalendar(
-//   //         timeZone: DateTime.now().timeZoneName,
-//   //         allowWhileIdle: true, preciseAlarm: true,
-//   //
-//   //         year: at.date.year, month: at.date.month, day: at.date.day,
-//   //         hour: at.time.hour, minute: at.time.minute,
-//   //         second: 0, millisecond: 0,
-//   //       );
-//   //     } else if(at.date.isYearly()) {
-//   //       schedule = NotificationCalendar(
-//   //         timeZone: DateTime.now().timeZoneName,
-//   //         allowWhileIdle: true, preciseAlarm: true,
-//   //
-//   //         repeats: true,
-//   //         month: at.date.month, day: at.date.day,
-//   //         hour: at.time.hour, minute: at.time.minute,
-//   //         second: 0, millisecond: 0,
-//   //       );
-//   //     } else if(at.date.isMonthly()) {
-//   //       schedule = NotificationCalendar(
-//   //         timeZone: DateTime.now().timeZoneName,
-//   //         allowWhileIdle: true, preciseAlarm: true,
-//   //
-//   //         repeats: true,
-//   //         day: at.date.day,
-//   //         hour: at.time.hour, minute: at.time.minute,
-//   //         second: 0, millisecond: 0,
-//   //       );
-//   //     } else if(at.date.isWeekly()) {
-//   //       schedule = NotificationCalendar(
-//   //         timeZone: DateTime.now().timeZoneName,
-//   //         allowWhileIdle: true, preciseAlarm: true,
-//   //
-//   //         repeats: true,
-//   //         weekday: at.date.toDateTime().weekday,
-//   //         hour: at.time.hour, minute: at.time.minute,
-//   //         second: 0, millisecond: 0,
-//   //       );
-//   //     } else if(at.date.isDaily()) {
-//   //       schedule = NotificationCalendar(
-//   //         timeZone: DateTime.now().timeZoneName,
-//   //         allowWhileIdle: true, preciseAlarm: true,
-//   //
-//   //         repeats: true,
-//   //         hour: at.time.hour, minute: at.time.minute,
-//   //         second: 0, millisecond: 0,
-//   //       );
-//   //     }
-//   //   } else {
-//   //     throw ArgumentError("at and it's override cannot both be null");
-//   //   }
-//   //
-//   //
-//   //   Map<String, String?> payload = {"id":id.toString(), "type": "${notifyType.index}", "color":"${color.value}", "title": title, "body":body};
-//   //   if(additionalPayload != null) payload.addAll(additionalPayload);//overrides
-//   //   if(notifyType == NotificationType.silent) {
-//   //     await AwesomeNotifications().createNotification(
-//   //       schedule: schedule,
-//   //       content: NotificationContent(
-//   //         channelKey: _SILENT_CHANNEL_NAME,
-//   //         id: id, title: title, body: body,
-//   //         payload: payload, backgroundColor: color,
-//   //         category: NotificationCategory.Reminder,
-//   //
-//   //         criticalAlert: true, wakeUpScreen: true,
-//   //       ),
-//   //       actionButtons: [
-//   //         NotificationActionButton(
-//   //           key: 'SNOOZE', label: 'Snooze 5m',
-//   //           actionType: ActionType.DismissAction,
-//   //         ),
-//   //         NotificationActionButton(
-//   //             key: 'DISMISS', label: 'Dismiss',
-//   //             actionType: ActionType.DismissAction
-//   //         )
-//   //       ],
-//   //     );
-//   //   } else if(notifyType == NotificationType.normal) {
-//   //     await AwesomeNotifications().createNotification(
-//   //       schedule: schedule,
-//   //       content: NotificationContent(
-//   //         channelKey: _NORMAL_CHANNEL_NAME,
-//   //         id: id, title: title, body: body,
-//   //         payload: payload, backgroundColor: color,
-//   //         category: NotificationCategory.Reminder,
-//   //
-//   //         criticalAlert: true, wakeUpScreen: true,
-//   //       ),
-//   //       actionButtons: [
-//   //         NotificationActionButton(
-//   //           key: 'SNOOZE', label: 'Snooze 5m',
-//   //           actionType: ActionType.DismissAction,
-//   //         ),
-//   //         NotificationActionButton(
-//   //             key: 'DISMISS', label: 'Dismiss',
-//   //             actionType: ActionType.DismissAction
-//   //         )
-//   //       ],
-//   //     );
-//   //   } else if(notifyType == NotificationType.fullscreen) {
-//   //     await AwesomeNotifications().createNotification(
-//   //       schedule: schedule,
-//   //       content: NotificationContent(
-//   //         channelKey: _FULLSCREEN_CHANNEL_NAME,
-//   //         id: id, title: title, body: body,
-//   //         payload: payload, backgroundColor: color,
-//   //         category: NotificationCategory.Reminder,
-//   //         fullScreenIntent: true,
-//   //
-//   //         criticalAlert: true, wakeUpScreen: true,
-//   //       ),
-//   //       actionButtons: [
-//   //         NotificationActionButton(
-//   //           key: 'SNOOZE', label: 'Snooze 5m',
-//   //           actionType: ActionType.DismissAction,
-//   //         ),
-//   //         NotificationActionButton(
-//   //             key: 'DISMISS', label: 'Dismiss',
-//   //             actionType: ActionType.DismissAction
-//   //         )
-//   //       ],
-//   //     );
-//   //   } else if(notifyType == NotificationType.alarm) {
-//   //     await AwesomeNotifications().createNotification(
-//   //       schedule: schedule,
-//   //       content: NotificationContent(
-//   //         channelKey: _ALARM_CHANNEL_NAME,
-//   //         id: id, title: title, body: body,
-//   //         payload: payload, backgroundColor: color,
-//   //         category: NotificationCategory.Alarm,
-//   //         fullScreenIntent: true,
-//   //
-//   //         criticalAlert: true, wakeUpScreen: true,
-//   //       ),
-//   //       actionButtons: [
-//   //         NotificationActionButton(
-//   //           key: 'SNOOZE', label: 'Snooze 5m',
-//   //           actionType: ActionType.DismissAction,
-//   //         ),
-//   //         NotificationActionButton(
-//   //             key: 'STOP', label: 'Stop',
-//   //             actionType: ActionType.DismissAction
-//   //         )
-//   //       ],
-//   //     );
-//   //   }
-//   // }
+//     if(override != null) {
+//       var (date, type) = override;
+//       notifyType = type;
+//       if(!date.isAfter(DateTime.now())) {
+//         atConcrete = null; //show right away
+//       } else {
+//         atConcrete = date;
+//       }
+//     } else if(at != null) {
+//       notifyType = at.notifyType;
+//       if(!at.date.isRepeating()) {
+//         atConcrete = at.toDateTime();
+//       } else {
+//         var now = DateTime.now();
+//         atConcrete = at.nextOccurrenceAfter(now);
+//         while(atConcrete != null && (atConcrete.isBefore(now) || (shouldSkip != null && shouldSkip(atConcrete)))) {
+//           var n = at.nextOccurrenceAfter(atConcrete.add(const Duration(days: 1)));
+//           if(n != null && shouldStop != null && shouldStop(n)) {
+//             return false;
+//           }
+//           if(n == atConcrete) {
+//             print("bug here");
+//             atConcrete = null;
+//           } else {
+//             atConcrete = n;
+//           }
+//           print("atConcrete: $atConcrete");
+//         }
+//         if(atConcrete == null) return false;
+//       }
+//     } else {
+//       throw ArgumentError("at and it's override cannot both be null");
+//     }
+//
+//
+//     NotificationDetails? details;
+//     if(notifyType == NotificationType.silent) {
+//       details = NotificationDetails(
+//           android: AndroidNotificationDetails(
+//               _SILENT_CHANNEL_NAME, _SILENT_CHANNEL_NAME,
+//               channelDescription: _SILENT_CHANNEL_NAME,
+//               category: AndroidNotificationCategory.reminder,
+//               importance: Importance.high,
+//               priority: Priority.defaultPriority,
+//               ongoing: true,
+//               fullScreenIntent: false,
+//               onlyAlertOnce: false,
+//               enableVibration: false,
+//               color: color,
+//               actions: [
+//                 const AndroidNotificationAction("SNOOZE", 'Snooze 5m'),
+//                 const AndroidNotificationAction("DISMISS", 'Dismiss'),
+//               ]
+//           ),
+//           iOS: null, linux: null, macOS: null
+//       );
+//     }
+//     if(notifyType == NotificationType.normal) {
+//       details = NotificationDetails(
+//           android: AndroidNotificationDetails(
+//               _NORMAL_CHANNEL_NAME, _NORMAL_CHANNEL_NAME,
+//               channelDescription: _NORMAL_CHANNEL_NAME,
+//               category: AndroidNotificationCategory.reminder,
+//               importance: Importance.high,
+//               priority: Priority.defaultPriority,
+//               ongoing: true,
+//               fullScreenIntent: false,
+//               onlyAlertOnce: false,
+//               enableVibration: true,
+//               vibrationPattern: Int64List.fromList(
+//                   [0, 200, 200, 200, 200, 200, 200]),
+//               playSound: true,
+//               color: color,
+//               actions: [
+//                 const AndroidNotificationAction("SNOOZE", 'Snooze 5m'),
+//                 const AndroidNotificationAction("DISMISS", 'Dismiss'),
+//               ]
+//           ),
+//           iOS: null, linux: null, macOS: null
+//       );
+//     }
+//     if(notifyType == NotificationType.fullscreen) {
+//       details = NotificationDetails(
+//           android: AndroidNotificationDetails(
+//               _FULLSCREEN_CHANNEL_NAME, _FULLSCREEN_CHANNEL_NAME,
+//               channelDescription: _FULLSCREEN_CHANNEL_NAME,
+//               category: AndroidNotificationCategory.reminder,
+//               audioAttributesUsage: AudioAttributesUsage.alarm,
+//               importance: Importance.max,
+//               priority: Priority.high,
+//               ongoing: true,
+//               fullScreenIntent: true,
+//               onlyAlertOnce: false,
+//               enableVibration: true,
+//               vibrationPattern: Int64List.fromList(
+//                   [0, 200, 200, 200, 200, 200, 200]),
+//               playSound: true,
+//               color: color,
+//               actions: [
+//                 const AndroidNotificationAction("SNOOZE", 'Snooze 5m'),
+//                 const AndroidNotificationAction("DISMISS", 'Dismiss'),
+//               ]
+//           ),
+//           iOS: null, linux: null, macOS: null
+//       );
+//     }
+//     if(notifyType == NotificationType.alarm) {
+//       details = NotificationDetails(
+//           android: AndroidNotificationDetails(
+//               _ALARM_CHANNEL_NAME, _ALARM_CHANNEL_NAME,
+//               channelDescription: _ALARM_CHANNEL_NAME,
+//               category: AndroidNotificationCategory.alarm,
+//               audioAttributesUsage: AudioAttributesUsage.alarm,
+//               importance: Importance.high,
+//               priority: Priority.max,
+//               ongoing: true,
+//               fullScreenIntent: true,
+//               onlyAlertOnce: false,
+//               enableVibration: true,
+//               vibrationPattern: Int64List.fromList([0, 200, 200, 200, 200, 200, 200]),
+//               playSound: true,
+//               color: color,
+//               actions: [
+//                 const AndroidNotificationAction("SNOOZE", 'Snooze 5m'),
+//                 const AndroidNotificationAction("DISMISS", 'Dismiss'),
+//               ]
+//           ),
+//           iOS: null, linux: null, macOS: null
+//       );
+//     }
+//
+//     Map<String, dynamic> payload = {
+//       "id": id.toString(),
+//       "type": notifyType.index.toString(),
+//       "color": color.value.toString(),
+//       "title": title,
+//       "body": body,
+//     };
+//     if(additionalPayload != null) payload.addAll(additionalPayload);//overrides
+//
+//     if(atConcrete == null) {
+//       plugin!.show(
+//         id, title, body, details!,
+//         payload: jsonEncode(payload)
+//       );
+//     } else {
+//       plugin!.zonedSchedule(
+//         id, title, body, tz.TZDateTime.from(atConcrete, tz.local), details!,
+//         androidAllowWhileIdle: true,
+//         androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+//         uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.wallClockTime,
+//         payload: jsonEncode(payload)
+//       );
+//     }
+//     return false;
+//   }
+//
+//
+//
+//   Future<void> onActionReceivedMethod(NotificationResponse receivedAction) async {
+//     if(plugin == null) await init();
+//
+//     debugPrint("========================================= onActionReceivedMethod: $receivedAction");
+//     int id = receivedAction.id!;
+//
+//     var payload = jsonDecode(receivedAction.payload!);
+//
+//
+//     var notifyType = NotificationType.values[int.parse(payload!["type"]!)];
+//
+//     try {
+//       //todo, this should neither be done here nor like this probably... breaks coupling rule
+//       int dlId = DeadlineAlarms.toDeadlineId(id);
+//       if (dlId != -1 && id < DeadlineAlarms.SNOOZE_OFFSET && (notifyType == NotificationType.fullscreen || notifyType == NotificationType.alarm)) {
+//         var d = await DeadlinesDatabase().loadById(dlId);
+//         if (d != null) await DeadlineAlarms.updateAlarmsFor(d);
+//       }
+//     } catch (e) {
+//       print(e);
+//     }
+//
+//     if (receivedAction.payload != null && payload!.containsKey("ongoing-is-snoozed-notification-id")) {
+//       int ongoingId = int.parse(payload!["ongoing-is-snoozed-notification-id"]!);
+//       cancel(ongoingId);
+//     }
+//
+//     if (receivedAction.actionId == "SNOOZE") {
+//       snooze(int.parse(payload["id"]), const Duration(minutes: 5),
+//           Color(int.parse(payload["color"]!)), payload["title"]!,
+//           payload["body"]!, payload!
+//       );
+//     } else if (receivedAction.actionId == "CANCEL-SNOOZE") {
+//       int idOfScheduledSnooze = int.parse(payload!["snooze-id"]!);
+//       cancel(idOfScheduledSnooze);
+//     } else {
+//       if(payload["is-rescheduled"] != null) return;
+//
+//       if (notifyType == NotificationType.fullscreen) {
+//         cancel(id);
+//         MainApp.navigatorKey.currentState?.pushNamedAndRemoveUntil(
+//           '/fullscreen',
+//           (route) => (route.settings.name != '/fullscreen') || route.isFirst,
+//           arguments: (jsonDecode(receivedAction.payload!), isInForeground)
+//         );
+//       } else if (notifyType == NotificationType.alarm) {
+//         cancel(id);
+//         MainApp.navigatorKey.currentState?.pushNamedAndRemoveUntil(
+//           '/alarm',
+//           (route) => (route.settings.name != '/alarm') || route.isFirst,
+//           arguments: (jsonDecode(receivedAction.payload!), isInForeground)
+//         );
+//       }
+//     }
+//   }
 //
 //
 //
 //
+//   @override Future<void> snooze(int originalId, Duration snoozeDuration, Color color, String title, String body, Map<String, dynamic> originalPayload) async {
+//     if(snoozeDuration.inHours > 2) throw ArgumentError("You snooze you loose");
 //
-//   // static void snooze(Duration snoozeDuration, Color color, String title, String body, Map<String, String?> originalPayload) {
-//   //   if(snoozeDuration.inHours > 2) throw ArgumentError("You snooze you loose");
-//   //
-//   //   Fluttertoast.showToast(msg: "Snoozed for ${snoozeDuration.inMinutes}m", toastLength: Toast.LENGTH_SHORT);
-//   //
-//   //   //rescheduled notification (with different id, to not reset the actual schedule), will
-//   //   int rescheduledId = Random().nextInt(5000000) + 5000000; //todo be better
-//   //   int ongoingId = rescheduledId + 1;
-//   //   Map<String, String?> newPayload = originalPayload;
-//   //   newPayload["ongoing-is-snoozed-notification-id"] = "$ongoingId";
-//   //   showNotification(
-//   //       rescheduledId, color, title, body,
-//   //       null, override: (DateTime.now().add(snoozeDuration), NotificationType.values[int.parse(originalPayload["type"]!)]),
-//   //       additionalPayload: originalPayload
-//   //   );
-//   //
-//   //   //ongoing notification to stop the snooze
-//   //   AwesomeNotifications().createNotification(
-//   //     content: NotificationContent(
-//   //         channelKey: _SNOOZE_CHANNEL_NAME,
-//   //         id: ongoingId, title: "Snoozed: $title",
-//   //         payload: {"snooze-id":"$rescheduledId"},
-//   //         category: NotificationCategory.Status,
-//   //
-//   //         criticalAlert: false, wakeUpScreen: false,
-//   //         locked: true, actionType: ActionType.KeepOnTop,
-//   //         backgroundColor: color
-//   //     ),
-//   //     actionButtons: [
-//   //       NotificationActionButton(
-//   //           key: 'CANCEL-SNOOZE', label: 'Cancel Notification',
-//   //           actionType: ActionType.DismissAction
-//   //       )
-//   //     ],
-//   //   );
-//   // }
+//     Fluttertoast.showToast(msg: "Snoozed for ${snoozeDuration.inMinutes}m", toastLength: Toast.LENGTH_SHORT);
+//
+//     //rescheduled notification (with different id, to not reset the actual schedule), will
+//     int rescheduledId = DeadlineAlarms.SNOOZE_OFFSET + DeadlineAlarms.toDeadlineId(originalId); //breaks coupling rule
+//     int ongoingId = DeadlineAlarms.SNOOZE_ONGOING_OFFSET + DeadlineAlarms.toDeadlineId(originalId); //breaks coupling rule
+//     Map<String, dynamic> newPayload = originalPayload;
+//     newPayload["snooze-id"] = "$rescheduledId";
+//     newPayload["ongoing-is-snoozed-notification-id"] = "$ongoingId";
+//     originalPayload.addAll({"is-rescheduled": "true"});
+//     await createNotification(
+//       rescheduledId, color, title, body,
+//       null, null, null, override: (DateTime.now().add(snoozeDuration), NotificationType.values[int.parse(originalPayload["type"]!)]),
+//       additionalPayload: originalPayload
+//     );
+//
+//     //ongoing notification to stop the snooze
+//     plugin!.show(ongoingId, "Snoozed: $title", "", NotificationDetails(
+//       android: AndroidNotificationDetails(
+//         _SNOOZE_CHANNEL_NAME, _SNOOZE_CHANNEL_NAME,
+//         category: AndroidNotificationCategory.status,
+//         autoCancel: false,
+//         color: color,
+//         usesChronometer: true,
+//
+//         timeoutAfter: snoozeDuration.inMilliseconds,
+//         actions: [
+//           const AndroidNotificationAction('CANCEL-SNOOZE', 'Cancel Notification')
+//         ]
+//       )
+//     ), payload: jsonEncode(originalPayload));
+//   }
 // }
 //
 //

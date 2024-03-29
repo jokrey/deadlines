@@ -1,5 +1,4 @@
 import 'package:deadlines/alarm_external_wrapper/awesome_notifications_android/wrapper_impl.dart';
-import 'package:flutter_overlay_window/flutter_overlay_window.dart';
 import 'package:move_to_background/move_to_background.dart';
 
 import 'alarm_page.dart';
@@ -16,11 +15,10 @@ NotifyWrapper staticNotify = AwesomeNotificationsWrapper();
 abstract class NotifyWrapper {
   Future<void> init() async {
     //must be before app lifecycle listener
-    await FlutterOverlayWindow.isPermissionGranted().then((isPermissionGranted) async {
-      if(!isPermissionGranted) {
-        await FlutterOverlayWindow.requestPermission();
-      }
-    });
+    // var isPermissionGranted = await FlutterOverlayWindow.isPermissionGranted();
+    // if(!isPermissionGranted) {
+    //   await FlutterOverlayWindow.requestPermission();
+    // }
 
     AppLifecycleListener(
         onStateChange: (newState) {
@@ -32,20 +30,20 @@ abstract class NotifyWrapper {
         onPause: MoveToBackground.moveTaskToBack
     );
 
-    FlutterOverlayWindow.closeOverlay();
+    // FlutterOverlayWindow.closeOverlay();
   }
 
   Route<dynamic>? handleRoute(String? name, Object? arguments) {
     switch (name) {
       case '/fullscreen':
         return MaterialPageRoute(builder: (context) {
-          final (notifyPayload, wasInForeground) = arguments as (Map<String, String?>, bool);
+          final (notifyPayload, wasInForeground) = arguments as (Map<String, dynamic>, bool);
           return FullscreenNotificationScreen(notifyPayload: notifyPayload, wasInForeground: wasInForeground);
         });
 
       case '/alarm':
         return MaterialPageRoute(builder: (context) {
-          final (notifyPayload, wasInForeground) = arguments as (Map<String, String?>, bool);
+          final (notifyPayload, wasInForeground) = arguments as (Map<String, dynamic>, bool);
           return AlarmNotificationScreen(notifyPayload: notifyPayload, wasInForeground: wasInForeground);
         });
     }
@@ -54,7 +52,7 @@ abstract class NotifyWrapper {
 
   Future<void> set(int notifyId, Color color, String title, String description, NotifyableRepeatableDateTime at, bool Function(DateTime)? shouldSkip, bool Function(DateTime)? shouldStop);
   Future<void> cancel(int notifyId);
-  Future<void> snooze(int originalId, Duration snoozeDuration, Color color, String title, String body, Map<String, String?> originalPayload);
+  Future<void> snooze(int originalId, Duration snoozeDuration, Color color, String title, String body, Map<String, dynamic> originalPayload);
 
 
   Future<(int, Duration)?> getDurationToNextAlarm();

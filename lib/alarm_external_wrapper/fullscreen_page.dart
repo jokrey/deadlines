@@ -4,7 +4,7 @@ import 'package:move_to_background/move_to_background.dart';
 import 'package:vibration/vibration.dart';
 
 class FullscreenNotificationScreen extends StatefulWidget {
-  final Map<String, String?> notifyPayload;
+  final Map<String, dynamic> notifyPayload;
   final bool wasInForeground;
   const FullscreenNotificationScreen({super.key, required this.notifyPayload, required this.wasInForeground});
 

@@ -3,13 +3,13 @@ import 'dart:async';
 import 'package:audio_session/audio_session.dart';
 import 'package:deadlines/alarm_external_wrapper/notify_wrapper.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_overlay_window/flutter_overlay_window.dart';
+// import 'package:flutter_overlay_window/flutter_overlay_window.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:move_to_background/move_to_background.dart';
 import 'package:vibration/vibration.dart';
 
 class AlarmNotificationScreen extends StatefulWidget {
-  final Map<String, String?> notifyPayload;
+  final Map<String, dynamic> notifyPayload;
   final bool wasInForeground;
   const AlarmNotificationScreen({super.key, required this.notifyPayload, required this.wasInForeground});
 
@@ -39,10 +39,10 @@ class _AlarmNotificationScreenState extends State<AlarmNotificationScreen> {
       await audioPlayer.setAudioSource(AudioSource.asset("assets/ringtone_example.mp3"));
       await audioPlayer.setLoopMode(LoopMode.all);
 
-      //required, because overlay starts, because on-notification-displayed is called (and after on-notification-action), but before this (usually...)
-      await FlutterOverlayWindow.shareData("stop-music").then((_) { //does not stop vibrator
-        FlutterOverlayWindow.closeOverlay(); //does not always seem to return when overlay not opened for some reason?
-      });
+      // //required, because overlay starts, because on-notification-displayed is called (and after on-notification-action), but before this (usually...)
+      // await FlutterOverlayWindow.shareData("stop-music").then((_) { //does not stop vibrator
+      //   FlutterOverlayWindow.closeOverlay(); //does not always seem to return when overlay not opened for some reason?
+      // });
 
       audioPlayer.play(); //only returns when music is stopped...
     });

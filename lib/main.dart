@@ -1,4 +1,4 @@
-import 'package:deadlines/alarm_external_wrapper/alarm_banner.dart';
+import 'package:deadlines/alarm_external_wrapper/awesome_notifications_android/test_alarms_screen.dart';
 import 'package:deadlines/alarm_external_wrapper/notify_wrapper.dart';
 import 'package:deadlines/ui/deadlines_display.dart';
 import 'package:flutter/material.dart';
@@ -9,14 +9,14 @@ void main() {
   runApp(const MainApp());
 }
 
-// overlay entry point
-@pragma("vm:entry-point")
-void overlayMain() {
-  runApp(const MaterialApp(
-    debugShowCheckedModeBanner: false,
-    home: AlarmBanner(),
-  ));
-}
+// // overlay entry point
+// @pragma("vm:entry-point")
+// void overlayMain() {
+//   runApp(const MaterialApp(
+//     debugShowCheckedModeBanner: false,
+//     home: AlarmBanner(),
+//   ));
+// }
 
 class MainApp extends StatefulWidget {
   static final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();

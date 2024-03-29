@@ -6,17 +6,16 @@ import 'package:deadlines/main.dart';
 import 'package:deadlines/persistence/database.dart';
 import 'package:deadlines/persistence/deadline_alarm_manager.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_overlay_window/flutter_overlay_window.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 
 import '../model.dart';
 
 class AwesomeNotificationsWrapper extends NotifyWrapper {
-  static const String _SILENT_CHANNEL_NAME = "silent - 99999";
-  static const String _NORMAL_CHANNEL_NAME = "normal - 99999";
-  static const String _FULLSCREEN_CHANNEL_NAME = "fullscreen - 99999";
-  static const String _ALARM_CHANNEL_NAME = "alarm - 99999";
-  static const String _SNOOZE_CHANNEL_NAME = "snooze - 99999";
+  static const String _SILENT_CHANNEL_NAME = "silent";
+  static const String _NORMAL_CHANNEL_NAME = "normal";
+  static const String _FULLSCREEN_CHANNEL_NAME = "fullscreen";
+  static const String _ALARM_CHANNEL_NAME = "alarm";
+  static const String _SNOOZE_CHANNEL_NAME = "snooze";
 
   static String currentTimeZone = "CET";
 
@@ -182,7 +181,6 @@ class AwesomeNotificationsWrapper extends NotifyWrapper {
     } else {
       bool success = await createNotification(notifyId, color, title, description, at, shouldSkip, shouldStop);
       if(!success) {
-        print("cancel");
         await cancel(notifyId);
       }
     }
@@ -224,7 +222,7 @@ class AwesomeNotificationsWrapper extends NotifyWrapper {
   }
 
 
-  @override Future<void> snooze(int originalId, Duration snoozeDuration, Color color, String title, String body, Map<String, String?> originalPayload) async {
+  @override Future<void> snooze(int originalId, Duration snoozeDuration, Color color, String title, String body, Map<String, dynamic> originalPayload) async {
     if(snoozeDuration.inHours > 2) throw ArgumentError("You snooze you loose");
 
     Fluttertoast.showToast(msg: "Snoozed for ${snoozeDuration.inMinutes}m", toastLength: Toast.LENGTH_SHORT);
@@ -232,8 +230,6 @@ class AwesomeNotificationsWrapper extends NotifyWrapper {
     //rescheduled notification (with different id, to not reset the actual schedule), will
     int rescheduledId = DeadlineAlarms.SNOOZE_OFFSET + DeadlineAlarms.toDeadlineId(originalId); //breaks coupling rule
     int ongoingId = DeadlineAlarms.SNOOZE_ONGOING_OFFSET + DeadlineAlarms.toDeadlineId(originalId); //breaks coupling rule
-    Map<String, String?> newPayload = originalPayload;
-    newPayload["ongoing-is-snoozed-notification-id"] = "$ongoingId";
     createNotification(
       rescheduledId, color, title, body,
       null, null, null, override: (DateTime.now().add(snoozeDuration), NotificationType.values[int.parse(originalPayload["type"]!)]),
@@ -284,11 +280,6 @@ class AwesomeNotificationsWrapper extends NotifyWrapper {
     //         -> requires specialized, deeply coupled and hacky handling
     //  also: it sometimes is not... It is a fairly classic race condition in which both versions must be accounted for
 
-    if(receivedNotification.payload != null && receivedNotification.payload!.containsKey("ongoing-is-snoozed-notification-id")) {
-      int ongoingId = int.parse(receivedNotification.payload!["ongoing-is-snoozed-notification-id"]!);
-      AwesomeNotifications().cancel(ongoingId);
-    }
-
     bool wasInForeground = receivedNotification.displayedLifeCycle == NotificationLifeCycle.Foreground;
 
     int id = receivedNotification.id!;
@@ -317,20 +308,21 @@ class AwesomeNotificationsWrapper extends NotifyWrapper {
           arguments: (receivedNotification.payload, wasInForeground)
         );
       }
-    } else {
-      if (notifyType == NotificationType.alarm) {
-        // if(! await AwesomeNotifications().isNotificationActiveOnStatusBar(id: id)) return;
-        AwesomeNotifications().dismiss(id);
-        await FlutterOverlayWindow.showOverlay(
-          alignment: OverlayAlignment.center,
-          height: 333,
-          width: 888,
-          overlayTitle: "deadlines alarm running",
-          overlayContent: "check out the notification"
-        );
-        await FlutterOverlayWindow.shareData(receivedNotification.payload);
-      }
     }
+    // else {
+    //   if (notifyType == NotificationType.alarm) {
+    //     // if(! await AwesomeNotifications().isNotificationActiveOnStatusBar(id: id)) return;
+    //     AwesomeNotifications().dismiss(id);
+    //     await FlutterOverlayWindow.showOverlay(
+    //       alignment: OverlayAlignment.center,
+    //       height: 333,
+    //       width: 888,
+    //       overlayTitle: "deadlines alarm running",
+    //       overlayContent: "check out the notification"
+    //     );
+    //     await FlutterOverlayWindow.shareData(receivedNotification.payload);
+    //   }
+    // }
   }
 
   @pragma("vm:entry-point")
@@ -378,7 +370,7 @@ class AwesomeNotificationsWrapper extends NotifyWrapper {
 
 
   /// additionalPayload overrides existing "id" or "type" if present
-  static Future<bool> createNotification(int id, Color color, String title, String body, NotifyableRepeatableDateTime? at, bool Function(DateTime)? shouldSkip, bool Function(DateTime)? shouldStop, {(DateTime, NotificationType)? override, Map<String, String?>? additionalPayload}) async {
+  static Future<bool> createNotification(int id, Color color, String title, String body, NotifyableRepeatableDateTime? at, bool Function(DateTime)? shouldSkip, bool Function(DateTime)? shouldStop, {(DateTime, NotificationType)? override, Map<String, dynamic>? additionalPayload}) async {
     NotificationSchedule? schedule;
     NotificationType notifyType;
     if(override != null) {
@@ -520,15 +512,15 @@ class AwesomeNotificationsWrapper extends NotifyWrapper {
       )
     ];
 
-    Map<String, String?> payload = {"id":id.toString(), "type": "${notifyType.index}", "color":"${color.value}", "title": title, "body":body};
+    Map<String, dynamic> payload = {"id":id.toString(), "type": "${notifyType.index}", "color":"${color.value}", "title": title, "body":body};
     if(additionalPayload != null) payload.addAll(additionalPayload);//overrides
     if(notifyType == NotificationType.silent) {
       await AwesomeNotifications().createNotification(
         schedule: schedule,
         content: NotificationContent(
           channelKey: _SILENT_CHANNEL_NAME,
-          id: id, title: title, body: body,
-          payload: payload, backgroundColor: color,
+          id: id, title: title, body: body, backgroundColor: color,
+          payload: payload.map((key, value) => MapEntry(key, value.toString())),
           category: NotificationCategory.Reminder,
 
           autoDismissible: false,
@@ -542,8 +534,8 @@ class AwesomeNotificationsWrapper extends NotifyWrapper {
         schedule: schedule,
         content: NotificationContent(
           channelKey: _NORMAL_CHANNEL_NAME,
-          id: id, title: title, body: body,
-          payload: payload, backgroundColor: color,
+          id: id, title: title, body: body, backgroundColor: color,
+          payload: payload.map((key, value) => MapEntry(key, value.toString())),
           category: NotificationCategory.Reminder,
 
           autoDismissible: false,
@@ -557,8 +549,8 @@ class AwesomeNotificationsWrapper extends NotifyWrapper {
         schedule: schedule,
         content: NotificationContent(
           channelKey: _FULLSCREEN_CHANNEL_NAME,
-          id: id, title: title, body: body,
-          payload: payload, backgroundColor: color,
+          id: id, title: title, body: body, backgroundColor: color,
+          payload: payload.map((key, value) => MapEntry(key, value.toString())),
           category: NotificationCategory.Reminder,
           fullScreenIntent: true,
 
@@ -573,8 +565,8 @@ class AwesomeNotificationsWrapper extends NotifyWrapper {
         schedule: schedule,
         content: NotificationContent(
           channelKey: _ALARM_CHANNEL_NAME,
-          id: id, title: title, body: body,
-          payload: payload, backgroundColor: color,
+          id: id, title: title, body: body, backgroundColor: color,
+          payload: payload.map((key, value) => MapEntry(key, value.toString())),
           category: NotificationCategory.Alarm,
           fullScreenIntent: true,
 
@@ -583,6 +575,7 @@ class AwesomeNotificationsWrapper extends NotifyWrapper {
         ),
         actionButtons: actionButtons,
       );
+
       return true;
     }
     return false;

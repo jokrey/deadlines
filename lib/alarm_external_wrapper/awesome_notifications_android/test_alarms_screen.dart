@@ -3,11 +3,12 @@ import 'dart:math';
 import 'package:audio_session/audio_session.dart';
 import 'package:deadlines/alarm_external_wrapper/alarm_page.dart';
 import 'package:deadlines/alarm_external_wrapper/fullscreen_page.dart';
+import 'package:deadlines/alarm_external_wrapper/local_notifications_android/wrapper_impl.dart';
 import 'package:deadlines/alarm_external_wrapper/notify_wrapper.dart';
 import '../model.dart';
 import 'wrapper_impl.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_overlay_window/flutter_overlay_window.dart';
+// import 'package:flutter_overlay_window/flutter_overlay_window.dart';
 import 'package:vibration/vibration.dart';
 import 'package:just_audio/just_audio.dart';
 
@@ -52,16 +53,16 @@ class _TestAlarmsScreenState extends State<TestAlarmsScreen> {
                 ),
                 TextButton(
                   onPressed: () async {
-                    await FlutterOverlayWindow.showOverlay(
-                        alignment: OverlayAlignment.center,
-                        height: 333,
-                        width: 888,
-                        overlayTitle: "deadlines alarm running",
-                        overlayContent: "check out the notification"
-                    );
-                    await FlutterOverlayWindow.shareData({
-                      "color": "${Colors.deepPurple.value}"
-                    });
+                    // await FlutterOverlayWindow.showOverlay(
+                    //     alignment: OverlayAlignment.center,
+                    //     height: 333,
+                    //     width: 888,
+                    //     overlayTitle: "deadlines alarm running",
+                    //     overlayContent: "check out the notification"
+                    // );
+                    // await FlutterOverlayWindow.shareData({
+                    //   "color": "${Colors.deepPurple.value}"
+                    // });
 
                     // /// broadcast data to and from overlay app
                     // await FlutterOverlayWindow.shareData("Hello from the other side");
@@ -89,14 +90,14 @@ class _TestAlarmsScreenState extends State<TestAlarmsScreen> {
                 TextButton(
                   onPressed: () {
                     var now = DateTime.now();
-                    var in10Seconds = now.add(const Duration(seconds: 10));
+                    var in5Seconds = now.add(const Duration(seconds: 5));
 
                     AwesomeNotificationsWrapper.createNotification(
                       Random().nextInt(100000), Colors.blue, "title", "body",
-                      null, null, null, override: (in10Seconds, NotificationType.silent),
+                      null, null, null, override: (in5Seconds, NotificationType.silent),
                     );
                   },
-                  child: const Text("silent in 10 seconds")
+                  child: const Text("silent in 5 seconds")
                 ),
               ],
             ),
@@ -114,14 +115,14 @@ class _TestAlarmsScreenState extends State<TestAlarmsScreen> {
                 TextButton(
                   onPressed: () {
                     var now = DateTime.now();
-                    var in10Seconds = now.add(const Duration(seconds: 10));
+                    var in5Seconds = now.add(const Duration(seconds: 5));
 
                     AwesomeNotificationsWrapper.createNotification(
                       Random().nextInt(100000), Colors.blue, "title", "body",
-                      null, null, null, override: (in10Seconds, NotificationType.normal),
+                      null, null, null, override: (in5Seconds, NotificationType.normal),
                     );
                   },
-                  child: const Text("normal in 10 seconds")
+                  child: const Text("normal in 5 seconds")
                 ),
               ],
             ),
@@ -139,14 +140,14 @@ class _TestAlarmsScreenState extends State<TestAlarmsScreen> {
                 TextButton(
                   onPressed: () {
                     var now = DateTime.now();
-                    var in10Seconds = now.add(const Duration(seconds: 10));
+                    var in5Seconds = now.add(const Duration(seconds: 5));
 
                     AwesomeNotificationsWrapper.createNotification(
                       Random().nextInt(100000), Colors.blue, "title", "body",
-                        null, null, null, override: (in10Seconds, NotificationType.fullscreen),
+                        null, null, null, override: (in5Seconds, NotificationType.fullscreen),
                     );
                   },
-                  child: const Text("fullscreen in 10 seconds")
+                  child: const Text("fullscreen in 5 seconds")
                 ),
               ],
             ),
@@ -164,14 +165,14 @@ class _TestAlarmsScreenState extends State<TestAlarmsScreen> {
                 TextButton(
                   onPressed: () {
                     var now = DateTime.now();
-                    var in10Seconds = now.add(const Duration(seconds: 10));
+                    var in5Seconds = now.add(const Duration(seconds: 5));
 
                     AwesomeNotificationsWrapper.createNotification(
                       Random().nextInt(100000), Colors.blue, "title", "body",
-                      null, null, null, override: (in10Seconds, NotificationType.alarm),
+                      null, null, null, override: (in5Seconds, NotificationType.alarm),
                     );
                   },
-                  child: const Text("alarm in 10 seconds")
+                  child: const Text("alarm in 5 seconds")
                 ),
               ],
             ),
@@ -212,8 +213,8 @@ class _TestAlarmsScreenState extends State<TestAlarmsScreen> {
                   }
                 });
                 audioPlayer.stop();
-                FlutterOverlayWindow.shareData("stop");
-                FlutterOverlayWindow.closeOverlay();
+                // FlutterOverlayWindow.shareData("stop");
+                // FlutterOverlayWindow.closeOverlay();
                 staticNotify.cancel(1);
               },
               child: const Text("Cancel All")
