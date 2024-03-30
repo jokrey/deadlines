@@ -25,6 +25,36 @@ T maxCmp<T extends Comparable<T>>(T a, T b) {
   return a.compareTo(b) >= 0? a : b;
 }
 
+class NotDumbIterator<T> {
+  late Iterator<T> _iterator;
+  late T _current;
+  bool hasNext = false;
+  NotDumbIterator(Iterable<T> iterable) {
+    this._iterator = iterable.iterator;
+    hasNext = _iterator.moveNext();
+    if(hasNext) _current = _iterator.current;
+  }
+
+  T next() {
+    T r = _current;
+    hasNext = _iterator.moveNext();
+    if(hasNext) _current = _iterator.current;
+    return r;
+  }
+}
+
+class ListIterator<T> {
+  final List list;
+  int _currentIndex = 0;
+  ListIterator(this.list);
+
+  int numLeft() => list.length - _currentIndex;
+  bool hasNext() {
+    return _currentIndex < list.length;
+  }
+  T next() => list[_currentIndex++];
+}
+
 bool iterEquals(Iterable elements1, Iterable elements2) {
   if (elements1 == elements2) return true;
   var iter1 = elements1.iterator;

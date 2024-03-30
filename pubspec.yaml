@@ -38,11 +38,14 @@ dependencies:
   table_calendar: any
   extended_wrap: ^0.1.5
   numberpicker: 2.1.2
+  multi_split_view: ^2.4.0
+
   fluttertoast: ^8.2.4
   synchronized: ^3.1.0+1
 
   sqflite: 2.3.0
   permission_handler: ^11.3.1
+  shared_preferences: ^2.2.2
 
   vibration: ^1.8.4
   just_audio: ^0.9.36

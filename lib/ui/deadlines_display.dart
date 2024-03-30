@@ -42,6 +42,8 @@ abstract class ChildController {
   bool removeFromCache(Deadline d);
 
   void updateShownList();
+
+  Future<void> init();
 }
 
 enum ShownType {
@@ -268,17 +270,23 @@ class _DeadlinesDisplayState extends State<DeadlinesDisplay> {
   late final DeadlinesCalendarController calendarController = DeadlinesCalendarController(parent);
 
   @override Widget build(BuildContext context) {
-    return PageView.builder(
-      controller: PageController(initialPage: 100000),
-      itemBuilder: (context, index) {
-        if(index % 2 == 0) {
-          calendarController.updateShownList();
-          return DeadlinesCalendar(calendarController);
-        } else {
-          upcomingController.updateShownList();
-          return UpcomingDeadlinesList(upcomingController);
-        }
-      },
+    return FutureBuilder(
+      future: Future.wait([upcomingController.init(), calendarController.init()]),
+      builder: (context, snapshot) {
+        if(!snapshot.hasData) return Container();
+        return PageView.builder(
+          controller: PageController(initialPage: 100000),
+          itemBuilder: (context, index) {
+            if (index % 2 == 0) {
+              calendarController.updateShownList();
+              return DeadlinesCalendar(calendarController);
+            } else {
+              upcomingController.updateShownList();
+              return UpcomingDeadlinesList(upcomingController);
+            }
+          },
+        );
+      }
     );
   }
 }
