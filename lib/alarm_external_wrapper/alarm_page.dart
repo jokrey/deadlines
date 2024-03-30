@@ -105,7 +105,7 @@ class _AlarmNotificationScreenState extends State<AlarmNotificationScreen> {
                 softWrap: true,
                 textAlign: TextAlign.center,
               ),
-              const Icon(Icons.alarm, size: 100, color: const Color(0xFFF94144),),
+              const Icon(Icons.alarm, size: 100, color: Color(0xFFF94144),),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [

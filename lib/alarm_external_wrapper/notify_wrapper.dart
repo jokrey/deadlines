@@ -6,7 +6,6 @@ import 'fullscreen_page.dart';
 
 import 'model.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
 
 // NotifyWrapper staticNotify = LocalNotificationsWrapper();
 NotifyWrapper staticNotify = AwesomeNotificationsWrapper();

@@ -95,7 +95,6 @@ class ParentController {
     } else {
       await db.updateDeadline(newDeadline);
     }
-    print("add to cache: $newDeadline");
     callingChild.addToCache(newDeadline);
     callingChild.updateShownList();
     return true;

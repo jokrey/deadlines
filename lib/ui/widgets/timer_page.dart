@@ -4,7 +4,6 @@ import 'package:deadlines/alarm_external_wrapper/model.dart';
 import 'package:deadlines/alarm_external_wrapper/notify_wrapper.dart';
 import 'package:deadlines/persistence/deadline_alarm_manager.dart';
 import 'package:deadlines/ui/deadlines_display.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:numberpicker/numberpicker.dart';

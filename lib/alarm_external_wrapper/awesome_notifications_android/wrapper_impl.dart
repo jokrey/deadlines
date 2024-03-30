@@ -293,11 +293,15 @@ class AwesomeNotificationsWrapper extends NotifyWrapper {
     int id = receivedNotification.id!;
     var notifyType = NotificationType.values[int.parse(receivedNotification.payload!["type"]!)];
 
-    //todo, this should neither be done here nor like this probably... breaks coupling rule
-    int dlId = DeadlineAlarms.toDeadlineId(id);
-    if(dlId != -1 && id < DeadlineAlarms.SNOOZE_OFFSET && (notifyType == NotificationType.fullscreen || notifyType == NotificationType.alarm)) {
-      var d = await DeadlinesDatabase().loadById(dlId);
-      if (d != null) await DeadlineAlarms.updateAlarmsFor(d);
+    try {
+      //todo, this should neither be done here nor like this probably... breaks coupling rule
+      int dlId = DeadlineAlarms.toDeadlineId(id);
+      if (dlId != -1 && id < DeadlineAlarms.SNOOZE_OFFSET && (notifyType == NotificationType.fullscreen || notifyType == NotificationType.alarm)) {
+        var d = await DeadlinesDatabase().loadById(dlId);
+        if (d != null) await DeadlineAlarms.updateAlarmsFor(d);
+      }
+    } catch (e) {
+      print(e);
     }
 
     if(wasInForeground) {

@@ -310,7 +310,7 @@
 //     var notifyType = NotificationType.values[int.parse(payload!["type"]!)];
 //
 //     try {
-//       //todo, this should neither be done here nor like this probably... breaks coupling rule
+//       //to-do, this should neither be done here nor like this probably... breaks coupling rule
 //       int dlId = DeadlineAlarms.toDeadlineId(id);
 //       if (dlId != -1 && id < DeadlineAlarms.SNOOZE_OFFSET && (notifyType == NotificationType.fullscreen || notifyType == NotificationType.alarm)) {
 //         var d = await DeadlinesDatabase().loadById(dlId);

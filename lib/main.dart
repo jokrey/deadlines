@@ -1,4 +1,3 @@
-import 'package:deadlines/alarm_external_wrapper/awesome_notifications_android/test_alarms_screen.dart';
 import 'package:deadlines/alarm_external_wrapper/notify_wrapper.dart';
 import 'package:deadlines/ui/deadlines_display.dart';
 import 'package:flutter/material.dart';
