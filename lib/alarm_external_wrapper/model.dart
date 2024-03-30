@@ -1,17 +1,6 @@
 import 'package:deadlines/ui/widgets/card_in_list.dart';
 import 'package:flutter/cupertino.dart';
 
-NotifyableRepeatableDateTime fromDateTime(DateTime dt, {RepetitionType rep = RepetitionType.none, NotificationType notify = NotificationType.off}) {
-  return NotifyableRepeatableDateTime(
-      RepeatableDate(dt.year, dt.month, dt.day, repetitionType: rep, repetition: 1),
-      Time(dt.hour, dt.minute, dt.second),
-      notify
-  );
-}
-
-
-
-
 enum NotificationType {
   /// No notification even scheduled
   off,
@@ -43,6 +32,16 @@ class NotifyableRepeatableDateTime extends RepeatableDateTime {
   NotifyableRepeatableDateTime withNextNotifyType([List<NotificationType> allowed = NotificationType.values]) => withNotifyType(allowed[(allowed.indexOf(notifyType)+1) % allowed.length]);
   NotifyableRepeatableDateTime withNotifyType(NotificationType type) => NotifyableRepeatableDateTime(date, time, type);
 }
+
+NotifyableRepeatableDateTime fromDateTime(DateTime dt, {RepetitionType rep = RepetitionType.none, NotificationType notify = NotificationType.off}) {
+  return NotifyableRepeatableDateTime(
+      RepeatableDate(dt.year, dt.month, dt.day, repetitionType: rep, repetition: 1),
+      Time(dt.hour, dt.minute, dt.second),
+      notify
+  );
+}
+
+
 
 @immutable
 class RepeatableDateTime implements Comparable<RepeatableDateTime> {
@@ -154,16 +153,9 @@ class RepeatableDate implements Comparable<RepeatableDate> {
     if(isWeekly()) return toDateTime().weekday == o.weekday;
     return (isMonthly() || isDaily() || (isYearly()? isInThisRepetition(year, o.year) : year == o.year)) && (isDaily() || (isMonthly()? isInThisRepetition(month, o.month) : month == o.month)) && (isDaily()? isInThisRepetition(day, o.day) : day == o.day);
   }
-  //wrong if over month, week or year borders:
   bool isAfterThisDay(DateTime d) {
     if(isRepeating()) throw ArgumentError("after cannot be checked when repeating, always before AND after");
-    // if(!isRepeating())
-      return year != d.year? year > d.year : month != d.month? month > d.month : day > d.day;
-    // if(isDaily()) return false;
-    // if(isWeekly()) return toDateTime().weekday > d.weekday;
-    // if(isMonthly()) return isInThisRepetition(month, d.month) && day > d.day;
-    // if(isYearly()) return isInThisRepetition(year, d.year) && month != d.month? month > d.month : day > d.day;
-    // return false;
+    return year != d.year? year > d.year : month != d.month? month > d.month : day > d.day;
   }
   bool isBeforeThisDay(DateTime o) {
     return !isOnThisDay(o) && !isAfterThisDay(o);
@@ -305,14 +297,14 @@ bool between(int v, int rS, int rE) {
   return v >= rS && v <= rE;
 }
 
-bool _beforeY(RepeatableDate d1, DateTime d2) {
-  return d1.year != d2.year? d1.year < d2.year : d1.month != d2.month? d1.month < d2.month : d1.day < d2.day;
-}
-bool _afterM(RepeatableDate d1, DateTime d2) {
-  return d1.month != d2.month? d1.month < d2.month : d1.day < d2.day;
-}
-bool _afterD(RepeatableDate d1, DateTime d2) {
-  return d1.day < d2.day;
-}
+// bool _beforeY(RepeatableDate d1, DateTime d2) {
+//   return d1.year != d2.year? d1.year < d2.year : d1.month != d2.month? d1.month < d2.month : d1.day < d2.day;
+// }
+// bool _afterM(RepeatableDate d1, DateTime d2) {
+//   return d1.month != d2.month? d1.month < d2.month : d1.day < d2.day;
+// }
+// bool _afterD(RepeatableDate d1, DateTime d2) {
+//   return d1.day < d2.day;
+// }
 
 bool invertIf(bool i, bool v) => i? !v:v;

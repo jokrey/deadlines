@@ -1,126 +1,3 @@
-// import 'dart:math';
-//
-// import 'package:flutter/material.dart';
-// import 'package:sqflite/sqflite.dart' as sql;
-// import 'package:table_calendar/table_calendar.dart';
-//
-// class Deadline {
-//   int? id;
-//   int? repetitionId;
-//   final String title;
-//   final String description;
-//   final Color color;
-//   final int importance;
-//   final DateTime startsAt;
-//   final DateTime deadlineAt;
-//
-//   Deadline(this.id, this.repetitionId, this.title, this.description, this.color, this.importance, this.startsAt, this.deadlineAt) {
-//     if (deadlineAt.isBefore(startsAt)) throw ArgumentError("deadline before work start");
-//   }
-//
-//   @override String toString() => title;
-//   bool isOneDay() {
-//     return isSameDay(startsAt, deadlineAt);
-//   }
-//
-//   Duration rangeLength() {
-//     return deadlineAt.difference(startsAt);
-//   }
-// }
-//
-// enum RepetitionType {
-//   yearly, monthly, daily
-// }
-// class Repetition {
-//   final RepetitionType type;
-//   final int skipInBetween;
-//   final int times;
-//   Repetition(this.type, this.skipInBetween, this.times);
-// }
-//
-//
-// Future<sql.Database> getDB() async {
-//   return sql.openDatabase(
-//     'deadlines.db',
-//     version: 1,
-//     onCreate: (db, version) async {
-//       await createTables(db);
-//     },
-//   );
-// }
-//
-// Future<void> createTables(sql.Database db) async {
-//   await db.execute("""CREATE TABLE deadlines(
-//         id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-//         repetitionId INTEGER,
-//         title TEXT NOT NULL,
-//         description TEXT NOT NULL,
-//         color int NOT NULL,
-//         importance int NOT NULL,
-//         startsAt DATETIME NOT NULL,
-//         deadlineAt DATETIME NOT NULL
-//       )
-//       """);
-// }
-//
-// int parseInt(Object? o) {
-//   if (o == null) throw ArgumentError("o is null");
-//   return int.parse(o.toString());
-// }
-// Deadline _fromMap(Map<String, Object?> m) {
-//   return Deadline(
-//     parseInt(m["id"]), parseInt(m["repetitionId"]),
-//     m["title"].toString(), m["description"].toString(),
-//     Color(parseInt(m["color"])), parseInt(m["importance"]),
-//     DateTime.fromMicrosecondsSinceEpoch(parseInt(m["startsAt"])), DateTime.fromMicrosecondsSinceEpoch(parseInt(m["deadlineAt"]))
-//   );
-// }
-// Map<String, Object?> _toMapWithoutId(Deadline d) {
-//   return {"repetitionId": d.repetitionId, "title": d.title, "description": d.description, "color": d.color.value, "importance": d.importance, "startsAt": d.startsAt.microsecondsSinceEpoch, "deadlineAt": d.deadlineAt.microsecondsSinceEpoch, };
-// }
-//
-//
-// Future<List<Deadline>> queryDeadlinesInMonth(int year, int month) async {
-//   final db = await getDB();
-//   var beginningOfMonth = DateTime(year, month);
-//   var afterEndOfMonth = beginningOfMonth.add(const Duration(days: 31)); //definitely after, might get a few event too much, but who cares
-//
-//   var rawResults = await db.rawQuery("""SELECT repetitionId, title, description, color, importance, startsAt, deadlineAt FROM deadlines WHERE NOT
-//                                         (startsAt < ${beginningOfMonth.microsecondsSinceEpoch} AND deadlineAt < ${beginningOfMonth.microsecondsSinceEpoch})
-//                                      OR (startsAt > ${afterEndOfMonth.microsecondsSinceEpoch} AND deadlineAt > ${afterEndOfMonth.microsecondsSinceEpoch})
-//                                     ;""");
-//   List<Deadline> found = (rawResults).map((e) => _fromMap(e)).toList();
-//
-//   return found;
-// }
-//
-// Future<void> createDeadline(Deadline d, Repetition r) async {
-//   if(d.rangeLength().inDays > 365) throw ArgumentError("range too long");
-//   final db = await getDB();
-//
-//   db.transaction((txn) async {
-//     int repetitionId = Random().nextInt(1<<32);
-//     d.repetitionId = repetitionId;
-//     await txn.insert("deadlines", _toMapWithoutId(d));
-//
-//
-//   });
-// }
-//
-// Future<void> deleteDeadline(Deadline d) async {
-//   final db = await getDB();
-//
-//   await db.delete("deadlines", where: "id = ?", whereArgs: [d.id]);
-// }
-//
-// Future<void> updateDeadline(Deadline d) async {
-//   if(d.rangeLength().inDays > 365) throw ArgumentError("range too long");
-//   final db = await getDB();
-//
-//   await db.update("deadlines", _toMapWithoutId(d), where: "id = ?", whereArgs: [d.id]);
-// }
-
-
 import 'package:deadlines/alarm_external_wrapper/model.dart';
 import 'package:deadlines/utils/utils.dart';
 import 'package:flutter/foundation.dart';
@@ -207,8 +84,8 @@ class Deadline implements Comparable<Deadline> {
     if (startsAt != null) {
       dayToResetTo = startsAt!.nextOccurrenceAfter(dayToResetTo.add(const Duration(days: 1)))!;
       newStartsAt = NotifyableRepeatableDateTime(
-          RepeatableDate(dayToResetTo.year, dayToResetTo.month, dayToResetTo.day, repetition: 1, repetitionType: startsAt!.date.repetitionType),
-          startsAt!.time, startsAt!.notifyType
+        RepeatableDate(dayToResetTo.year, dayToResetTo.month, dayToResetTo.day, repetition: 1, repetitionType: startsAt!.date.repetitionType),
+        startsAt!.time, startsAt!.notifyType
       );
       dayToResetTo = deadlineAt!.nextOccurrenceAfter(dayToResetTo)!;
     } else {
@@ -237,7 +114,7 @@ class Deadline implements Comparable<Deadline> {
     importance,
     removals
   );
-  copyWithNotifyType(bool modifyStartsAt, NotificationType ov) => Deadline(
+  Deadline copyWithNotifyType(bool modifyStartsAt, NotificationType ov) => Deadline(
     id, title, description, color, active,
     modifyStartsAt && startsAt!=null?startsAt!.withNotifyType(ov):startsAt,
     !modifyStartsAt && deadlineAt!=null?deadlineAt!.withNotifyType(ov):deadlineAt,

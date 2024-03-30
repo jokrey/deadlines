@@ -165,14 +165,6 @@ class AwesomeNotificationsWrapper extends NotifyWrapper {
         onNotificationDisplayedMethod:  AwesomeNotificationsWrapper.onNotificationDisplayedMethod,
         onDismissActionReceivedMethod:  AwesomeNotificationsWrapper.onDismissActionReceivedMethod
     );
-
-
-    // ReceivedAction? receivedAction = await AwesomeNotifications().getInitialNotificationAction(
-    //   removeFromActionEvents: true
-    // );
-    // if(receivedAction != null) {
-    //   await onActionReceivedMethod(receivedAction);
-    // }
   }
 
   @override Future<void> set(int notifyId, Color color, String title, String description, NotifyableRepeatableDateTime at, bool Function(DateTime)? shouldSkip, bool Function(DateTime)? shouldStop) async {
