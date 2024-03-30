@@ -101,6 +101,12 @@ class UpcomingDeadlinesListController extends ChildController {
           var list = e.$2;
           var newList = <Deadline?>[];
           for(Deadline d in list) {
+            if(lastDeadline != null && lastDeadline?.isOverdue() != d.isOverdue()) {
+              newList.add(null);
+              if((lastDeadline?.startsAt??lastDeadline?.deadlineAt)?.date.day != (d.startsAt??d.deadlineAt)?.date.day) {
+                newList.add(null);
+              }
+            }
             if(lastDeadline != null && !d.isOverdue() && (lastDeadline?.startsAt??lastDeadline?.deadlineAt)?.date.month != (d.startsAt??d.deadlineAt)?.date.month) {
               newList.add(null);
             }
