@@ -181,8 +181,8 @@ class ParentController {
     );
   }
 
-  void toggleDeadlineNotificationTypeWithoutReload(ChildController callingChild, Deadline d, NotifyableRepeatableDateTime nrdt, NotificationType? ov) {
-    updateWithoutUndoUI(callingChild, d, ov!=null?d.copyWithNotifyType(nrdt == d.startsAt, ov) : d.copyWithNextNotifyType(nrdt == d.startsAt));
+  void toggleDeadlineNotificationTypeWithoutReload(ChildController callingChild, Deadline d, NotifyableRepeatableDateTime nrdt) {
+    updateWithoutUndoUI(callingChild, d, d.copyWithNextNotifyType(nrdt == d.startsAt));
   }
 
   void toggleDeadlineActiveWithoutReload(ChildController callingChild, BuildContext context, Deadline d) {

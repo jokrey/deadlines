@@ -196,7 +196,7 @@ class DeadlinesCalendarState extends State<DeadlinesCalendar> {
                         (d) => c.parent.editDeadlineWithoutReload(c, ogContext, d.id!),
                         (d) => c.parent.deleteDeadlineWithoutReload(c, ogContext, d, dtr1),
                         (d) => c.parent.toggleDeadlineActiveWithoutReload(c, ogContext, d),
-                        (d, nrdt, ov) => c.parent.toggleDeadlineNotificationTypeWithoutReload(c, d, nrdt, ov),
+                        (d, nrdt) => c.parent.toggleDeadlineNotificationTypeWithoutReload(c, d, nrdt),
                       );
                     }
                   );

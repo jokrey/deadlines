@@ -41,7 +41,7 @@ class NotifyableRepeatableDateTime extends RepeatableDateTime {
   @override String toString() => "NRDT[${notifyType.index}, $date-$time]";
 
   NotifyableRepeatableDateTime withNextNotifyType([List<NotificationType> allowed = NotificationType.values]) => withNotifyType(allowed[(allowed.indexOf(notifyType)+1) % allowed.length]);
-  NotifyableRepeatableDateTime withNotifyType(NotificationType ov) => NotifyableRepeatableDateTime(date, time, ov);
+  NotifyableRepeatableDateTime withNotifyType(NotificationType type) => NotifyableRepeatableDateTime(date, time, type);
 }
 
 @immutable

@@ -10,7 +10,7 @@ class DeadlineCard extends StatelessWidget {
   final Function(Deadline) edit;
   final Function(Deadline) delete;
   final Function(Deadline) toggleActive;
-  final Function(Deadline, NotifyableRepeatableDateTime, NotificationType?) toggleNotificationType;
+  final Function(Deadline, NotifyableRepeatableDateTime) toggleNotificationType;
   const DeadlineCard(this.d, this.edit, this.delete, this.toggleActive, this.toggleNotificationType, {super.key});
 
   Color get appropriateColor => d.active? Color(d.color) : darken(Color(d.color), 35);
@@ -106,10 +106,8 @@ class DeadlineCard extends StatelessWidget {
                 color: d1.isOverdue()? darken(appropriateColor, 35) : appropriateColor,
               ),
               onTap: () {
-                if(d1.isOverdue()) {
-                  toggleNotificationType(d, d1, NotificationType.off);
-                } else {
-                  toggleNotificationType(d, d1, null);
+                if(!d1.isOverdue()) {
+                  toggleNotificationType(d, d1);
                 }
               }
             ),
