@@ -45,7 +45,7 @@ class UpcomingDeadlinesListController extends ChildController {
     setState!(() {
       var now = DateTime.now();
       shownBelow.clear();
-      shownBelow.add(("ToDo(${camel(Importance.critical.name)})", deadlinesDbCache.where((d) => d.isTimeless() && d.importance == Importance.critical).toList(growable: false)));
+      shownBelow.add(("ToDo(${camel(Importance.critical.name)})", deadlinesDbCache.where((d) => d.isTimeless() && d.importance == Importance.critical && (d.active || parent.showWhat == ShownType.showAll)).toList(growable: false)));
       if(shownBelow.last.$2.isNotEmpty) shownBelow.add(("", []));
 
       //todo: improve readability and maintainability of this insanity:
@@ -104,10 +104,6 @@ class UpcomingDeadlinesListController extends ChildController {
             if(lastDeadline != null && !d.isOverdue() && (lastDeadline?.startsAt??lastDeadline?.deadlineAt)?.date.month != (d.startsAt??d.deadlineAt)?.date.month) {
               newList.add(null);
             }
-            if(lastDeadline != null && lastDeadline?.isOverdue() != d.isOverdue()) {
-              newList.add(null);
-              newList.add(null);
-            }
             newList.add(d);
             lastDeadline = d;
           }
@@ -116,7 +112,7 @@ class UpcomingDeadlinesListController extends ChildController {
       );
       if(shownBelow.last.$2.isNotEmpty) shownBelow.add(("", []));
 
-      shownBelow.add(("ToDo(${camel(Importance.important.name)})", deadlinesDbCache.where((d) => d.isTimeless() && d.importance == Importance.important).toList(growable: false)));
+      shownBelow.add(("ToDo(${camel(Importance.important.name)})", deadlinesDbCache.where((d) => d.isTimeless() && d.importance == Importance.important && (d.active || parent.showWhat == ShownType.showAll)).toList(growable: false)));
       if(shownBelow.last.$2.isNotEmpty) shownBelow.add(("", []));
 
       List<Deadline> repeating = deadlinesDbCache.where((d) => d.isRepeating()).toList();
@@ -130,7 +126,7 @@ class UpcomingDeadlinesListController extends ChildController {
       shownBelow.addAll(repeatingByTypeSorted.map((e) => (camel(e.$1.name), e.$2)));
       if(shownBelow.last.$2.isNotEmpty) shownBelow.add(("", []));
 
-      shownBelow.add(("ToDo(${camel(Importance.normal.name)})", deadlinesDbCache.where((d) => d.isTimeless() && (d.importance == Importance.normal)).toList(growable: false)));
+      shownBelow.add(("ToDo(${camel(Importance.normal.name)})", deadlinesDbCache.where((d) => d.isTimeless() && d.importance == Importance.normal && (d.active || parent.showWhat == ShownType.showAll)).toList(growable: false)));
       if(shownBelow.last.$2.isNotEmpty) shownBelow.add(("", []));
     });
 
