@@ -56,5 +56,5 @@ abstract class NotifyWrapper {
 
 
   Future<(int, Duration)?> getDurationToNextAlarm();
-  Future<Duration> getDurationTo(int notifyId);
+  Future<(Duration, NotificationType)> getDurationTo(int notifyId);
 }

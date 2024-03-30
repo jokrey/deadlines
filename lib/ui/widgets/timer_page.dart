@@ -85,28 +85,38 @@ class _TimerWidgetState extends State<TimerWidget> {
         }
       },
     );
-    secondController = DelayedNumberPickerController();
+    secondController = DelayedNumberPickerController(
+      onChangeDone: (value) => lock.synchronized(() {
+        timeLeft[S] = value;
+      }),
+      onChanged: (value) {
+        if(timeLeft[S] != 0) {
+          lock.synchronized(() {
+            timeLeft[S] = value;
+          });
+        }
+      },
+    );
 
+    int loadMinimizer = 8;
     updateFunction(_) async {
       await lock.synchronized(() async {
         if(!listEquals(timeLeft, before)) {
           before.setRange(0, 3, timeLeft);
-          if(timeLeft[H] == 0 && timeLeft[M] == 0 && timeLeft[S] == 0) {
-            await staticNotify.cancel(widget.notifyId);
-          } else {
-            await staticNotify.set(
-              widget.notifyId, color, "Timer is Up", "",
-              fromDateTime(
-                DateTime.now().add(Duration(hours: timeLeft[H], minutes: timeLeft[M], seconds: timeLeft[S])),
-                notify: notifyType
-              ),
-              null, null
-            );
-          }
+          await resetAlarm();
         } else {
-          if(before[H] == 0 && before[M] == 0 && before[S] == 0) return;
-          var v = await staticNotify.getDurationTo(widget.notifyId);
-          timeLeft = [v.inHours, v.inMinutes % 60, v.inSeconds % 60];
+          if(before[H] == 0 && before[M] == 0 && before[S] == 0) {
+            loadMinimizer++;
+            if(loadMinimizer < 8) return;
+            loadMinimizer = 0;
+          }
+          var (d, t) = await staticNotify.getDurationTo(widget.notifyId);
+          timeLeft = [d.inHours, d.inMinutes % 60, d.inSeconds % 60];
+          if((t == NotificationType.normal || t == NotificationType.alarm) && notifyType != t) {
+            setState(() {
+              notifyType = t;
+            });
+          }
           before.setRange(0, 3, timeLeft);
         }
         hourController.setValue(timeLeft[H]);
@@ -116,6 +126,20 @@ class _TimerWidgetState extends State<TimerWidget> {
     }
     updateFunction(null);
     _repeatUpdate = Timer.periodic(const Duration(milliseconds: 250), updateFunction);
+  }
+  Future<void> resetAlarm() async {
+    if(timeLeft[H] == 0 && timeLeft[M] == 0 && timeLeft[S] == 0) {
+      await staticNotify.cancel(widget.notifyId);
+    } else {
+      await staticNotify.set(
+          widget.notifyId, color, "Timer is Up", "",
+          fromDateTime(
+              DateTime.now().add(Duration(hours: timeLeft[H], minutes: timeLeft[M], seconds: timeLeft[S])),
+              notify: notifyType
+          ),
+          null, null
+      );
+    }
   }
   @override void dispose() {
     _repeatUpdate.cancel();
@@ -149,7 +173,7 @@ class _TimerWidgetState extends State<TimerWidget> {
                 textStyle: TextStyle(color: Theme.of(context).hintColor, fontSize: 14),
                 selectedTextStyle: const TextStyle(fontSize: 18),
               ),
-              IgnorePointer(child: DelayedNumberPicker(
+              /*IgnorePointer(child: */DelayedNumberPicker(
                 secondController,
                 minValue: 0,
                 maxValue: 59,
@@ -158,7 +182,7 @@ class _TimerWidgetState extends State<TimerWidget> {
                 itemWidth: 50,
                 textStyle: TextStyle(color: Theme.of(context).hintColor, fontSize: 14),
                 selectedTextStyle: const TextStyle(fontSize: 18),
-              )),
+              )/*)*/,
             ],
           ),
         ),
@@ -176,6 +200,7 @@ class _TimerWidgetState extends State<TimerWidget> {
                 ),
                 onTap: () => setState(() {
                   notifyType = notifyType == NotificationType.alarm? NotificationType.normal: NotificationType.alarm;
+                  resetAlarm(); //no need to wait
                 })
             ),
             ElevatedButton(onPressed: () {
@@ -191,6 +216,7 @@ class _TimerWidgetState extends State<TimerWidget> {
       ],
     );
   }
+
 }
 
 

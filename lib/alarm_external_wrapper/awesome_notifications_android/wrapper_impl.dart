@@ -190,16 +190,18 @@ class AwesomeNotificationsWrapper extends NotifyWrapper {
     await AwesomeNotifications().cancel(notifyId);
   }
 
-  @override Future<Duration> getDurationTo(int notifyId) async {
+  @override Future<(Duration, NotificationType)> getDurationTo(int notifyId) async {
     var notifyWithId = (await AwesomeNotifications().listScheduledNotifications()).where((e) => e.content != null && e.content!.id == notifyId).firstOrNull;
 
-    // print("notifyWithId: $notifyWithId");
-    if(notifyWithId == null || notifyWithId.schedule == null) return Duration.zero;
+    if(notifyWithId == null || notifyWithId.schedule == null/* || notifyWithId.content?.payload == null*/) return (Duration.zero, NotificationType.off);
     var now = DateTime.now();
     notifyWithId.schedule!.timeZone = currentTimeZone;
     notifyWithId.schedule!.timeZone = "UTC"; //bug in getNextDate?
     var notifyAt = await AwesomeNotifications().getNextDate(notifyWithId.schedule!, fixedDate: now);
-    return notifyAt == null? Duration.zero : notifyAt.difference(now);
+
+    var notifyType = NotificationType.values[int.parse(notifyWithId.content!.payload!["type"]!)];
+
+    return (notifyAt == null? Duration.zero : notifyAt.difference(now), notifyType);
   }
 
   @override Future<(int, Duration)?> getDurationToNextAlarm() async {
@@ -227,36 +229,42 @@ class AwesomeNotificationsWrapper extends NotifyWrapper {
 
     Fluttertoast.showToast(msg: "Snoozed for ${snoozeDuration.inMinutes}m", toastLength: Toast.LENGTH_SHORT);
 
-    //rescheduled notification (with different id, to not reset the actual schedule), will
-    int rescheduledId = DeadlineAlarms.SNOOZE_OFFSET + DeadlineAlarms.toDeadlineId(originalId) + 1; //breaks coupling rule
-    int ongoingId = DeadlineAlarms.SNOOZE_ONGOING_OFFSET + DeadlineAlarms.toDeadlineId(originalId) + 1; //breaks coupling rule
+    int rescheduledId; //breaks coupling rule
+    if(originalId >= DeadlineAlarms.TIMER_OFFSET) {
+      rescheduledId = originalId;
+    } else {
+      //rescheduled notification (with different id, to not reset the actual schedule), will
+      rescheduledId = DeadlineAlarms.SNOOZE_OFFSET + DeadlineAlarms.toDeadlineId(originalId) + 1;
+
+      int ongoingId = DeadlineAlarms.SNOOZE_ONGOING_OFFSET + DeadlineAlarms.toDeadlineId(originalId) + 1; //breaks coupling rule
+      //ongoing notification to stop the snooze
+      AwesomeNotifications().createNotification(
+        content: NotificationContent(
+          channelKey: _SNOOZE_CHANNEL_NAME,
+          id: ongoingId, title: "Snoozed for ${snoozeDuration.inMinutes}m: $title",
+          payload: {"snooze-id":"$rescheduledId"},
+          category: NotificationCategory.Status,
+
+          autoDismissible: false,
+          criticalAlert: false, wakeUpScreen: false,
+          locked: true, actionType: ActionType.KeepOnTop,
+          backgroundColor: color,
+          chronometer: Duration.zero,
+          timeoutAfter: snoozeDuration,
+        ),
+        actionButtons: [
+          NotificationActionButton(
+              key: 'CANCEL-SNOOZE', label: 'Cancel Notification',
+              actionType: ActionType.SilentBackgroundAction
+          )
+        ],
+      );
+    }
+
     createNotification(
-      rescheduledId, color, title, body,
-      null, null, null, override: (DateTime.now().add(snoozeDuration), NotificationType.values[int.parse(originalPayload["type"]!)]),
-      additionalPayload: originalPayload
-    );
-
-    //ongoing notification to stop the snooze
-    AwesomeNotifications().createNotification(
-      content: NotificationContent(
-        channelKey: _SNOOZE_CHANNEL_NAME,
-        id: ongoingId, title: "Snoozed for ${snoozeDuration.inMinutes}m: $title",
-        payload: {"snooze-id":"$rescheduledId"},
-        category: NotificationCategory.Status,
-
-        autoDismissible: false,
-        criticalAlert: false, wakeUpScreen: false,
-        locked: true, actionType: ActionType.KeepOnTop,
-        backgroundColor: color,
-        chronometer: Duration.zero,
-        timeoutAfter: snoozeDuration,
-      ),
-      actionButtons: [
-        NotificationActionButton(
-            key: 'CANCEL-SNOOZE', label: 'Cancel Notification',
-            actionType: ActionType.SilentBackgroundAction
-        )
-      ],
+        rescheduledId, color, title, body, null, null, null,
+        override: (DateTime.now().add(snoozeDuration), NotificationType.values[int.parse(originalPayload["type"]!)]),
+        additionalPayload: originalPayload
     );
   }
 
