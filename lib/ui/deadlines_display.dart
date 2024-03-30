@@ -65,7 +65,10 @@ class ParentController {
     return _editOrNewWithoutReload(callingChild, context, toEditId, null);
   }
   Future<bool> _editOrNewWithoutReload(ChildController callingChild, BuildContext context, int? toEditId, DateTime? newAt) async {
+    var colorScheme = Theme.of(context).colorScheme;
+
     Deadline? toEdit = toEditId==null?null:await db.loadById(toEditId);
+    if (!context.mounted) return false;
     var newDeadline = await Navigator.push(
       context,
       MaterialPageRoute(
@@ -75,16 +78,16 @@ class ParentController {
         )
       ),
     );
-    print("newDeadline: $newDeadline");
     if(newDeadline == null) {
       Fluttertoast.showToast(
         msg: "Canceled...",
-        backgroundColor: Theme.of(context).colorScheme.onBackground.withAlpha(200),
-        textColor: Theme.of(context).colorScheme.background,
+        backgroundColor: colorScheme.onBackground.withAlpha(200),
+        textColor: colorScheme.background,
         toastLength: Toast.LENGTH_SHORT
       );
       return false;
     }
+
 
     if(toEdit != null) {
       callingChild.removeFromCache(toEdit);
@@ -207,11 +210,11 @@ class ParentController {
     callingChild.updateShownList();
   }
   Future<void> updateWithUndoUI(ChildController callingChild, BuildContext context, String msg, Deadline d, Deadline dNew) async {
-    await updateWithoutUndoUI(callingChild, d, dNew);
     undoUI(
       msg, Color(d.color), context,
       () => updateWithoutUndoUI(callingChild, dNew, d),
     );
+    await updateWithoutUndoUI(callingChild, d, dNew);
   }
 }
 

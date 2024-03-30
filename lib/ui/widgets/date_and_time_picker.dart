@@ -2,15 +2,18 @@
 import 'package:flutter/material.dart';
 import 'package:numberpicker/numberpicker.dart';
 
+class NicerTimePickerWidgetController {
+  int currentHour;
+  int currentMinute;
+  NicerTimePickerWidgetController(this.currentHour, this.currentMinute);
+}
 class NicerTimePickerWidget extends StatefulWidget {
-  late int currentHour;
-  late int currentMinute;
+  late final NicerTimePickerWidgetController controller;
   final int initialHour;
   final int initialMinute;
   final Function(int, int) onChanged;
   NicerTimePickerWidget(this.initialHour, this.initialMinute, {required this.onChanged, super.key}) {
-    currentHour = initialHour;
-    currentMinute = initialMinute;
+    controller = NicerTimePickerWidgetController(initialHour, initialMinute);
   }
 
   @override State<NicerTimePickerWidget> createState() => _NicerTimePickerWidgetState();
@@ -21,7 +24,7 @@ class _NicerTimePickerWidgetState extends State<NicerTimePickerWidget> {
     return Row(
       children: [
         NumberPicker(
-          value: widget.currentHour,
+          value: widget.controller.currentHour,
           minValue: 0,
           maxValue: 23,
           step: 1,
@@ -32,13 +35,13 @@ class _NicerTimePickerWidgetState extends State<NicerTimePickerWidget> {
           selectedTextStyle: const TextStyle(fontSize: 18),
           onChanged: (value) {
             setState(() {
-              widget.currentHour = value;
-              widget.onChanged(widget.currentHour, widget.currentMinute);
+              widget.controller.currentHour = value;
+              widget.onChanged(widget.controller.currentHour, widget.controller.currentMinute);
             });
           },
         ),
         NumberPicker(
-          value: widget.currentMinute,
+          value: widget.controller.currentMinute,
           minValue: 0,
           maxValue: 59,
           step: 1,
@@ -49,8 +52,8 @@ class _NicerTimePickerWidgetState extends State<NicerTimePickerWidget> {
           selectedTextStyle: const TextStyle(fontSize: 18),
           onChanged: (value) {
             setState(() {
-              widget.currentMinute = value;
-              widget.onChanged(widget.currentHour, widget.currentMinute);
+              widget.controller.currentMinute = value;
+              widget.onChanged(widget.controller.currentHour, widget.controller.currentMinute);
             });
           },
         ),

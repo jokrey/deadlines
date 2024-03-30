@@ -24,7 +24,7 @@ class _TimerPageState extends State<TimerPage> {
           physics: const NeverScrollableScrollPhysics(),
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, mainAxisSpacing: 6),
           itemBuilder: (_, index) {
-            return TimerWidget(DeadlineAlarms.TIMER_OFFSET + index);
+            return TimerWidget(DeadlineAlarms.timerOffset + index);
           },
           itemCount: 6,
         )),
@@ -58,7 +58,7 @@ class _TimerWidgetState extends State<TimerWidget> {
   @override void initState() {
     super.initState();
 
-    color = colors[widget.notifyId % DeadlineAlarms.TIMER_OFFSET];
+    color = colors[widget.notifyId % DeadlineAlarms.timerOffset];
 
     hourController = DelayedNumberPickerController(
       onChangeDone: (value) => lock.synchronized(() {

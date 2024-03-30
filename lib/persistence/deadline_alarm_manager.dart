@@ -6,15 +6,15 @@ import 'package:deadlines/persistence/model.dart';
 import 'package:flutter/cupertino.dart';
 
 class DeadlineAlarms {
-  static const DEADLINE_OFFSET = 100000; //uses range [100000, 200000]
-  static const SNOOZE_OFFSET = DEADLINE_OFFSET * 3; //uses range [300000, 400000]
-  static const SNOOZE_ONGOING_OFFSET = DEADLINE_OFFSET * 4; //uses range [400000, 500000]
-  static const TIMER_OFFSET = DEADLINE_OFFSET * 10; //uses range [1000000, 1000006]
-  static int toDeadlineId(int notifyId) => notifyId > TIMER_OFFSET ? -1 : (notifyId % DEADLINE_OFFSET) - 1;
+  static const deadlineOffset = 100000; //uses range [100000, 200000]
+  static const snoozeOffset = deadlineOffset * 3; //uses range [300000, 400000]
+  static const snoozeOngoingOffset = deadlineOffset * 4; //uses range [400000, 500000]
+  static const timerOffset = deadlineOffset * 10; //uses range [1000000, 1000006]
+  static int toDeadlineId(int notifyId) => notifyId > timerOffset ? -1 : (notifyId % deadlineOffset) - 1;
   static int toNotificationId(int deadlineId, bool isForStartsAt) {
-    if(deadlineId >= DEADLINE_OFFSET) throw ArgumentError("cannot have deadlineId > $DEADLINE_OFFSET");
+    if(deadlineId >= deadlineOffset) throw ArgumentError("cannot have deadlineId > $deadlineOffset");
     if(deadlineId < 0) throw ArgumentError("cannot have deadlineId < 0");
-    return (isForStartsAt ? deadlineId : deadlineId + DEADLINE_OFFSET) + 1;
+    return (isForStartsAt ? deadlineId : deadlineId + deadlineOffset) + 1;
   }
 
   static Future<void> updateAlarmsFor(Deadline d) async {

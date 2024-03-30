@@ -11,11 +11,11 @@ import 'package:fluttertoast/fluttertoast.dart';
 import '../model.dart';
 
 class AwesomeNotificationsWrapper extends NotifyWrapper {
-  static const String _SILENT_CHANNEL_NAME = "silent";
-  static const String _NORMAL_CHANNEL_NAME = "normal";
-  static const String _FULLSCREEN_CHANNEL_NAME = "fullscreen";
-  static const String _ALARM_CHANNEL_NAME = "alarm";
-  static const String _SNOOZE_CHANNEL_NAME = "snooze";
+  static const String _silentChannelName = "silent";
+  static const String _normalChannelName = "normal";
+  static const String _fullscreenChannelName = "fullscreen";
+  static const String _alarmChannelName = "alarm";
+  static const String _snoozeChannelName = "snooze";
 
   static String currentTimeZone = "CET";
 
@@ -27,9 +27,9 @@ class AwesomeNotificationsWrapper extends NotifyWrapper {
         [
           NotificationChannel(
             channelGroupKey: 'deadlines',
-            channelKey: _SILENT_CHANNEL_NAME,
-            channelName: _SILENT_CHANNEL_NAME,
-            channelDescription: _SILENT_CHANNEL_NAME,
+            channelKey: _silentChannelName,
+            channelName: _silentChannelName,
+            channelDescription: _silentChannelName,
 
             importance: NotificationImportance.Max,
             criticalAlerts: true,
@@ -43,9 +43,9 @@ class AwesomeNotificationsWrapper extends NotifyWrapper {
           ),
           NotificationChannel(
             channelGroupKey: 'deadlines',
-            channelKey: _NORMAL_CHANNEL_NAME,
-            channelName: _NORMAL_CHANNEL_NAME,
-            channelDescription: _NORMAL_CHANNEL_NAME,
+            channelKey: _normalChannelName,
+            channelName: _normalChannelName,
+            channelDescription: _normalChannelName,
 
             importance: NotificationImportance.Max,
             criticalAlerts: true,
@@ -61,9 +61,9 @@ class AwesomeNotificationsWrapper extends NotifyWrapper {
           ),
           NotificationChannel(
             channelGroupKey: 'deadlines',
-            channelKey: _FULLSCREEN_CHANNEL_NAME,
-            channelName: _FULLSCREEN_CHANNEL_NAME,
-            channelDescription: _FULLSCREEN_CHANNEL_NAME,
+            channelKey: _fullscreenChannelName,
+            channelName: _fullscreenChannelName,
+            channelDescription: _fullscreenChannelName,
 
             importance: NotificationImportance.Max,
             criticalAlerts: true,
@@ -79,9 +79,9 @@ class AwesomeNotificationsWrapper extends NotifyWrapper {
           ),
           NotificationChannel(
             channelGroupKey: 'deadlines',
-            channelKey: _ALARM_CHANNEL_NAME,
-            channelName: _ALARM_CHANNEL_NAME,
-            channelDescription: _ALARM_CHANNEL_NAME,
+            channelKey: _alarmChannelName,
+            channelName: _alarmChannelName,
+            channelDescription: _alarmChannelName,
 
             importance: NotificationImportance.Max, //uses fullscreen intent or system alert screen anyway (but, no pop up)
             criticalAlerts: true,
@@ -97,9 +97,9 @@ class AwesomeNotificationsWrapper extends NotifyWrapper {
           ),
           NotificationChannel(
             channelGroupKey: 'deadlines',
-            channelKey: _SNOOZE_CHANNEL_NAME,
-            channelName: _SNOOZE_CHANNEL_NAME,
-            channelDescription: _SNOOZE_CHANNEL_NAME,
+            channelKey: _snoozeChannelName,
+            channelName: _snoozeChannelName,
+            channelDescription: _snoozeChannelName,
 
             importance: NotificationImportance.High,
             criticalAlerts: false,
@@ -142,19 +142,19 @@ class AwesomeNotificationsWrapper extends NotifyWrapper {
           NotificationPermission.Car,
         ];
         await AwesomeNotifications().requestPermissionToSendNotifications(
-            channelKey: _SILENT_CHANNEL_NAME, permissions: permissions
+            channelKey: _silentChannelName, permissions: permissions
         );
         await AwesomeNotifications().requestPermissionToSendNotifications(
-            channelKey: _NORMAL_CHANNEL_NAME, permissions: permissions
+            channelKey: _normalChannelName, permissions: permissions
         );
         await AwesomeNotifications().requestPermissionToSendNotifications(
-            channelKey: _FULLSCREEN_CHANNEL_NAME, permissions: permissions
+            channelKey: _fullscreenChannelName, permissions: permissions
         );
         await AwesomeNotifications().requestPermissionToSendNotifications(
-            channelKey: _ALARM_CHANNEL_NAME, permissions: permissions
+            channelKey: _alarmChannelName, permissions: permissions
         );
         await AwesomeNotifications().requestPermissionToSendNotifications(
-            channelKey: _SNOOZE_CHANNEL_NAME, permissions: permissions
+            channelKey: _snoozeChannelName, permissions: permissions
         );
       }
     });
@@ -222,17 +222,17 @@ class AwesomeNotificationsWrapper extends NotifyWrapper {
     Fluttertoast.showToast(msg: "Snoozed for ${snoozeDuration.inMinutes}m", toastLength: Toast.LENGTH_SHORT);
 
     int rescheduledId; //breaks coupling rule
-    if(originalId >= DeadlineAlarms.TIMER_OFFSET) {
+    if(originalId >= DeadlineAlarms.timerOffset) {
       rescheduledId = originalId;
     } else {
       //rescheduled notification (with different id, to not reset the actual schedule), will
-      rescheduledId = DeadlineAlarms.SNOOZE_OFFSET + DeadlineAlarms.toDeadlineId(originalId) + 1;
+      rescheduledId = DeadlineAlarms.snoozeOffset + DeadlineAlarms.toDeadlineId(originalId) + 1;
 
-      int ongoingId = DeadlineAlarms.SNOOZE_ONGOING_OFFSET + DeadlineAlarms.toDeadlineId(originalId) + 1; //breaks coupling rule
+      int ongoingId = DeadlineAlarms.snoozeOngoingOffset + DeadlineAlarms.toDeadlineId(originalId) + 1; //breaks coupling rule
       //ongoing notification to stop the snooze
       AwesomeNotifications().createNotification(
         content: NotificationContent(
-          channelKey: _SNOOZE_CHANNEL_NAME,
+          channelKey: _snoozeChannelName,
           id: ongoingId, title: "Snoozed for ${snoozeDuration.inMinutes}m: $title",
           payload: {"snooze-id":"$rescheduledId"},
           category: NotificationCategory.Status,
@@ -288,7 +288,7 @@ class AwesomeNotificationsWrapper extends NotifyWrapper {
     try {
       //todo, this should neither be done here nor like this probably... breaks coupling rule
       int dlId = DeadlineAlarms.toDeadlineId(id);
-      if (dlId != -1 && id < DeadlineAlarms.SNOOZE_OFFSET && (notifyType == NotificationType.fullscreen || notifyType == NotificationType.alarm)) {
+      if (dlId != -1 && id < DeadlineAlarms.snoozeOffset && (notifyType == NotificationType.fullscreen || notifyType == NotificationType.alarm)) {
         var d = await DeadlinesDatabase().loadById(dlId);
         if (d != null) await DeadlineAlarms.updateAlarmsFor(d);
       }
@@ -338,7 +338,7 @@ class AwesomeNotificationsWrapper extends NotifyWrapper {
     try {
       //todo, this should neither be done here nor like this probably... breaks coupling rule
       int dlId = DeadlineAlarms.toDeadlineId(id);
-      if (dlId != -1 && id < DeadlineAlarms.SNOOZE_OFFSET) {
+      if (dlId != -1 && id < DeadlineAlarms.snoozeOffset) {
         var d = await DeadlinesDatabase().loadById(dlId);
         if (d != null) await DeadlineAlarms.updateAlarmsFor(d);
       }
@@ -351,7 +351,7 @@ class AwesomeNotificationsWrapper extends NotifyWrapper {
     } else if(receivedAction.buttonKeyPressed == "CANCEL-SNOOZE") {
       int idOfScheduledSnooze = int.parse(receivedAction.payload!["snooze-id"]!);
       AwesomeNotifications().cancel(idOfScheduledSnooze);
-    } else if(receivedAction.channelKey != _SNOOZE_CHANNEL_NAME) {
+    } else if(receivedAction.channelKey != _snoozeChannelName) {
       var notifyType = NotificationType.values[int.parse(receivedAction.payload!["type"]!)];
 
       bool wasInForeground = receivedAction.actionLifeCycle == NotificationLifeCycle.Foreground;
@@ -526,7 +526,7 @@ class AwesomeNotificationsWrapper extends NotifyWrapper {
       await AwesomeNotifications().createNotification(
         schedule: schedule,
         content: NotificationContent(
-          channelKey: _SILENT_CHANNEL_NAME,
+          channelKey: _silentChannelName,
           id: id, title: title, body: body, backgroundColor: color,
           payload: payload.map((key, value) => MapEntry(key, value.toString())),
           category: NotificationCategory.Reminder,
@@ -541,7 +541,7 @@ class AwesomeNotificationsWrapper extends NotifyWrapper {
       await AwesomeNotifications().createNotification(
         schedule: schedule,
         content: NotificationContent(
-          channelKey: _NORMAL_CHANNEL_NAME,
+          channelKey: _normalChannelName,
           id: id, title: title, body: body, backgroundColor: color,
           payload: payload.map((key, value) => MapEntry(key, value.toString())),
           category: NotificationCategory.Reminder,
@@ -556,7 +556,7 @@ class AwesomeNotificationsWrapper extends NotifyWrapper {
       await AwesomeNotifications().createNotification(
         schedule: schedule,
         content: NotificationContent(
-          channelKey: _FULLSCREEN_CHANNEL_NAME,
+          channelKey: _fullscreenChannelName,
           id: id, title: title, body: body, backgroundColor: color,
           payload: payload.map((key, value) => MapEntry(key, value.toString())),
           category: NotificationCategory.Reminder,
@@ -572,7 +572,7 @@ class AwesomeNotificationsWrapper extends NotifyWrapper {
       await AwesomeNotifications().createNotification(
         schedule: schedule,
         content: NotificationContent(
-          channelKey: _ALARM_CHANNEL_NAME,
+          channelKey: _alarmChannelName,
           id: id, title: title, body: body, backgroundColor: color,
           payload: payload.map((key, value) => MapEntry(key, value.toString())),
           category: NotificationCategory.Alarm,

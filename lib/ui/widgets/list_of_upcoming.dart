@@ -193,11 +193,11 @@ class UpcomingDeadlinesListState extends State<UpcomingDeadlinesList> {
     c.shownUpdated.remove(reloadState);
   }
 
-  @override Widget build(BuildContext ogContext) {
+  @override Widget build(BuildContext context) {
     return Scaffold(
       floatingActionButton: FloatingActionButton(
         child: const Icon(Icons.add),
-        onPressed: () => c.parent.newDeadlineWithoutReload(c, ogContext, null),
+        onPressed: () => c.parent.newDeadlineWithoutReload(c, context, null),
       ),
       body: SafeArea(child: Column(
         children: [
@@ -224,9 +224,9 @@ class UpcomingDeadlinesListState extends State<UpcomingDeadlinesList> {
                       } else {
                         return DeadlineCard(
                           d, 
-                          (d) => c.parent.editDeadlineWithoutReload(c, ogContext, d.id!),
-                          (d) => c.parent.deleteDeadlineWithoutReload(c, ogContext, d, null),
-                          (d) => c.parent.toggleDeadlineActiveWithoutReload(c, ogContext, d),
+                          (d) => c.parent.editDeadlineWithoutReload(c, context, d.id!),
+                          (d) => c.parent.deleteDeadlineWithoutReload(c, context, d, null),
+                          (d) => c.parent.toggleDeadlineActiveWithoutReload(c, context, d),
                           (d, nrdt) => c.parent.toggleDeadlineNotificationTypeWithoutReload(c, d, nrdt),
                         );
                       }
@@ -264,7 +264,7 @@ class UpcomingDeadlinesListState extends State<UpcomingDeadlinesList> {
                 child: const Icon(Icons.alarm, size: 44),
                 onTap: () async {
                   await Navigator.push(
-                    ogContext,
+                    context,
                     MaterialPageRoute(builder: (context) => const TimerPage()),
                   );
                   c.updateNextAlarm().then((value) => setState(() {}));

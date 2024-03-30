@@ -174,12 +174,12 @@ class DeadlinesCalendarState extends State<DeadlinesCalendar> {
     c.shownUpdated.remove(reloadState);
   }
 
-  @override Widget build(BuildContext ogContext) {
+  @override Widget build(BuildContext context) {
     return Scaffold(
       floatingActionButton: c._selectedDay == null? null : FloatingActionButton(
         child: const Icon(Icons.add),
         onPressed: () async {
-          await c.parent.newDeadlineWithoutReload(c, ogContext, c._selectedDay==null?c._focusedDay:c._selectedDay!);
+          await c.parent.newDeadlineWithoutReload(c, context, c._selectedDay==null?c._focusedDay:c._selectedDay!);
         },
       ),
       body: SafeArea(child: Column(
@@ -187,7 +187,7 @@ class DeadlinesCalendarState extends State<DeadlinesCalendar> {
           Expanded(
             child: MultiSplitViewTheme(
               data: MultiSplitViewThemeData(
-                dividerPainter: DividerPainters.background(color: Theme.of(ogContext).colorScheme.onBackground.withAlpha(50), highlightedColor: Theme.of(ogContext).colorScheme.onBackground.withAlpha(200))
+                dividerPainter: DividerPainters.background(color: Theme.of(context).colorScheme.onBackground.withAlpha(50), highlightedColor: Theme.of(context).colorScheme.onBackground.withAlpha(200))
               ),
               child: MultiSplitView(
                   axis: Axis.vertical,
@@ -243,6 +243,7 @@ class DeadlinesCalendarState extends State<DeadlinesCalendar> {
                             if (!d.active) builder += ")\n";
                             builder += "\n\n";
                           }
+                          if(!context.mounted) return;
                           await showDialog(context: context, builder: (context) {
                             return SimpleDialog(
                               title: const Text("Calendar as Text: "),
@@ -256,6 +257,7 @@ class DeadlinesCalendarState extends State<DeadlinesCalendar> {
                             );
                           },);
 
+                          if(!context.mounted) return;
                           Navigator.of(context).pop();
                         }, child: const Text("save backup"))),
                       ]
