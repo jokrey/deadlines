@@ -27,9 +27,9 @@ class _NicerTimePickerWidgetState extends State<NicerTimePickerWidget> {
           step: 1,
           infiniteLoop: true,
           itemWidth: 75,
-          textStyle: const TextStyle(/*color: Colors.white54,*/ fontSize: 14),
+          textStyle: TextStyle(color: Theme.of(context).hintColor, fontSize: 14),
           zeroPad: true,
-          selectedTextStyle: const TextStyle(/*color: Colors.white70,*/ fontSize: 18),
+          selectedTextStyle: const TextStyle(fontSize: 18),
           onChanged: (value) {
             setState(() {
               widget.currentHour = value;
@@ -44,9 +44,9 @@ class _NicerTimePickerWidgetState extends State<NicerTimePickerWidget> {
           step: 1,
           infiniteLoop: true,
           itemWidth: 75,
-          textStyle: const TextStyle(/*color: Colors.white54,*/ fontSize: 14),
+          textStyle: TextStyle(color: Theme.of(context).hintColor, fontSize: 14),
           zeroPad: true,
-          selectedTextStyle: const TextStyle(/*color: Colors.white70,*/ fontSize: 18),
+          selectedTextStyle: const TextStyle(fontSize: 18),
           onChanged: (value) {
             setState(() {
               widget.currentMinute = value;

@@ -68,7 +68,7 @@ class ParentController {
       context,
       MaterialPageRoute(
         builder: (context) => EditDeadlineWidget(
-          toEdit ?? Deadline(null, "", "", Colors.blue.value, true, null, newAt==null?null:fromDateTime(withTime(newAt, DateTime.now().hour+1), notify: NotificationType.silent), Importance.important, const []),
+          toEdit ?? Deadline(null, "", "", colors.last.value, true, null, newAt==null?null:fromDateTime(withTime(newAt, DateTime.now().hour+1), notify: NotificationType.silent), Importance.important, const []),
           autofocusTitle: toEdit == null,
         )
       ),
@@ -77,7 +77,8 @@ class ParentController {
     if(newDeadline == null) {
       Fluttertoast.showToast(
         msg: "Canceled...",
-        backgroundColor: Colors.black54,
+        backgroundColor: Theme.of(context).colorScheme.onBackground.withAlpha(200),
+        textColor: Theme.of(context).colorScheme.background,
         toastLength: Toast.LENGTH_SHORT
       );
       return false;
@@ -110,19 +111,19 @@ class ParentController {
           actions: [
             SizedBox(width: double.infinity, child: ElevatedButton(onPressed: () {
               var dNew = d.copyRemoveOccurrence(RepeatableDate.from(d.deadlineAt!.nextOccurrenceAfter(day)!));
-              updateWithUndoUI(callingChild, context, "${d.title} on ${day.day}.${day.month}.${day.year} has been deleted", d, dNew);
+              updateWithUndoUI(callingChild, context, "${d.title} on ${day.day}.${day.month}.${day.year} deleted", d, dNew);
 
               Navigator.of(context).pop();
             }, child: const Text("Only this occurrence"))),
             SizedBox(width: double.infinity, child: ElevatedButton(onPressed: () async {
               var dNew = d.copyResetFirstOccurrenceTo(day);
-              updateWithUndoUI(callingChild, context, "${d.title}'s past has been deleted", d, dNew);
+              updateWithUndoUI(callingChild, context, "${d.title}'s past deleted", d, dNew);
 
               Navigator.of(context).pop();
             }, child: const Text("Only this and before"))),
             SizedBox(width: double.infinity, child: ElevatedButton(onPressed: () {
               var dNew = d.copyRemoveOccurrencesAfter(RepeatableDate(day.year, day.month, day.day));
-              updateWithUndoUI(callingChild, context, "${d.title}'s future has been deleted", d, dNew);
+              updateWithUndoUI(callingChild, context, "${d.title}'s future deleted", d, dNew);
 
               Navigator.of(context).pop();
             }, child: const Text("Only this and after"))),
@@ -133,7 +134,7 @@ class ParentController {
             [
               SizedBox(width: double.infinity, child: ElevatedButton(onPressed: () {
                 var dNew = d.copyRemoveOccurrence(RepeatableDate.from(d.deadlineAt!.nextOccurrenceAfter(day)!, repetitionType: RepetitionType.weekly));
-                updateWithUndoUI(callingChild, context, "${d.title} on every ${DateFormat('EEEE').format(day)} has been deleted", d, dNew);
+                updateWithUndoUI(callingChild, context, "${d.title} on every ${DateFormat('EEEE').format(day)} deleted", d, dNew);
 
                 Navigator.of(context).pop();
               }, child: const Text("This occurrence every week"))),
@@ -142,7 +143,7 @@ class ParentController {
             [
               SizedBox(width: double.infinity, child: ElevatedButton(onPressed: () {
                 var dNew = d.copyRemoveOccurrence(RepeatableDate.from(d.deadlineAt!.nextOccurrenceAfter(day)!, repetitionType: RepetitionType.yearly));
-                updateWithUndoUI(callingChild, context, "${d.title} on every ${DateFormat('MMMM').format(day)} has been deleted", d, dNew);
+                updateWithUndoUI(callingChild, context, "${d.title} on every ${DateFormat('MMMM').format(day)} deleted", d, dNew);
 
                 Navigator.of(context).pop();
               }, child: const Text("This occurrence every year"))),
@@ -172,7 +173,7 @@ class ParentController {
     callingChild.updateShownList();
 
     undoUI(
-      "${d.title} has been deleted", Color(d.color), context,
+      "\"${d.title}\" deleted", Color(d.color), context,
       () async {
         d = await db.createDeadline(d);
         callingChild.addToCache(d);
@@ -190,7 +191,7 @@ class ParentController {
     updateWithoutUndoUI(callingChild, d, newD);
     if(d.active) {//was active
       undoUI(
-        "${d.title} has been set to done", Color(d.color), context,
+        "\"${d.title}\" is done", Color(d.color), context,
         () {
           updateWithoutUndoUI(callingChild, newD, d);
         }
@@ -226,7 +227,7 @@ void undoUI(String text, Color color, BuildContext context, Function() undo) {
     child: Container(
       decoration: ShapeDecoration(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        color: Colors.black38,
+        color: Theme.of(context).colorScheme.onBackground.withAlpha(200),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -235,7 +236,7 @@ void undoUI(String text, Color color, BuildContext context, Function() undo) {
           Flexible(
             child: FittedBox(
               fit: BoxFit.cover,
-              child: Text(text)
+              child: Text(text, style: TextStyle(color: color))
             ),
           ),
           const SizedBox(width: 15,),

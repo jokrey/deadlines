@@ -354,7 +354,7 @@ class _DeadlineTableCalendarState extends State<DeadlineTableCalendar> {
     } else if(isSameDay(DateTime.now(), day)) {
       decoration = const ShapeDecoration(shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(5))), color: Color(0x5F5C6BC0));
     }
-    children.add(Text("${day.day}", style: TextStyle(fontSize: 14, color: day.weekday >= 6? Colors.white60 : null),));
+    children.add(Text("${day.day}", style: TextStyle(fontSize: 14, color: day.weekday >= 6? Theme.of(context).hintColor: null),));
 
 
     if(events.isNotEmpty) {
