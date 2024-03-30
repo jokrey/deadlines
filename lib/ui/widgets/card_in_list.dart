@@ -39,10 +39,7 @@ class DeadlineCard extends StatelessWidget {
               onTap: () => edit(d),
               leading: GestureDetector(
                 child: Icon(Icons.delete, color: appropriateColor,),
-                onTap: () => //confirmDialog(d).then((yes) {
-                // if(yes)
-                delete(d),
-                // }),
+                onTap: () => delete(d),
               ),
               title: Text(d.title, softWrap: false, maxLines: 1),
               subtitle: d.description.isEmpty ? null : Text(d.description, softWrap: false, maxLines: 3,),
