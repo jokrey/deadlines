@@ -5,6 +5,7 @@ import 'package:deadlines/ui/deadlines_display.dart';
 import 'package:deadlines/persistence/database.dart';
 import 'package:deadlines/persistence/model.dart';
 import 'package:deadlines/ui/widgets/card_in_list.dart';
+import 'package:deadlines/utils/fitted_text.dart';
 import 'package:deadlines/utils/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:multi_split_view/multi_split_view.dart';
@@ -494,11 +495,17 @@ class _DeadlineTableCalendarState extends State<DeadlineTableCalendar> {
                 width: width,
                 height: rowHeight,
                 decoration: ShapeDecoration(shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(rowHeight / 2))), color: Color(d.color)),
-                child: FittedBox(
-                  fit: BoxFit.contain,
-                  alignment: Alignment.center,
-                  child: Text(" ${d.title.substring(0, min(d.title.length, (width*0.44).round()))} ", style: TextStyle(color: getForegroundForColor(Color(d.color)),))
-                ),
+                // child: FittedBox(
+                //   fit: BoxFit.fitHeight,
+                //   clipBehavior: Clip.hardEdge,
+                //   alignment: Alignment.centerLeft,
+                //   child: Text(
+                //     " ${d.title} ",
+                //     style: TextStyle(color: getForegroundForColor(Color(d.color)),)
+                //   )
+                // ),
+                alignment: Alignment.center,
+                child: FittedText(foreground: getForegroundForColor(Color(d.color))!, text: d.title, maxWidth: width*0.85, maxHeight: rowHeight*0.9, preferredMinFontSize: 5, maxFontSize: 10),
               )
                 :
               Container(
@@ -513,16 +520,18 @@ class _DeadlineTableCalendarState extends State<DeadlineTableCalendar> {
             if (d != null) {
               Widget? child;
               if ((d.startsAt?.date.isOnThisDay(day) ?? d.startsAt == null) || day.day == 1 || day.weekday == 1) {
-                child = FittedBox(
-                    fit: BoxFit.fitHeight,
-                    clipBehavior: Clip.hardEdge,
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      "${(!(d.startsAt?.date.isOnThisDay(day) ?? d.startsAt == null) && (day.day == 1 || day.weekday == 1)) ? "..." : " "}${d.title} ",
-                      style: TextStyle(color: getForegroundForColor(Color(d.color)),)
-                    )
-                );
-              }
+                // child = FittedBox(
+                //   fit: BoxFit.fitHeight,
+                //   clipBehavior: Clip.hardEdge,
+                //   alignment: Alignment.centerLeft,
+                //   child: Text(
+                //     "${(!(d.startsAt?.date.isOnThisDay(day) ?? d.startsAt == null) && (day.day == 1 || day.weekday == 1)) ? "..." : " "}${d.title} ",
+                //     style: TextStyle(color: getForegroundForColor(Color(d.color)),)
+                //   )
+                // );
+                var text = "${(!(d.startsAt?.date.isOnThisDay(day) ?? d.startsAt == null) && (day.day == 1 || day.weekday == 1)) ? "..." : " "}${d.title} ";
+                child = FittedText(foreground: getForegroundForColor(Color(d.color))!, text: text, maxWidth: maxWidth, maxHeight: rowHeight*0.9, preferredMinFontSize: 5, maxFontSize: 10);
+          }
               var radius = BorderRadius.zero;
               if ((d.startsAt?.date.isOnThisDay(day) ?? true) &&
                   (d.deadlineAt?.date.isOnThisDay(day) ?? true)) {
@@ -543,6 +552,7 @@ class _DeadlineTableCalendarState extends State<DeadlineTableCalendar> {
                 width: double.maxFinite,
                 height: rowHeight,
                 decoration: ShapeDecoration(shape: RoundedRectangleBorder(borderRadius: radius), color: Color(d.color)),
+                alignment: d.isOneDay() ? Alignment.center : Alignment.centerLeft,
                 child: child,
               ));
             } else {
