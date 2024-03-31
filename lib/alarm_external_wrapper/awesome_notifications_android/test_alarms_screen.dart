@@ -4,6 +4,7 @@ import 'package:audio_session/audio_session.dart';
 import 'package:deadlines/alarm_external_wrapper/alarm_page.dart';
 import 'package:deadlines/alarm_external_wrapper/fullscreen_page.dart';
 import 'package:deadlines/alarm_external_wrapper/notify_wrapper.dart';
+import '../../ui/deadlines_display.dart';
 import '../model.dart';
 import 'wrapper_impl.dart';
 import 'package:flutter/material.dart';
@@ -39,13 +40,14 @@ class _TestAlarmsScreenState extends State<TestAlarmsScreen> {
               children: [
                 TextButton(
                   onPressed: () {
-                    Navigator.push(context, MaterialPageRoute(builder: (context) => const AlarmNotificationScreen(notifyPayload: {}, wasInForeground: true)));
+                    Navigator.push(context, MaterialPageRoute(builder: (context) => AlarmNotificationScreen(
+                        notifyPayload: {"title":"Test Title", "body": "Bla Bla Bla\nwhats up?\nI have absolutely not idea what you are talking about", "color": "${colors[3].value}"}, wasInForeground: true)));
                   },
                   child: const Text("alarm screen")
                 ),
                 TextButton(
                   onPressed: () {
-                    Navigator.push(context, MaterialPageRoute(builder: (context) => const FullscreenNotificationScreen(notifyPayload: {"body": "VERY LONG TEXT, WHICH SHALL BE WRAPPED AFTER A WHILE, NO?"}, wasInForeground: true)));
+                    Navigator.push(context, MaterialPageRoute(builder: (context) => FullscreenNotificationScreen(notifyPayload: {"title":"Test Title", "body": "", "color": "${colors[0].value}"}, wasInForeground: true)));
                   },
                   child: const Text("fullscreen screen")
                 ),

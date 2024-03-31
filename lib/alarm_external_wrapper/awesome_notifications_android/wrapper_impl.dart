@@ -71,7 +71,7 @@ class AwesomeNotificationsWrapper extends NotifyWrapper {
             playSound: true,
             defaultRingtoneType: DefaultRingtoneType.Notification,
             enableVibration: true,
-            vibrationPattern: Int64List.fromList([0, 200, 200, 200, 200, 200, 200]),
+            vibrationPattern: Int64List.fromList([0, 200, 200, 200, 200, 400, 200]),
             locked: true,
 
             ledColor: Colors.blue,
@@ -87,7 +87,8 @@ class AwesomeNotificationsWrapper extends NotifyWrapper {
             criticalAlerts: true,
 
             playSound: true,
-            defaultRingtoneType: DefaultRingtoneType.Alarm,
+            // defaultRingtoneType: DefaultRingtoneType.Alarm,
+            soundSource: "resource://raw/ringtone_example",
             enableVibration: true,
             vibrationPattern: Int64List.fromList([0, 200, 200, 200, 200, 200, 200]),
             locked: true,
