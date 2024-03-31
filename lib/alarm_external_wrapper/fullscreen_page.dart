@@ -1,4 +1,4 @@
-
+import 'package:confetti/confetti.dart';
 import 'package:deadlines/alarm_external_wrapper/notify_wrapper.dart';
 import 'package:deadlines/ui/deadlines_display.dart';
 import 'package:flutter/material.dart';
@@ -15,8 +15,12 @@ class FullscreenNotificationScreen extends StatefulWidget {
 }
 
 class _FullscreenNotificationScreenState extends State<FullscreenNotificationScreen> {
+  late ConfettiController _controller;
   @override void initState() {
     super.initState();
+
+    _controller = ConfettiController(duration: const Duration(seconds: 10));
+    _controller.play();
 
     Vibration.hasVibrator().then((hasVibrator) {
       if (hasVibrator == true) {
@@ -27,6 +31,7 @@ class _FullscreenNotificationScreenState extends State<FullscreenNotificationScr
   }
 
   @override void dispose() {
+    _controller.dispose();
     Vibration.cancel();
 
     super.dispose();
@@ -66,6 +71,22 @@ class _FullscreenNotificationScreenState extends State<FullscreenNotificationScr
           minimum: EdgeInsets.only(top: maxHeight / 9, bottom: maxHeight / 9 / 2),
           child: Stack(
             children: [
+              Align(
+                alignment: Alignment.center,
+                child: ConfettiWidget(
+                  confettiController: _controller,
+                  blastDirectionality: BlastDirectionality.explosive,
+                  colors: colors,
+                  shouldLoop: true,
+
+                  maxBlastForce: 33, // set a lower max blast force
+                  minBlastForce: 11, // set a lower min blast force
+                  emissionFrequency: 0.03,
+                  numberOfParticles: 11, // a lot of particles at once
+                  gravity: 0.1,
+                ),
+              ),
+
               Center(child: Icon(Icons.event_available_rounded, size: maxHeight / 4, color: const Color(0xFFF94144),)),
 
               Align(
