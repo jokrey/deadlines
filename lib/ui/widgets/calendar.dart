@@ -37,7 +37,7 @@ class DeadlinesCalendarController extends ChildController {
 
   bool showDaily = false;
 
-  List<Deadline> getDailyEvents(DateTime day) {
+  List<Deadline> getDailyEvents(DateTime day, {required bool showDaily}) {
     var today = stripTime(DateTime.now());
     var l = deadlinesDbCache.where((d) {
       return !d.isTimeless() && d.isOnThisDay(day) &&
@@ -76,7 +76,7 @@ class DeadlinesCalendarController extends ChildController {
 
     shownBelow.clear();
     if (_selectedDay != null) {
-      shownBelow.add(((_selectedDay!, _selectedDay!), getDailyEvents(_selectedDay!)));
+      shownBelow.add(((_selectedDay!, _selectedDay!), getDailyEvents(_selectedDay!, showDaily: true)));
     } else {
       //todo: improve readability and maintainability of this insanity:
       var now = DateTime.now();
@@ -85,7 +85,7 @@ class DeadlinesCalendarController extends ChildController {
       var occurrencesInMonth = <Deadline, List<DateTime>>{};
       DateTime i = firstDayInMonth;
       while(i.month == firstDayInMonth.month) {
-        var ds = getDailyEvents(i);
+        var ds = getDailyEvents(i, showDaily: showDaily);
         for(var d in ds) {
           occurrencesInMonth.update(d, (v) => v + [i], ifAbsent: () => [i]);
         }
@@ -398,7 +398,7 @@ class _DeadlineTableCalendarState extends State<DeadlineTableCalendar> {
     }
   }
   Widget? buildWidgetForDay(DateTime day, List<Deadline?> lastDrawnAtIndex) {
-    var events = c.getDailyEvents(day);
+    var events = c.getDailyEvents(day, showDaily: c.showDaily);
 
     ShapeDecoration decoration;
     if (isSameDay(c._selectedDay, day)) {
