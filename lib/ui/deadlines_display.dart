@@ -80,7 +80,7 @@ class ParentController {
             null,
             "", "", colors.last.value, true,
             null,
-            newAt==null?null:fromDateTime(withTime(newAt, isSameDay(newAt, DateTime.now()) ? DateTime.now().hour+1 : max(8, min(22, DateTime.now().hour+1))), notify: NotificationType.silent),
+            newAt==null?null:fromDateTime(withTime(newAt, isSameDay(newAt, DateTime.now()) ? DateTime.now().hour+1 : max(6, min(22, DateTime.now().hour+1))), notify: NotificationType.silent),
             Importance.important, const []
           ),
           autofocusTitle: toEdit == null,
