@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:deadlines/alarm_external_wrapper/model.dart';
 import 'package:deadlines/ui/widgets/edit.dart';
 import 'package:deadlines/ui/widgets/list_of_upcoming.dart';
@@ -8,6 +10,7 @@ import 'package:deadlines/utils/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:intl/intl.dart';
+import 'package:table_calendar/table_calendar.dart';
 
 const colors = [
   /*Color(0xFFF94144),*/ Color(0xFFF3722C), Color(0xFFF8961E), Color(0xFFF9C74F),   Color(0xFF90BE6D), Color(0xFF43AA8B), Color(0xFF577590),
@@ -77,7 +80,7 @@ class ParentController {
             null,
             "", "", colors.last.value, true,
             null,
-            newAt==null?null:fromDateTime(withTime(newAt, DateTime.now().hour+1), notify: NotificationType.silent),
+            newAt==null?null:fromDateTime(withTime(newAt, isSameDay(newAt, DateTime.now()) ? DateTime.now().hour+1 : max(8, min(22, DateTime.now().hour+1))), notify: NotificationType.silent),
             Importance.important, const []
           ),
           autofocusTitle: toEdit == null,
