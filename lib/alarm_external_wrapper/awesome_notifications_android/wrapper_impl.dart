@@ -5,6 +5,7 @@ import 'package:deadlines/alarm_external_wrapper/notify_wrapper.dart';
 import 'package:deadlines/main.dart';
 import 'package:deadlines/persistence/database.dart';
 import 'package:deadlines/persistence/deadline_alarm_manager.dart';
+import 'package:deadlines/utils/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 
@@ -415,13 +416,12 @@ class AwesomeNotificationsWrapper extends NotifyWrapper {
           if(n != null && shouldStop != null && shouldStop(n)) {
             return false;
           }
-          if(n == atConcrete) {
+          if(n != null && (n == atConcrete || n.isBefore(atConcrete))) {
             print("bug here");
-            atConcrete = null;
+            return false;
           } else {
             atConcrete = n;
           }
-          print("atConcrete: $atConcrete");
         }
         if(atConcrete == null) return false;
 

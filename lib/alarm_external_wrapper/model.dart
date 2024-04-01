@@ -211,7 +211,9 @@ class RepeatableDate implements Comparable<RepeatableDate> {
       var weekday = raw.weekday;
       var ret = reference.copyWith(hour: time?.hour, minute: time?.minute, second: time?.second, millisecond: 0, microsecond: 0);
       if(ret.isBefore(reference)) return ret;
-      return reference.subtract(Duration(days: weekday < reference.weekday ? reference.weekday - weekday : (reference.weekday - weekday) + 7));
+      //reverse of add
+      int toSubtract = reference.weekday > weekday ? weekday - reference.weekday : 7 - (reference.weekday - weekday);
+      return ret.subtract(Duration(days: toSubtract ));
     }
     if(isDaily()) {
       var ret = raw.copyWith(year: reference.year, month: reference.month, day: reference.day, hour: time?.hour, minute: time?.minute, second: time?.second);
@@ -238,7 +240,8 @@ class RepeatableDate implements Comparable<RepeatableDate> {
       var weekday = raw.weekday;
       var ret = reference.copyWith(hour: time?.hour, minute: time?.minute, second: time?.second, millisecond: 0, microsecond: 0);
       if(ret.isAfter(reference)) return ret;
-      return reference.add(Duration(days: weekday > reference.weekday ? reference.weekday - weekday : 7 - (reference.weekday - weekday) ));
+      int toAdd = reference.weekday < weekday ? weekday - reference.weekday : 7 - (reference.weekday - weekday);
+      return ret.add(Duration(days: toAdd ));
     }
     if(isDaily()) {
       var ret = raw.copyWith(year: reference.year, month: reference.month, day: reference.day, hour: time?.hour, minute: time?.minute, second: time?.second);

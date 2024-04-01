@@ -73,7 +73,13 @@ class ParentController {
       context,
       MaterialPageRoute(
         builder: (context) => EditDeadlineWidget(
-          toEdit ?? Deadline(null, "", "", colors.last.value, true, null, newAt==null?null:fromDateTime(withTime(newAt, DateTime.now().hour+1), notify: NotificationType.silent), Importance.important, const []),
+          toEdit ?? Deadline(
+            null,
+            "", "", colors.last.value, true,
+            null,
+            newAt==null?null:fromDateTime(withTime(newAt, DateTime.now().hour+1), notify: NotificationType.silent),
+            Importance.important, const []
+          ),
           autofocusTitle: toEdit == null,
         )
       ),
