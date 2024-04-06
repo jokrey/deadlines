@@ -12,15 +12,6 @@ Future<void> main() async {
   runApp(const MainApp());
 }
 
-// // overlay entry point
-// @pragma("vm:entry-point")
-// void overlayMain() {
-//   runApp(const MaterialApp(
-//     debugShowCheckedModeBanner: false,
-//     home: AlarmBanner(),
-//   ));
-// }
-
 class MainApp extends StatefulWidget {
   static final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -39,7 +30,6 @@ class _MainAppState extends State<MainApp> {
       supportedLocales: const [Locale('en', 'GB'),],
       title: 'deadlines',
       theme: ThemeData(
-        // colorScheme: ColorScheme.fromSeed(seedColor: Colors.cyanAccent),
         useMaterial3: true,
       ),
       darkTheme: ThemeData.dark(),

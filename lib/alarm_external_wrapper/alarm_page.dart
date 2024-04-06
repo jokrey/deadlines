@@ -67,11 +67,6 @@ class _AlarmNotificationScreenState extends State<AlarmNotificationScreen> {
         await audioPlayer!.setAudioSource(AudioSource.asset("assets/alarm.mp3"));
         await audioPlayer!.setLoopMode(LoopMode.all);
 
-        // //required, because overlay starts, because on-notification-displayed is called (and after on-notification-action), but before this (usually...)
-        // await FlutterOverlayWindow.shareData("stop-music").then((_) { //does not stop vibrator
-        //   FlutterOverlayWindow.closeOverlay(); //does not always seem to return when overlay not opened for some reason?
-        // });
-
         await audioPlayer!.seek(const Duration(seconds: 4));
         await audioPlayer!.play(); //only returns when music is stopped...
       });

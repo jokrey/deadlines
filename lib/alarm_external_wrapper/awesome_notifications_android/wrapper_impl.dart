@@ -167,9 +167,6 @@ class AwesomeNotificationsWrapper extends NotifyWrapper {
         onDismissActionReceivedMethod:  AwesomeNotificationsWrapper.onDismissActionReceivedMethod
     );
 
-    // var initialAction = await AwesomeNotifications().getInitialNotificationAction(removeFromActionEvents: true);
-    // if(initialAction != null) await onActionReceivedMethod(initialAction);
-
     return true;
   }
 
@@ -319,20 +316,6 @@ class AwesomeNotificationsWrapper extends NotifyWrapper {
         );
       }
     }
-    // else {
-    //   if (notifyType == NotificationType.alarm) {
-    //     // if(! await AwesomeNotifications().isNotificationActiveOnStatusBar(id: id)) return;
-    //     AwesomeNotifications().dismiss(id);
-    //     await FlutterOverlayWindow.showOverlay(
-    //       alignment: OverlayAlignment.center,
-    //       height: 333,
-    //       width: 888,
-    //       overlayTitle: "deadlines alarm running",
-    //       overlayContent: "check out the notification"
-    //     );
-    //     await FlutterOverlayWindow.shareData(receivedNotification.payload);
-    //   }
-    // }
   }
 
   @pragma("vm:entry-point")

@@ -50,29 +50,6 @@ class _TestAlarmsScreenState extends State<TestAlarmsScreen> {
                   },
                   child: const Text("fullscreen screen")
                 ),
-                TextButton(
-                  onPressed: () async {
-                    // await FlutterOverlayWindow.showOverlay(
-                    //     alignment: OverlayAlignment.center,
-                    //     height: 333,
-                    //     width: 888,
-                    //     overlayTitle: "deadlines alarm running",
-                    //     overlayContent: "check out the notification"
-                    // );
-                    // await FlutterOverlayWindow.shareData({
-                    //   "color": "${Colors.deepPurple.value}"
-                    // });
-
-                    // /// broadcast data to and from overlay app
-                    // await FlutterOverlayWindow.shareData("Hello from the other side");
-                    //
-                    // /// streams message shared between overlay and main app
-                    // FlutterOverlayWindow.overlayListener.listen((event) {
-                    //   log("Current Event: $event");
-                    // });
-                  },
-                  child: const Text("alarm overlay")
-                ),
               ],
             ),
             Row(
@@ -212,8 +189,6 @@ class _TestAlarmsScreenState extends State<TestAlarmsScreen> {
                   }
                 });
                 audioPlayer.stop();
-                // FlutterOverlayWindow.shareData("stop");
-                // FlutterOverlayWindow.closeOverlay();
                 staticNotify.cancel(1);
               },
               child: const Text("Cancel All")

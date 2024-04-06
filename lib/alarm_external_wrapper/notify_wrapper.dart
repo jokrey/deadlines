@@ -11,12 +11,6 @@ NotifyWrapper staticNotify = AwesomeNotificationsWrapper();
 
 abstract class NotifyWrapper {
   Future<bool> init() async {
-    //must be before app lifecycle listener
-    // var isPermissionGranted = await FlutterOverlayWindow.isPermissionGranted();
-    // if(!isPermissionGranted) {
-    //   await FlutterOverlayWindow.requestPermission();
-    // }
-
     AppLifecycleListener(
         onStateChange: (newState) {
           debugPrint("newState: $newState");
@@ -27,7 +21,6 @@ abstract class NotifyWrapper {
         onPause: MoveToBackground.moveTaskToBack
     );
 
-    // FlutterOverlayWindow.closeOverlay();
     return true;
   }
 
