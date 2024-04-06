@@ -36,6 +36,9 @@ class DeadlineCard extends StatelessWidget {
           alignment: Alignment.center,
           children:
             <Widget>[ListTile(
+              shape: const RoundedRectangleBorder( //as is parent
+                  borderRadius: BorderRadius.all(Radius.circular(10)),
+              ),
               onTap: () => edit(d),
               leading: GestureDetector(
                 child: Icon(Icons.delete, color: appropriateColor,),
