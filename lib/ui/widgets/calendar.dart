@@ -386,7 +386,7 @@ class _DeadlineTableCalendarState extends State<DeadlineTableCalendar> {
   void buildWidgetsForDays() {
     widgetPerDayCache.clear();
 
-    List<Deadline?> lastDrawnAtIndex = [];
+    List<(Deadline?, Importance?)> lastDrawnAtIndex = [];
     DateTime t = c._focusedDay;
     DateTime firstDay = DateTime(t.month==1?t.year-1:t.year, t.month==1?12:t.month-1, 1);
     DateTime lastDay = DateTime(t.month>=11?t.year+1:t.year, t.month==11?1:t.month==12?2:t.month+2, 1).subtract(const Duration(days: 1));
@@ -397,7 +397,7 @@ class _DeadlineTableCalendarState extends State<DeadlineTableCalendar> {
       co = DateTime(co.year, co.month, co.day+1);
     }
   }
-  Widget? buildWidgetForDay(DateTime day, List<Deadline?> lastDrawnAtIndex) {
+  Widget? buildWidgetForDay(DateTime day, List<(Deadline?, Importance?)> lastDrawnAtIndex) {
     var events = c.getDailyEvents(day, showDaily: c.showDaily);
     var today = DateTime.now();
 
@@ -445,36 +445,37 @@ class _DeadlineTableCalendarState extends State<DeadlineTableCalendar> {
       for (Deadline d in wideEventsSorted) {
         if (d.startsAt?.date.isOnThisDay(day) ?? d.startsAt == null) {
           bool found = false;
-          for (var (i, lastAt) in lastDrawnAtIndex.indexed) {
-            if (lastAt == null) {
-              lastDrawnAtIndex[i] = d;
+          for (var (i, (lastAt, imp)) in lastDrawnAtIndex.indexed) {
+            var hasSameHeight = ((d.importance != Importance.critical) == (imp != Importance.critical));
+            if (lastAt == null && hasSameHeight) {
+              lastDrawnAtIndex[i] = (d, null);
               found = true;
               break;
             }
           }
           if (!found) {
-            lastDrawnAtIndex.add(d);
+            lastDrawnAtIndex.add((d, null));
           }
         } else {
-          for (var (i, lastAt) in lastDrawnAtIndex.indexed) {
+          for (var (i, (lastAt, _)) in lastDrawnAtIndex.indexed) {
             if (d.id == lastAt?.id) {
-              lastDrawnAtIndex[i] = d;
+              lastDrawnAtIndex[i] = (d, null);
               break;
             }
           }
         }
       }
 
-      List<Deadline?> multiDayEventsDraw = [];
+      List<(Deadline?, Importance?)> multiDayEventsDraw = [];
       multiDayEventsDraw.addAll(lastDrawnAtIndex);
 
       for (Deadline d in wideEventsSorted) {
         if (d.deadlineAt != null && d.deadlineAt!.date.isOnThisDay(day)) {
-          var i = lastDrawnAtIndex.indexOf(d);
-          if (i != -1) lastDrawnAtIndex[lastDrawnAtIndex.indexOf(d)] = null;
+          var i = lastDrawnAtIndex.indexOf((d, null));
+          if (i != -1) lastDrawnAtIndex[i] = (null, d.importance);
         }
       }
-      while (lastDrawnAtIndex.isNotEmpty && lastDrawnAtIndex.last == null) {
+      while (lastDrawnAtIndex.isNotEmpty && lastDrawnAtIndex.last.$1 == null) {
         lastDrawnAtIndex.removeLast();
       }
 
@@ -517,7 +518,8 @@ class _DeadlineTableCalendarState extends State<DeadlineTableCalendar> {
               );
           }
 
-          for (Deadline? d in multiDayEventsDraw.take(2)) {
+          for (var (d, imp) in multiDayEventsDraw) {
+            var actualRowHeight = ((d?.importance ?? imp) == Importance.critical) ? rowHeight : rowHeight*0.6;
             if (d != null) {
               Widget? child;
               if ((d.startsAt?.date.isOnThisDay(day) ?? d.startsAt == null) || day.day == 1 || day.weekday == 1) {
@@ -531,40 +533,42 @@ class _DeadlineTableCalendarState extends State<DeadlineTableCalendar> {
                 //   )
                 // );
                 var text = "${(!(d.startsAt?.date.isOnThisDay(day) ?? d.startsAt == null) && (day.day == 1 || day.weekday == 1)) ? "..." : " "}${d.title} ";
-                child = FittedText(foreground: getForegroundForColor(Color(d.color))!.withAlpha(d.active && !(d.isRepeating() && day.isBefore(today)) ? 255 : 105), text: text, maxWidth: maxWidth, maxHeight: rowHeight*0.9, preferredMinFontSize: 5, maxFontSize: 10);
+                child = FittedText(foreground: getForegroundForColor(Color(d.color))!.withAlpha(d.active && !(d.isRepeating() && day.isBefore(today)) ? 255 : 105), text: text, maxWidth: maxWidth, maxHeight: actualRowHeight*0.9, preferredMinFontSize: 5, maxFontSize: 10);
               }
               var radius = BorderRadius.zero;
               if ((d.startsAt?.date.isOnThisDay(day) ?? true) &&
                   (d.deadlineAt?.date.isOnThisDay(day) ?? true)) {
-                radius = BorderRadius.all(Radius.circular(rowHeight / 2));
+                radius = BorderRadius.all(Radius.circular(actualRowHeight / 2));
               } else if (d.startsAt?.date.isOnThisDay(day) ?? false) {
                 radius = BorderRadius.only(
-                    topLeft: Radius.circular(rowHeight / 2),
-                    bottomLeft: Radius.circular(rowHeight / 2));
+                    topLeft: Radius.circular(actualRowHeight / 2),
+                    bottomLeft: Radius.circular(actualRowHeight / 2));
               } else if (d.deadlineAt?.date.isOnThisDay(day) ?? false) {
                 radius = BorderRadius.only(
-                    topRight: Radius.circular(rowHeight / 2),
-                    bottomRight: Radius.circular(rowHeight / 2));
+                    topRight: Radius.circular(actualRowHeight / 2),
+                    bottomRight: Radius.circular(actualRowHeight / 2));
               }
-              if(countY + rowHeight + 1 > maxHeight) return Column(children: children);
-              countY += rowHeight + 1;
+              if(countY + actualRowHeight + 1 > maxHeight) return Column(children: children);
+              countY += actualRowHeight + 1;
               children.add(Container(
                 margin: const EdgeInsets.only(bottom: 1),
                 width: double.maxFinite,
-                height: rowHeight,
+                height: actualRowHeight,
                 decoration: ShapeDecoration(shape: RoundedRectangleBorder(borderRadius: radius), color: Color(d.color).withAlpha(d.active && !(d.isRepeating() && day.isBefore(today)) ? 255 : 155)),
                 alignment: d.isOneDay() ? Alignment.center : Alignment.centerLeft,
                 child: child,
               ));
             } else {
               List<Container> rowChildren = [];
-              double occupiedWidth = 0;
-              double importantWidth = shortEventsSortedIterator.numLeft() >= 3 ?
-                max(maxWidth / 3.33, rowHeight*2) : maxWidth / (shortEventsSortedIterator.numLeft()+0.33);
-              while (occupiedWidth + importantWidth < maxWidth && shortEventsSortedIterator.hasNext()) {
-                var container = shortEventContainerFor(shortEventsSortedIterator.next(), importantWidth);
-                occupiedWidth += importantWidth;
-                rowChildren.add(container);
+              if(actualRowHeight == rowHeight) { //if space available
+                double occupiedWidth = 0;
+                double importantWidth = shortEventsSortedIterator.numLeft() >= 3 ?
+                max(maxWidth / 3.33, rowHeight * 2) : maxWidth / (shortEventsSortedIterator.numLeft() + 0.33);
+                while (occupiedWidth + importantWidth < maxWidth && shortEventsSortedIterator.hasNext()) {
+                  var container = shortEventContainerFor(shortEventsSortedIterator.next(), importantWidth);
+                  occupiedWidth += importantWidth;
+                  rowChildren.add(container);
+                }
               }
               if (rowChildren.isNotEmpty) {
                 if(countY + rowHeight + 1 > maxHeight) return Column(children: children);
@@ -574,26 +578,15 @@ class _DeadlineTableCalendarState extends State<DeadlineTableCalendar> {
                   children: rowChildren,
                 ));
               } else {
-                if(countY + rowHeight + 1 > maxHeight) return Column(children: children);
-                countY += rowHeight + 1;
+                if(countY + actualRowHeight + 1 > maxHeight) return Column(children: children);
+                countY += actualRowHeight + 1;
                 children.add(Container(
                   margin: const EdgeInsets.only(bottom: 1),
                   width: double.maxFinite,
-                  height: rowHeight,
+                  height: actualRowHeight,
                 ));
               }
             }
-          }
-          for (Deadline? d in multiDayEventsDraw.skip(2)) {
-            var smallerRowHeight = max(1.0, rowHeight/8.0);
-            if(countY + smallerRowHeight + 1 > maxHeight) return Column(children: children);
-            countY += smallerRowHeight + 1;
-            children.add(Container(
-              margin: const EdgeInsets.only(bottom: 1),
-              width: double.maxFinite,
-              height: smallerRowHeight,
-              decoration: d == null ? null : BoxDecoration(shape: BoxShape.rectangle, color: Color(d.color).withAlpha(d.active && !(d.isRepeating() && day.isBefore(today)) ? 255 : 155)),
-            ));
           }
 
           while (shortEventsSortedIterator.hasNext()) {
