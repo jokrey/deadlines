@@ -2,8 +2,6 @@ import 'package:deadlines/alarm_external_wrapper/awesome_notifications_android/w
 import 'package:move_to_background/move_to_background.dart';
 
 import 'alarm_page.dart';
-import 'fullscreen_page.dart';
-
 import 'model.dart';
 import 'package:flutter/material.dart';
 
@@ -37,13 +35,23 @@ abstract class NotifyWrapper {
       case '/fullscreen':
         return MaterialPageRoute(builder: (context) {
           final (notifyPayload, wasInForeground) = arguments as (Map<String, dynamic>, bool);
-          return FullscreenNotificationScreen(notifyPayload: notifyPayload, wasInForeground: wasInForeground);
+          return AlarmNotificationScreen(
+            notifyPayload: notifyPayload, wasInForeground: wasInForeground,
+            withAudio: false,
+            repeatVibration: false,
+            vibrationPattern: const [0, 200, 200, 200, 200, 400, 200]
+          );
         });
 
       case '/alarm':
         return MaterialPageRoute(builder: (context) {
           final (notifyPayload, wasInForeground) = arguments as (Map<String, dynamic>, bool);
-          return AlarmNotificationScreen(notifyPayload: notifyPayload, wasInForeground: wasInForeground);
+          return AlarmNotificationScreen(
+            notifyPayload: notifyPayload, wasInForeground: wasInForeground,
+            withAudio: true,
+            repeatVibration: true,
+            vibrationPattern: const [0, 1000, 500, 250, 250, 250, 1000],
+          );
         });
     }
     return null;

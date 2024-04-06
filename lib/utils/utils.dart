@@ -94,3 +94,47 @@ Color lighten(Color c, [int percent = 10]) {
       c.blue + ((255 - c.blue) * p).round()
   );
 }
+
+
+String? convert0To99ToText(int i) {
+  if(i < 20) {
+    switch (i) {
+      case 0:return "zero";
+      case 1:return "one";
+      case 2:return "two";
+      case 3:return "three";
+      case 4:return "four";
+      case 5:return "five";
+      case 6:return "six";
+      case 7:return "seven";
+      case 8:return "eight";
+      case 9:return "nine";
+      case 10:return "ten";
+      case 11:return "eleven";
+      case 12:return "twelve";
+      case 13:return "thirteen";
+      case 14:return "fourteen";
+      case 15:return "fifteen";
+      case 16:return "sixteen";
+      case 17:return "seventeen";
+      case 18:return "eighteen";
+      case 19:return "nineteen";
+      default:return null;
+    }
+  } else {
+    var tenner = i - i%10;
+    String tt;
+    switch (tenner) {
+      case 20:tt="twenty";
+      case 30:tt="thirty";
+      case 40:tt="forty";
+      case 50:tt="fifty";
+      case 60:tt="sixty";
+      case 70:tt="seventy";
+      case 80:tt="eighty";
+      case 90:tt="ninety";
+      default:return null;
+    }
+    return "$tt ${i % 10 == 0?"":convert0To99ToText(i % 10)}";
+  }
+}

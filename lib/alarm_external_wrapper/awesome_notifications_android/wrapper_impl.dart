@@ -124,6 +124,9 @@ class AwesomeNotificationsWrapper extends NotifyWrapper {
         debug: true
     );
 
+    var initialAction = await AwesomeNotifications().getInitialNotificationAction(removeFromActionEvents: true);
+    if(initialAction != null) onActionReceivedMethod(initialAction);
+
     currentTimeZone = await AwesomeNotifications().getLocalTimeZoneIdentifier();
 
     await AwesomeNotifications().isNotificationAllowed().then((isAllowed) async {
