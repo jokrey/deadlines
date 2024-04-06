@@ -399,6 +399,7 @@ class _DeadlineTableCalendarState extends State<DeadlineTableCalendar> {
   }
   Widget? buildWidgetForDay(DateTime day, List<Deadline?> lastDrawnAtIndex) {
     var events = c.getDailyEvents(day, showDaily: c.showDaily);
+    var today = DateTime.now();
 
     ShapeDecoration decoration;
     if (isSameDay(c._selectedDay, day)) {
@@ -494,7 +495,7 @@ class _DeadlineTableCalendarState extends State<DeadlineTableCalendar> {
                 margin: const EdgeInsets.only(left: 0.4, right: 0.4, bottom: 1),
                 width: width,
                 height: rowHeight,
-                decoration: ShapeDecoration(shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(rowHeight / 2))), color: Color(d.color)),
+                decoration: ShapeDecoration(shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(rowHeight / 2))), color: Color(d.color).withAlpha(d.active && !(d.isRepeating() && day.isBefore(today)) ? 255 : 155)),
                 // child: FittedBox(
                 //   fit: BoxFit.fitHeight,
                 //   clipBehavior: Clip.hardEdge,
@@ -505,14 +506,14 @@ class _DeadlineTableCalendarState extends State<DeadlineTableCalendar> {
                 //   )
                 // ),
                 alignment: Alignment.center,
-                child: FittedText(foreground: getForegroundForColor(Color(d.color))!, text: d.title, maxWidth: width*0.85, maxHeight: rowHeight*0.9, preferredMinFontSize: 5, maxFontSize: 10),
+                child: FittedText(foreground: getForegroundForColor(Color(d.color))!.withAlpha(d.active && !(d.isRepeating() && day.isBefore(today)) ? 255 : 105), text: d.title, maxWidth: width*0.85, maxHeight: rowHeight*0.9, preferredMinFontSize: 5, maxFontSize: 10),
               )
                 :
               Container(
                 margin: const EdgeInsets.only(left: 0.4, right: 0.4, bottom: 1),
                 width: rowHeight,
                 height: rowHeight,
-                decoration: ShapeDecoration(shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(rowHeight / 2))), color: Color(d.color)),
+                decoration: ShapeDecoration(shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(rowHeight / 2))), color: Color(d.color).withAlpha(d.active && !(d.isRepeating() && day.isBefore(today)) ? 255 : 155)),
               );
           }
 
@@ -530,8 +531,8 @@ class _DeadlineTableCalendarState extends State<DeadlineTableCalendar> {
                 //   )
                 // );
                 var text = "${(!(d.startsAt?.date.isOnThisDay(day) ?? d.startsAt == null) && (day.day == 1 || day.weekday == 1)) ? "..." : " "}${d.title} ";
-                child = FittedText(foreground: getForegroundForColor(Color(d.color))!, text: text, maxWidth: maxWidth, maxHeight: rowHeight*0.9, preferredMinFontSize: 5, maxFontSize: 10);
-          }
+                child = FittedText(foreground: getForegroundForColor(Color(d.color))!.withAlpha(d.active && !(d.isRepeating() && day.isBefore(today)) ? 255 : 105), text: text, maxWidth: maxWidth, maxHeight: rowHeight*0.9, preferredMinFontSize: 5, maxFontSize: 10);
+              }
               var radius = BorderRadius.zero;
               if ((d.startsAt?.date.isOnThisDay(day) ?? true) &&
                   (d.deadlineAt?.date.isOnThisDay(day) ?? true)) {
@@ -551,7 +552,7 @@ class _DeadlineTableCalendarState extends State<DeadlineTableCalendar> {
                 margin: const EdgeInsets.only(bottom: 1),
                 width: double.maxFinite,
                 height: rowHeight,
-                decoration: ShapeDecoration(shape: RoundedRectangleBorder(borderRadius: radius), color: Color(d.color)),
+                decoration: ShapeDecoration(shape: RoundedRectangleBorder(borderRadius: radius), color: Color(d.color).withAlpha(d.active && !(d.isRepeating() && day.isBefore(today)) ? 255 : 155)),
                 alignment: d.isOneDay() ? Alignment.center : Alignment.centerLeft,
                 child: child,
               ));
@@ -559,7 +560,7 @@ class _DeadlineTableCalendarState extends State<DeadlineTableCalendar> {
               List<Container> rowChildren = [];
               double occupiedWidth = 0;
               double importantWidth = shortEventsSortedIterator.numLeft() >= 3 ?
-                min(maxWidth / 3.2, rowHeight*2) : maxWidth / (shortEventsSortedIterator.numLeft()+0.33);
+                max(maxWidth / 3.33, rowHeight*2) : maxWidth / (shortEventsSortedIterator.numLeft()+0.33);
               while (occupiedWidth + importantWidth < maxWidth && shortEventsSortedIterator.hasNext()) {
                 var container = shortEventContainerFor(shortEventsSortedIterator.next(), importantWidth);
                 occupiedWidth += importantWidth;
@@ -591,7 +592,7 @@ class _DeadlineTableCalendarState extends State<DeadlineTableCalendar> {
               margin: const EdgeInsets.only(bottom: 1),
               width: double.maxFinite,
               height: smallerRowHeight,
-              decoration: d == null ? null : BoxDecoration(shape: BoxShape.rectangle, color: Color(d.color)),
+              decoration: d == null ? null : BoxDecoration(shape: BoxShape.rectangle, color: Color(d.color).withAlpha(d.active && !(d.isRepeating() && day.isBefore(today)) ? 255 : 155)),
             ));
           }
 
@@ -599,7 +600,7 @@ class _DeadlineTableCalendarState extends State<DeadlineTableCalendar> {
             List<Container> rowChildren = [];
             double occupiedWidth = 0;
             double importantWidth = shortEventsSortedIterator.numLeft() >= 3 ?
-              min(maxWidth / 3.2, rowHeight*2) : maxWidth / (shortEventsSortedIterator.numLeft()+0.25);
+              max(maxWidth / 3.33, rowHeight*2) : maxWidth / (shortEventsSortedIterator.numLeft()+0.33);
             while (occupiedWidth + importantWidth < maxWidth && shortEventsSortedIterator.hasNext()) {
               var container = shortEventContainerFor(shortEventsSortedIterator.next(), importantWidth);
               occupiedWidth += importantWidth;

@@ -1,5 +1,4 @@
 import 'package:deadlines/alarm_external_wrapper/model.dart';
-import 'package:deadlines/utils/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -13,7 +12,7 @@ class DeadlineCard extends StatelessWidget {
   final Function(Deadline, NotifyableRepeatableDateTime) toggleNotificationType;
   const DeadlineCard(this.d, this.edit, this.delete, this.toggleActive, this.toggleNotificationType, {super.key});
 
-  Color get appropriateColor => d.active? Color(d.color) : darken(Color(d.color), 35);
+  Color get appropriateColor => Color(d.color);//d.active? Color(d.color) : Color(d.color).withAlpha(150);
 
   @override Widget build(BuildContext context) {
     return Dismissible(
@@ -103,7 +102,7 @@ class DeadlineCard extends StatelessWidget {
                 d1.notifyType == NotificationType.normal ? Icons.notifications_rounded :
                 d1.notifyType == NotificationType.fullscreen ? Icons.fullscreen_rounded :
                 Icons.notifications_active_rounded,
-                color: d1.isOverdue()? darken(appropriateColor, 35) : appropriateColor,
+                color: appropriateColor,
               ),
               onTap: () {
                 if(!d1.isOverdue()) {
@@ -115,7 +114,7 @@ class DeadlineCard extends StatelessWidget {
         ),
       ]
       +
-      (d1.isOverdue()? [Positioned(left: 0, right: 0, child: Container(height: 2, color: darken(const Color(0xFFF94144), 35).withAlpha(105)))] : []),
+      (d1.isOverdue()? [Positioned(left: 0, right: 0, child: Container(height: 2, color: const Color(0xFFF94144).withAlpha(105)))] : []),
     );
   }
 }
