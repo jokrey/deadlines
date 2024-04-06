@@ -10,7 +10,7 @@ NotifyWrapper staticNotify = AwesomeNotificationsWrapper();
 
 
 abstract class NotifyWrapper {
-  Future<void> init() async {
+  Future<bool> init() async {
     //must be before app lifecycle listener
     // var isPermissionGranted = await FlutterOverlayWindow.isPermissionGranted();
     // if(!isPermissionGranted) {
@@ -28,6 +28,7 @@ abstract class NotifyWrapper {
     );
 
     // FlutterOverlayWindow.closeOverlay();
+    return true;
   }
 
   Route<dynamic>? handleRoute(String? name, Object? arguments) {

@@ -5,7 +5,10 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Permission.manageExternalStorage.request();
+
   runApp(const MainApp());
 }
 
@@ -27,12 +30,7 @@ class MainApp extends StatefulWidget {
 }
 
 class _MainAppState extends State<MainApp> {
-  @override void initState() {
-    super.initState();
-
-    staticNotify.init();
-    Permission.manageExternalStorage.request();
-  }
+  final Future<void> notifyInit = staticNotify.init();
 
   @override Widget build(BuildContext context) {
     return MaterialApp(
@@ -56,10 +54,19 @@ class _MainAppState extends State<MainApp> {
 
         switch (settings.name) {
           case '/':
-            return MaterialPageRoute(builder: (context) =>
-              // const TestAlarmsScreen()
-              const DeadlinesDisplay()
-            );
+            return MaterialPageRoute(builder: (context) {
+              return FutureBuilder(
+                future: notifyInit,
+                builder: (context, snapshot) {
+                  if(snapshot.hasData) {
+                    // const TestAlarmsScreen()
+                    return const DeadlinesDisplay();
+                  } else {
+                    return Container();
+                  }
+                },
+              );
+            });
 
           default:
             assert(false, 'Page ${settings.name} not found');

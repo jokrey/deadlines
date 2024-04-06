@@ -19,7 +19,7 @@ class AwesomeNotificationsWrapper extends NotifyWrapper {
 
   static String currentTimeZone = "CET";
 
-  @override Future<void> init() async {
+  @override Future<bool> init() async {
     super.init();
     await AwesomeNotifications().initialize(
       // set the icon to null if you want to use the default app icon
@@ -169,6 +169,8 @@ class AwesomeNotificationsWrapper extends NotifyWrapper {
         onNotificationDisplayedMethod:  AwesomeNotificationsWrapper.onNotificationDisplayedMethod,
         onDismissActionReceivedMethod:  AwesomeNotificationsWrapper.onDismissActionReceivedMethod
     );
+
+    return true;
   }
 
   @override Future<void> set(int notifyId, Color color, String title, String description, NotifyableRepeatableDateTime at, bool Function(DateTime)? shouldSkip, bool Function(DateTime)? shouldStop) async {
