@@ -88,7 +88,7 @@ class AwesomeNotificationsWrapper extends NotifyWrapper {
 
             playSound: true,
             // defaultRingtoneType: DefaultRingtoneType.Alarm,
-            soundSource: "resource://raw/ringtone_example",
+            soundSource: "resource://raw/alarm",
             enableVibration: true,
             vibrationPattern: Int64List.fromList([0, 200, 200, 200, 200, 200, 200]),
             locked: true,
@@ -123,9 +123,6 @@ class AwesomeNotificationsWrapper extends NotifyWrapper {
         ],
         debug: true
     );
-
-    var initialAction = await AwesomeNotifications().getInitialNotificationAction(removeFromActionEvents: true);
-    if(initialAction != null) onActionReceivedMethod(initialAction);
 
     currentTimeZone = await AwesomeNotifications().getLocalTimeZoneIdentifier();
 
@@ -169,6 +166,9 @@ class AwesomeNotificationsWrapper extends NotifyWrapper {
         onNotificationDisplayedMethod:  AwesomeNotificationsWrapper.onNotificationDisplayedMethod,
         onDismissActionReceivedMethod:  AwesomeNotificationsWrapper.onDismissActionReceivedMethod
     );
+
+    // var initialAction = await AwesomeNotifications().getInitialNotificationAction(removeFromActionEvents: true);
+    // if(initialAction != null) await onActionReceivedMethod(initialAction);
 
     return true;
   }

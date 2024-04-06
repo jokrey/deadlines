@@ -27,7 +27,7 @@
 //           usage: AndroidAudioUsage.alarm,
 //         ),
 //       ));
-//       await audioPlayer.setAudioSource(AudioSource.asset("assets/ringtone_example.mp3"));
+//       await audioPlayer.setAudioSource(AudioSource.asset("assets/alarm.mp3"));
 //       await audioPlayer.setLoopMode(LoopMode.all);
 //     });
 //

@@ -187,7 +187,7 @@ class _TestAlarmsScreenState extends State<TestAlarmsScreen> {
                     ),
                   ));
 
-                  await audioPlayer.setAudioSource(AudioSource.asset("assets/ringtone_example.mp3"));
+                  await audioPlayer.setAudioSource(AudioSource.asset("assets/alarm.mp3"));
                   await audioPlayer.setLoopMode(LoopMode.all);
                   audioPlayer.play();
                 },

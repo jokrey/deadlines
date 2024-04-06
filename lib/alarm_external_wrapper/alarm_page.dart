@@ -64,7 +64,7 @@ class _AlarmNotificationScreenState extends State<AlarmNotificationScreen> {
             usage: AndroidAudioUsage.alarm,
           ),
         ));
-        await audioPlayer!.setAudioSource(AudioSource.asset("assets/ringtone_example.mp3"));
+        await audioPlayer!.setAudioSource(AudioSource.asset("assets/alarm.mp3"));
         await audioPlayer!.setLoopMode(LoopMode.all);
 
         // //required, because overlay starts, because on-notification-displayed is called (and after on-notification-action), but before this (usually...)
@@ -72,7 +72,8 @@ class _AlarmNotificationScreenState extends State<AlarmNotificationScreen> {
         //   FlutterOverlayWindow.closeOverlay(); //does not always seem to return when overlay not opened for some reason?
         // });
 
-        audioPlayer!.play(); //only returns when music is stopped...
+        await audioPlayer!.seek(const Duration(seconds: 4));
+        await audioPlayer!.play(); //only returns when music is stopped...
       });
     }
 
@@ -96,17 +97,17 @@ class _AlarmNotificationScreenState extends State<AlarmNotificationScreen> {
 
   bool wasFinished = false;
 
-  void snooze() {
+  Future<void> snooze() async {
     if(wasFinished) return;
     wasFinished = true;
-    Vibration.cancel();
-    audioPlayer?.stop();
+    await Vibration.cancel();
+    await audioPlayer?.stop();
 
     int id = int.parse(widget.notifyPayload["id"]!);
     Color color = widget.notifyPayload["color"] != null ? Color(int.parse(widget.notifyPayload["color"]!)) : Colors.black45;
     String title = widget.notifyPayload["title"] != null ? widget.notifyPayload["title"]! : "ALARM";
     String body = widget.notifyPayload["body"] != null ? widget.notifyPayload["body"]! : "NONE";
-    staticNotify.snooze(id, Duration(minutes: snoozeForMinutes), color, title, body, widget.notifyPayload);
+    await staticNotify.snooze(id, Duration(minutes: snoozeForMinutes), color, title, body, widget.notifyPayload);
   }
 
   @override Widget build(BuildContext context) {
@@ -261,20 +262,20 @@ class _AlarmNotificationScreenState extends State<AlarmNotificationScreen> {
                         ],
                       ),
                     ),
-                    onChanged: (position) {
-                      setState(() {
-                        if(position == SlidableButtonPosition.start) {
-                          snooze();
+                    onChanged: (position) async {
+                      if(position == SlidableButtonPosition.start) {
+                        await snooze();
 
-                          Navigator.pop(context);
-                        } else if(position == SlidableButtonPosition.end) {
-                          wasFinished = true;
-                          Vibration.cancel();
-                          audioPlayer?.stop();
+                        if (!context.mounted) return;
+                        Navigator.pop(context);
+                      } else if(position == SlidableButtonPosition.end) {
+                        wasFinished = true;
+                        Vibration.cancel();
+                        await audioPlayer?.stop();
 
-                          Navigator.pop(context);
-                        }
-                      });
+                        if (!context.mounted) return;
+                        Navigator.pop(context);
+                      }
                     },
                   ),
                 ),

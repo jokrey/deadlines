@@ -10,7 +10,7 @@
 .svn/
 migrate_working_dir/
 
-ringtone_example.mp3
+alarm.mp3
 
 # IntelliJ related
 *.iml
