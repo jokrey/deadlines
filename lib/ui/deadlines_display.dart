@@ -2,8 +2,8 @@ import 'dart:math';
 
 import 'package:deadlines/alarm_external_wrapper/model.dart';
 import 'package:deadlines/ui/widgets/edit.dart';
-import 'package:deadlines/ui/widgets/list_of_upcoming.dart';
-import 'package:deadlines/ui/widgets/calendar.dart';
+import 'package:deadlines/ui/widgets/upcoming_list.dart';
+import 'package:deadlines/ui/widgets/months.dart';
 import 'package:deadlines/persistence/database.dart';
 import 'package:deadlines/persistence/model.dart';
 import 'package:deadlines/utils/utils.dart';

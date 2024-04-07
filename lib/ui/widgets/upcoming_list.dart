@@ -6,7 +6,7 @@ import 'package:deadlines/persistence/database.dart';
 import 'package:deadlines/ui/deadlines_display.dart';
 import 'package:deadlines/ui/widgets/card_in_list.dart';
 import 'package:deadlines/persistence/model.dart';
-import 'package:deadlines/ui/widgets/timer_page.dart';
+import 'package:deadlines/ui/widgets/timers.dart';
 import 'package:deadlines/utils/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
