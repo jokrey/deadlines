@@ -70,6 +70,8 @@ bool iterEquals(Iterable elements1, Iterable elements2) {
 DateTime stripTime(DateTime dt) => DateTime(dt.year, dt.month, dt.day);
 DateTime withTime(DateTime dt, [int hour = 0, int minute = 0, int second = 0]) => DateTime(dt.year, dt.month, dt.day, hour, minute, second);
 bool isSameMonth(DateTime d1, DateTime d2) => d1.year == d2.year && d1.month == d2.month;
+bool isSameDay(DateTime d1, DateTime d2) => d1.year == d2.year && d1.month == d2.month && d1.day == d2.day;
+
 
 ///https://stackoverflow.com/a/60191441
 Color darken(Color c, [int percent = 10]) {

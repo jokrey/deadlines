@@ -4,7 +4,6 @@ import 'package:deadlines/utils/not_dumb_grid_view.dart';
 import 'package:deadlines/utils/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:table_calendar/table_calendar.dart';
 
 class YearsPage extends StatefulWidget {
   final DeadlinesDatabase db;

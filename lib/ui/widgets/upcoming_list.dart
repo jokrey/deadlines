@@ -9,7 +9,6 @@ import 'package:deadlines/persistence/model.dart';
 import 'package:deadlines/ui/widgets/timers.dart';
 import 'package:deadlines/utils/utils.dart';
 import 'package:flutter/material.dart';
-import 'package:table_calendar/table_calendar.dart';
 import '../../persistence/deadline_alarm_manager.dart';
 
 
