@@ -5,6 +5,7 @@ import 'package:deadlines/ui/deadlines_display.dart';
 import 'package:deadlines/persistence/database.dart';
 import 'package:deadlines/persistence/model.dart';
 import 'package:deadlines/ui/widgets/card_in_list.dart';
+import 'package:deadlines/ui/widgets/years.dart';
 import 'package:deadlines/utils/fitted_text.dart';
 import 'package:deadlines/utils/utils.dart';
 import 'package:flutter/material.dart';
@@ -406,7 +407,7 @@ class _DeadlineTableCalendarState extends State<DeadlineTableCalendar> {
       decoration = const ShapeDecoration(shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.all(Radius.circular(5))),
           color: Color(0xFF5C6BC0));
-    } else if (isSameDay(DateTime.now(), day)) {
+    } else if (isSameDay(today, day)) {
       decoration = const ShapeDecoration(shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.all(Radius.circular(5))),
           color: Color(0x5F5C6BC0));
@@ -648,9 +649,19 @@ class _DeadlineTableCalendarState extends State<DeadlineTableCalendar> {
       headerStyle: const HeaderStyle(
         formatButtonVisible : false,
       ),
-      onHeaderTapped: (_) {
-        c._selectedDay = null;
-        c.updateShownList();
+      onHeaderTapped: (_) async {
+        var tappedMonth = await Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => YearsPage(db: c.db, initialYear: c._focusedDay.year,)),
+        );
+
+        if(tappedMonth is DateTime) {
+          c._focusedDay = tappedMonth;
+          c._selectedDay = null;
+          c.updatePotentiallyVisibleDeadlinesFromDb().then((_) => setState(() {
+            c.updateShownList();
+          }));
+        }
       },
       calendarFormat: CalendarFormat.month,
       firstDay: DateTime(1990),

@@ -300,6 +300,50 @@ final class DeadlinesDatabase {
     return found;
   }
 
+  Future<List<Deadline>> queryActiveCriticalDeadlinesInYear(int year) async {
+    var rawResults = await (await db).rawQuery(
+        """SELECT *
+        FROM deadlines d
+        WHERE
+        (
+          (d.active = 1)
+          AND
+          (d.importance = ${Importance.critical.index})
+          AND
+          (
+               (d.startsAt_year   == $year OR d.startsAt_repetitionType   != ${RepetitionType.none.index})
+            OR (d.deadlineAt_year == $year OR d.deadlineAt_repetitionType != ${RepetitionType.none.index})
+          )
+          AND
+          (
+            d.id NOT IN (SELECT rm_id FROM removals WHERE all_future)
+            OR
+            d.id IN (
+              SELECT rm_id FROM removals r WHERE 
+              d.id == r.rm_id
+              AND
+              r.all_future
+              AND
+              (r.rm_dlAt_year >= $year)
+            )
+          )
+        )
+      ;"""
+    );
+
+    List<Deadline> found = await Future.wait(rawResults.map((e) async => _fromSQLMap(e, (await (await db).rawQuery(
+        """SELECT *
+        FROM removals
+        WHERE
+        (
+          rm_id == ${e["id"]}
+        )
+      ;"""
+    )).map(_rFromSQLMap).toList(growable: false))).toList());
+
+    return found;
+  }
+
 
   Future<Deadline?> loadById(int id) async {
     var raw = await (await db).query("deadlines", where: "id = ?", whereArgs: [id]);
