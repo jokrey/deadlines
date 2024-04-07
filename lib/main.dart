@@ -50,7 +50,7 @@ class _MainAppState extends State<MainApp> {
                 builder: (context, snapshot) {
                   if(snapshot.hasData) {
                     // const TestAlarmsScreen()
-                    return const DeadlinesDisplay();
+                    return DeadlinesDisplay();
                   } else {
                     return Container();
                   }
