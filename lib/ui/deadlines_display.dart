@@ -269,17 +269,12 @@ void undoUI(String text, Color color, BuildContext context, Function() undo) {
 
 
 
-class DeadlinesDisplay extends StatefulWidget {
-  const DeadlinesDisplay({super.key});
+class DeadlinesDisplay extends StatelessWidget {
+  DeadlinesDisplay({super.key});
 
-  @override State<DeadlinesDisplay> createState() => _DeadlinesDisplayState();
-}
-
-class _DeadlinesDisplayState extends State<DeadlinesDisplay> {
   final ParentController parent = ParentController();
   late final UpcomingDeadlinesListController upcomingController = UpcomingDeadlinesListController(parent);
   late final DeadlinesCalendarController calendarController = DeadlinesCalendarController(parent);
-
   @override Widget build(BuildContext context) {
     return FutureBuilder(
       future: Future.wait([upcomingController.init(), calendarController.init()]),
@@ -301,6 +296,3 @@ class _DeadlinesDisplayState extends State<DeadlinesDisplay> {
     );
   }
 }
-
-
-
