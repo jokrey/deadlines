@@ -11,7 +11,7 @@ import 'package:deadlines/utils/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:multi_split_view/multi_split_view.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:table_calendar/table_calendar.dart';
+import 'package:table_calendar/table_calendar.dart' as tbl;
 
 class DeadlinesCalendarController extends ChildController {
   final ParentController parent;
@@ -403,7 +403,7 @@ class _DeadlineTableCalendarState extends State<DeadlineTableCalendar> {
     var today = DateTime.now();
 
     ShapeDecoration decoration;
-    if (isSameDay(c._selectedDay, day)) {
+    if (c._selectedDay != null && isSameDay(c._selectedDay!, day)) {
       decoration = const ShapeDecoration(shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.all(Radius.circular(5))),
           color: Color(0xFF5C6BC0));
@@ -644,9 +644,10 @@ class _DeadlineTableCalendarState extends State<DeadlineTableCalendar> {
   @override Widget build(BuildContext context) {
     buildWidgetsForDays();
 
-    return TableCalendar<Deadline>(
+    // return TinyMonthView(year: c._focusedDay.year, month: c._focusedDay.month, deadlines: c.deadlinesDbCache);
+    return tbl.TableCalendar<Deadline>(
       shouldFillViewport: true,
-      headerStyle: const HeaderStyle(
+      headerStyle: const tbl.HeaderStyle(
         formatButtonVisible : false,
       ),
       onHeaderTapped: (_) async {
@@ -663,21 +664,21 @@ class _DeadlineTableCalendarState extends State<DeadlineTableCalendar> {
           }));
         }
       },
-      calendarFormat: CalendarFormat.month,
+      calendarFormat: tbl.CalendarFormat.month,
       firstDay: DateTime(1990),
       lastDay: DateTime(2100),
       focusedDay: c._focusedDay,
-      selectedDayPredicate: (day) => isSameDay(c._selectedDay, day),
-      rangeSelectionMode: RangeSelectionMode.disabled,
+      selectedDayPredicate: (day) => c._selectedDay != null && isSameDay(c._selectedDay!, day),
+      rangeSelectionMode: tbl.RangeSelectionMode.disabled,
       eventLoader: (day) {return const [];},
-      startingDayOfWeek: StartingDayOfWeek.monday,
-      calendarStyle: const CalendarStyle(
+      startingDayOfWeek: tbl.StartingDayOfWeek.monday,
+      calendarStyle: const tbl.CalendarStyle(
         outsideDaysVisible: true,
         cellAlignment: Alignment.topCenter,
         cellMargin: EdgeInsets.only(top: 3),
       ),
       onDaySelected: (selectedDay, focusedDay) {
-        if (isSameDay(c._selectedDay, selectedDay)) return;
+        if (c._selectedDay != null && isSameDay(c._selectedDay!, selectedDay)) return;
         if(isSameMonth(selectedDay, focusedDay)) {
           c._selectedDay = selectedDay;
         } else {
@@ -693,7 +694,7 @@ class _DeadlineTableCalendarState extends State<DeadlineTableCalendar> {
           c.updateShownList();
         }));
       },
-      calendarBuilders: CalendarBuilders(
+      calendarBuilders: tbl.CalendarBuilders(
         prioritizedBuilder: (context, day, events) => widgetPerDayCache[(day.year, day.month, day.day)],
       ),
     );

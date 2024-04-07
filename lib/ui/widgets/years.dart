@@ -17,7 +17,6 @@ class _YearsPageState extends State<YearsPage> {
   late PageController controller;
   @override void initState() {
     super.initState();
-
     controller = PageController(initialPage: widget.initialYear);
   }
   @override void dispose() {
