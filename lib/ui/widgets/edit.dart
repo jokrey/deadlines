@@ -2,6 +2,7 @@ import 'package:deadlines/alarm_external_wrapper/model.dart';
 import 'package:deadlines/ui/deadlines_display.dart';
 import 'package:deadlines/ui/widgets/card_in_list.dart';
 import 'package:deadlines/utils/date_and_time_picker.dart';
+import 'package:deadlines/utils/not_dumb_grid_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:deadlines/persistence/model.dart';
@@ -142,12 +143,11 @@ class EditDeadlineWidgetState extends State<EditDeadlineWidget> {
                   ],
                 ),
                 const SizedBox(height: 10,),
-                Flexible(
-                  child: GridView.builder(
-                    shrinkWrap: true, // new line
-                    physics: const NeverScrollableScrollPhysics(),
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: (colors.length / 2).round()),
-                    itemBuilder: (_, index) {
+                SizedBox(
+                  height: 100,
+                  child: NotDumbGridView(
+                    xCount: (colors.length/2).round(), yCount: 2,
+                    builder: (index) {
                       Color cAtIndex = colors[index];
                       return IconButton(
                         onPressed: () {
@@ -159,7 +159,6 @@ class EditDeadlineWidgetState extends State<EditDeadlineWidget> {
                         icon: Icon(color.value == cAtIndex.value?Icons.circle: Icons.circle_outlined,),
                       );
                     },
-                    itemCount: colors.length,
                   ),
                 ),
                 const SizedBox(height: 25,),

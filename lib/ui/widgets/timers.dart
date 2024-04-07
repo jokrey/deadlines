@@ -4,6 +4,7 @@ import 'package:deadlines/alarm_external_wrapper/model.dart';
 import 'package:deadlines/alarm_external_wrapper/notify_wrapper.dart';
 import 'package:deadlines/persistence/deadline_alarm_manager.dart';
 import 'package:deadlines/ui/deadlines_display.dart';
+import 'package:deadlines/utils/not_dumb_grid_view.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:numberpicker/numberpicker.dart';
@@ -19,15 +20,22 @@ class _TimerPageState extends State<TimerPage> {
   @override Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
-        child: Center(child: GridView.builder(
+        child: Padding(
+          padding: const EdgeInsets.all(10.0),
+          child: NotDumbGridView(
+            xCount: 2, yCount: 3,
+            builder: (index) => TimerWidget(DeadlineAlarms.timerOffset + index),
+          ),
+        ),
+        /*Center(child: GridView.builder(
           shrinkWrap: true, // new line
           physics: const NeverScrollableScrollPhysics(),
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, mainAxisSpacing: 6),
           itemBuilder: (_, index) {
-            return TimerWidget(DeadlineAlarms.timerOffset + index);
+            return ;
           },
           itemCount: 6,
-        )),
+        )),*/
       ),
     );
   }
