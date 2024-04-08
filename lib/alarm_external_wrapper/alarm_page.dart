@@ -216,13 +216,10 @@ class _AlarmNotificationScreenState extends State<AlarmNotificationScreen> {
                         mainAxisSize: MainAxisSize.min,
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: <Widget>[
-                          Transform.flip(
-                            flipX: true,
-                            child:Icon(
-                              Icons.double_arrow_rounded,
-                              size: maxHeight / 9 / 3,
-                              color: getForegroundForColor(color),
-                            )
+                          Icon(
+                            Icons.keyboard_double_arrow_left_rounded,
+                            size: maxHeight / 9 / 3,
+                            color: getForegroundForColor(color),
                           ),
                         ]+(widget.withAudio || widget.repeatVibration?[
                           Icon(
@@ -232,7 +229,7 @@ class _AlarmNotificationScreenState extends State<AlarmNotificationScreen> {
                           ),
                         ]:[])+[
                           Icon(
-                            Icons.double_arrow_rounded,
+                            Icons.keyboard_double_arrow_right_rounded,
                             size: maxHeight / 9 / 3,
                             color: getForegroundForColor(color),
                           ),
