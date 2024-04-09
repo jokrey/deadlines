@@ -26,9 +26,7 @@ class DeadlinesCalendarController extends ChildController {
     prefs.setDouble("ratio", ratio);
   }
 
-  final List<Deadline> deadlinesDbCache = [];
-
-  DateTime _focusedDay = DateTime.now();
+  DateTime _selectedMonth = DateTime.now();
   DateTime? _selectedDay;
   final List<((DateTime, DateTime), List<Deadline>)> shownBelow = [];
 
@@ -81,7 +79,7 @@ class DeadlinesCalendarController extends ChildController {
     } else {
       //todo: improve readability and maintainability of this insanity:
       var now = DateTime.now();
-      var firstDayInMonth = DateTime(_focusedDay.year, _focusedDay.month, 1);
+      var firstDayInMonth = DateTime(_selectedMonth.year, _selectedMonth.month, 1);
 
       var occurrencesInMonth = <Deadline, List<DateTime>>{};
       DateTime i = firstDayInMonth;
@@ -381,24 +379,155 @@ class DeadlineTableCalendar extends StatefulWidget {
 class _DeadlineTableCalendarState extends State<DeadlineTableCalendar> {
   DeadlinesCalendarController get c => widget.c;
 
-  //calendar widget builder very rarely not called in order of days... but this fucks up the lastDrawnAtIndex...
-  //so a map is required...
-  Map<(int, int, int), Widget?> widgetPerDayCache = {};
-  void buildWidgetsForDays() {
-    widgetPerDayCache.clear();
+  int getPage(DateTime d) {
+    return d.year*12 + d.month;
+  }
+  (int, int) getYearMonthFromPage(int page) {
+    return ((page / 12).floor(), page % 12);
+  }
+
+  late PageController controller;
+  @override void initState() {
+    super.initState();
+    controller = PageController(initialPage: getPage(c._selectedMonth));
+    controller.addListener(() {
+      var (year, month) = getYearMonthFromPage(controller.page!.round());
+      c._selectedMonth = DateTime(year, month, 1);
+      c._selectedDay = null;
+      // c.updatePotentiallyVisibleDeadlinesFromDb().then((_) {
+      //   c.notifyContentsChanged();
+      // });
+    });
+  }
+  @override void dispose() {
+    super.dispose();
+    controller.dispose();
+  }
+
+  @override Widget build(BuildContext context) {
+    return PageView.builder(
+      controller: controller,
+      itemBuilder: (context, page) {
+        var (year, month) = getYearMonthFromPage(page);
+        var firstDayInMonth = DateTime(year, month, 1);
+
+        // return FutureBuilder(
+          // future: Future.wait([
+          //   c.db.queryDeadlinesInMonth(month==1?year-1:year, month==1?12:month-1),
+          //   c.db.queryDeadlinesInMonth(year, month),
+          //   c.db.queryDeadlinesInMonth(month==12?year+1:year, month==12?1:month+1),
+          // ]),
+          // builder: (context, snapshot) {
+            return Column(
+              mainAxisAlignment: MainAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                GestureDetector(
+                  behavior: HitTestBehavior.translucent,
+                  onTap: () async {
+                    var tappedMonth = await Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => YearsPage(db: c.db, initialYear: c._selectedMonth.year,)),
+                    );
+
+                    if(tappedMonth is DateTime) {
+                      c._selectedMonth = tappedMonth;
+                      controller.animateToPage(getPage(tappedMonth), duration: const Duration(milliseconds: 500), curve: Curves.linear);
+                      c._selectedDay = null;
+                      // c.updatePotentiallyVisibleDeadlinesFromDb().then((_) => setState(() {
+                      //   c.notifyContentsChanged();
+                      // }));
+                    }
+                  },
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      IconButton(
+                        onPressed: () {
+                          controller.previousPage(duration: const Duration(milliseconds: 250), curve: accelerateEasing);
+                        },
+                        icon: const Icon(Icons.keyboard_double_arrow_left)
+                      ),
+                      Text(
+                        "  ${DateFormat.MMMM().format(firstDayInMonth)}",
+                        textAlign: TextAlign.left,
+                        style: Theme.of(context).textTheme.titleSmall,
+                      ),
+                      IconButton(
+                        onPressed: () {
+                          controller.nextPage(duration: const Duration(milliseconds: 250), curve: accelerateEasing);
+                        },
+                        icon: const Icon(Icons.keyboard_double_arrow_right)
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: BigMonthView(
+                    year: year, month: month, c: c,
+                    onTapped: (day) {
+                      print("day: $day");
+                      if (c._selectedDay != null && isSameDay(c._selectedDay!, day)) return;
+                      if(isSameMonth(day, firstDayInMonth)) {
+                        c._selectedDay = day;
+                      } else {
+                        c._selectedDay = null;
+                      }
+                      c._selectedMonth = firstDayInMonth;
+                      c.notifyContentsChanged();
+                    },
+                  )
+                ),
+              ],
+            );
+        //   }
+        // );
+      },
+    );
+  }
+}
+
+
+
+
+class BigMonthView extends StatelessWidget {
+  final DeadlinesCalendarController c;
+  final int year;
+  final int month;
+  final Function(DateTime) onTapped;
+  final bool showWeekdayLabels;
+  const BigMonthView({super.key, required this.year, required this.month, required this.c, required this.onTapped, this.showWeekdayLabels = true});
+
+  @override Widget build(BuildContext context) {
+    int firstWeekdayDay = DateTime(year, month, 1).weekday;
+    var firstDayInMonth = DateTime(year, month, 1);
+    var firstDayOfNextMonth = DateTime(year, month+1, 1);
+    var numDaysInMonth = (firstWeekdayDay-1) + DateTimeRange(start: firstDayInMonth, end: firstDayOfNextMonth).duration.inDays;
 
     List<(Deadline?, Importance?)> lastDrawnAtIndex = [];
-    DateTime t = c._focusedDay;
-    DateTime firstDay = DateTime(t.month==1?t.year-1:t.year, t.month==1?12:t.month-1, 1);
-    DateTime lastDay = DateTime(t.month>=11?t.year+1:t.year, t.month==11?1:t.month==12?2:t.month+2, 1).subtract(const Duration(days: 1));
-
-    DateTime co = firstDay;
-    while(!co.isAfter(lastDay)) {
-      widgetPerDayCache[(co.year, co.month, co.day)] = buildWidgetForDay(co, lastDrawnAtIndex);
-      co = DateTime(co.year, co.month, co.day+1);
-    }
+    return NotDumbGridView(
+      xCount: 7,
+      yCount: (numDaysInMonth / 7).ceil() + (showWeekdayLabels?1:0), //if correct size, not all same size which looks bad
+      builder: (i) {
+        if(showWeekdayLabels) {
+          if(i < 7) {
+            return Center(child: Text(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][i]));
+          }
+        }
+        var current = firstDayInMonth.add(Duration(days: -firstWeekdayDay + (i-(showWeekdayLabels?6:0))));
+        return GestureDetector(
+          behavior: HitTestBehavior.translucent,
+          onTap: () {
+            onTapped(current);
+          },
+          child: buildWidgetForDay(current, lastDrawnAtIndex, context) ?? Container()
+        );
+      },
+    );
   }
-  Widget? buildWidgetForDay(DateTime day, List<(Deadline?, Importance?)> lastDrawnAtIndex) {
+
+
+  Widget? buildWidgetForDay(DateTime day, List<(Deadline?, Importance?)> lastDrawnAtIndex, BuildContext context) {
     var events = c.getDailyEvents(day, showDaily: c.showDaily);
     var today = DateTime.now();
 
@@ -493,23 +622,23 @@ class _DeadlineTableCalendarState extends State<DeadlineTableCalendar> {
 
           shortEventContainerFor(Deadline d, double width) {
             return d.importance == Importance.important ?
-              Container(
-                margin: const EdgeInsets.only(left: 0.4, right: 0.4, bottom: 1),
-                width: width,
-                height: rowHeight,
-                decoration: ShapeDecoration(shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(rowHeight / 2))), color: Color(d.color).withAlpha(d.active && !(d.isRepeating() && day.isBefore(today)) ? 255 : 155)),
-                // child: FittedBox(
-                //   fit: BoxFit.fitHeight,
-                //   clipBehavior: Clip.hardEdge,
-                //   alignment: Alignment.centerLeft,
-                //   child: Text(
-                //     " ${d.title} ",
-                //     style: TextStyle(color: getForegroundForColor(Color(d.color)),)
-                //   )
-                // ),
-                alignment: Alignment.center,
-                child: FittedText(foreground: getForegroundForColor(Color(d.color))!.withAlpha(d.active && !(d.isRepeating() && day.isBefore(today)) ? 255 : 105), text: d.title, maxWidth: width*0.85, maxHeight: rowHeight*0.9, preferredMinFontSize: 5, maxFontSize: 10),
-              )
+            Container(
+              margin: const EdgeInsets.only(left: 0.4, right: 0.4, bottom: 1),
+              width: width,
+              height: rowHeight,
+              decoration: ShapeDecoration(shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(rowHeight / 2))), color: Color(d.color).withAlpha(d.active && !(d.isRepeating() && day.isBefore(today)) ? 255 : 155)),
+              // child: FittedBox(
+              //   fit: BoxFit.fitHeight,
+              //   clipBehavior: Clip.hardEdge,
+              //   alignment: Alignment.centerLeft,
+              //   child: Text(
+              //     " ${d.title} ",
+              //     style: TextStyle(color: getForegroundForColor(Color(d.color)),)
+              //   )
+              // ),
+              alignment: Alignment.center,
+              child: FittedText(foreground: getForegroundForColor(Color(d.color))!.withAlpha(d.active && !(d.isRepeating() && day.isBefore(today)) ? 255 : 105), text: d.title, maxWidth: width*0.85, maxHeight: rowHeight*0.9, preferredMinFontSize: 5, maxFontSize: 10),
+            )
                 :
               Container(
                 margin: const EdgeInsets.only(left: 0.4, right: 0.4, bottom: 1),
@@ -594,7 +723,7 @@ class _DeadlineTableCalendarState extends State<DeadlineTableCalendar> {
             List<Container> rowChildren = [];
             double occupiedWidth = 0;
             double importantWidth = shortEventsSortedIterator.numLeft() >= 3 ?
-              max(maxWidth / 3.33, rowHeight*2) : maxWidth / (shortEventsSortedIterator.numLeft()+0.33);
+            max(maxWidth / 3.33, rowHeight*2) : maxWidth / (shortEventsSortedIterator.numLeft()+0.33);
             while (occupiedWidth + importantWidth < maxWidth && shortEventsSortedIterator.hasNext()) {
               var container = shortEventContainerFor(shortEventsSortedIterator.next(), importantWidth);
               occupiedWidth += importantWidth;
@@ -622,81 +751,10 @@ class _DeadlineTableCalendarState extends State<DeadlineTableCalendar> {
       clipBehavior: Clip.hardEdge,
       child: Column(children: children),
     );
-    if (!isSameMonth(c._focusedDay, day)) {
+    if (!isSameMonth(c._selectedMonth, day)) {
       return Opacity(opacity: 0.2, child: container);
     } else {
       return container;
     }
-  }
-
-  // void reload() {
-  //   setState(() {});
-  // }
-  // @override void initState() {
-  //   super.initState();
-  //   c.shownUpdated.add(reload);
-  // }
-  // @override void dispose() {
-  //   c.shownUpdated.remove(reload);
-  //   super.dispose();
-  // }
-
-  @override Widget build(BuildContext context) {
-    buildWidgetsForDays();
-
-    // return TinyMonthView(year: c._focusedDay.year, month: c._focusedDay.month, deadlines: c.deadlinesDbCache);
-    return tbl.TableCalendar<Deadline>(
-      shouldFillViewport: true,
-      headerStyle: const tbl.HeaderStyle(
-        formatButtonVisible : false,
-      ),
-      onHeaderTapped: (_) async {
-        var tappedMonth = await Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => YearsPage(db: c.db, initialYear: c._focusedDay.year,)),
-        );
-
-        if(tappedMonth is DateTime) {
-          c._focusedDay = tappedMonth;
-          c._selectedDay = null;
-          c.updatePotentiallyVisibleDeadlinesFromDb().then((_) => setState(() {
-            c.updateShownList();
-          }));
-        }
-      },
-      calendarFormat: tbl.CalendarFormat.month,
-      firstDay: DateTime(1990),
-      lastDay: DateTime(2100),
-      focusedDay: c._focusedDay,
-      selectedDayPredicate: (day) => c._selectedDay != null && isSameDay(c._selectedDay!, day),
-      rangeSelectionMode: tbl.RangeSelectionMode.disabled,
-      eventLoader: (day) {return const [];},
-      startingDayOfWeek: tbl.StartingDayOfWeek.monday,
-      calendarStyle: const tbl.CalendarStyle(
-        outsideDaysVisible: true,
-        cellAlignment: Alignment.topCenter,
-        cellMargin: EdgeInsets.only(top: 3),
-      ),
-      onDaySelected: (selectedDay, focusedDay) {
-        if (c._selectedDay != null && isSameDay(c._selectedDay!, selectedDay)) return;
-        if(isSameMonth(selectedDay, focusedDay)) {
-          c._selectedDay = selectedDay;
-        } else {
-          c._selectedDay = null;
-        }
-        c._focusedDay = focusedDay;
-        c.updateShownList();
-      },
-      onPageChanged: (focusedDay) {
-        c._focusedDay = focusedDay;
-        c._selectedDay = null;
-        c.updatePotentiallyVisibleDeadlinesFromDb().then((_) => setState(() {
-          c.updateShownList();
-        }));
-      },
-      calendarBuilders: tbl.CalendarBuilders(
-        prioritizedBuilder: (context, day, events) => widgetPerDayCache[(day.year, day.month, day.day)],
-      ),
-    );
   }
 }
