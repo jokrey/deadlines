@@ -10,7 +10,10 @@ final class DeadlinesDatabase {
   final Future<sql.Database> db = _initDB();
 
   Future<void> updateAllAlarms() async {
-    await queryDeadlinesActiveOrAfter(DateTime.now()).then((all) => all.forEach(DeadlineAlarms.updateAlarmsFor));
+    var all = await queryDeadlinesActiveOrTimelessOrAfter(DateTime.now());
+    for(var d in all) {
+      await DeadlineAlarms.updateAlarmsFor(d);
+    }
   }
 
   static Future<sql.Database> _initDB() async {
@@ -143,10 +146,8 @@ final class DeadlinesDatabase {
     };
   }
 
-  Future<List<Deadline>> selectAll() async {
-    var rawResults = await (await db).rawQuery("SELECT * FROM deadlines d;", []);
-
-    List<Deadline> found = await Future.wait(rawResults.map((e) async => _fromSQLMap(e, (await (await db).rawQuery(
+  Future<List<Deadline>> withRemovals(List<Map<String, Object?>> rawResults) {
+    return Future.wait(rawResults.map((e) async => _fromSQLMap(e, (await (await db).rawQuery(
         """SELECT *
         FROM removals
         WHERE
@@ -155,10 +156,24 @@ final class DeadlinesDatabase {
         )
       ;"""
     )).map(_rFromSQLMap).toList(growable: false))).toList());
-
-    return found;
   }
 
+  Future<List<Deadline>> selectAll() async {
+    var rawResults = await (await db).rawQuery("SELECT * FROM deadlines d;", []);
+
+    return withRemovals(rawResults);
+  }
+
+  Future<Set<Deadline>> queryDeadlinesInOrAroundMonth(int year, int month) async {
+    var allPossible = await Future.wait([
+      queryDeadlinesInMonth(month==1?year-1:year, month==1?12:month-1),
+      queryDeadlinesInMonth(year, month),
+      queryDeadlinesInMonth(month==12?year+1:year, month==12?1:month+1),
+    ]);
+    Set<Deadline>? inOrAround = {};
+    allPossible.forEach((list) => inOrAround.addAll(list));
+    return inOrAround;
+  }
   Future<List<Deadline>> queryDeadlinesInMonth(int year, int month) async {
     var rawResults = await (await db).rawQuery(
       """SELECT *
@@ -188,34 +203,22 @@ final class DeadlinesDatabase {
       ;"""
     );
 
-    List<Deadline> found = await Future.wait(rawResults.map((e) async => _fromSQLMap(e, (await (await db).rawQuery(
-      """SELECT *
-        FROM removals
-        WHERE
-        (
-          rm_id == ${e["id"]}
-        )
-      ;"""
-    )).map(_rFromSQLMap).toList(growable: false))).toList());
-      /*
-        AND
-        (
-          all_future
-          OR
-          rm_dlAt_year == $year AND rm_dlAt_month == $month
-        )
-       */
-    // await Future.wait(found.map(DeadlineAlarms.updateAlarmsFor));
-    return found;
+    return withRemovals(rawResults);
   }
 
-  Future<List<Deadline>> queryDeadlinesActiveOrAfter(DateTime minute) async {
+  Future<List<Deadline>> queryDeadlinesActiveOrTimelessOrAfter(DateTime minute) async {
     var rawResults = await (await db).rawQuery(
         """SELECT *
           FROM deadlines d
           WHERE 
           (
             d.active
+            OR
+            (d.startsAt_year == 0 AND d.deadlineAt_year == 0)
+            OR
+            d.startsAt_repetitionType != ${RepetitionType.none.index}
+            OR
+            d.deadlineAt_repetitionType != ${RepetitionType.none.index}
             OR
             (
               (d.startsAt_year    > ${minute.year}) OR
@@ -253,52 +256,25 @@ final class DeadlinesDatabase {
       ;"""
     );
 
-    List<Deadline> found = await Future.wait(rawResults.map((e) async => _fromSQLMap(e, (await (await db).rawQuery(
-        """SELECT *
-          FROM removals
-          WHERE
-          (
-            rm_id == ${e["id"]}
-          )
-        ;"""
-    )).map(_rFromSQLMap).toList(growable: false))).toList());
-    /*
-      AND
-      (
-        all_future
-        OR
-        rm_dlAt_year >= ${minute.year} AND rm_dlAt_month >= ${minute.month}
-      )
-     */
-    // await Future.wait(found.map(DeadlineAlarms.updateAlarmsFor));
-    return found;
+    return withRemovals(rawResults);
   }
 
-  Future<List<Deadline>> queryDeadlinesWithActiveAlarms() async {
-    var rawResults = await (await db).rawQuery(
-      """SELECT *
-        FROM deadlines
-        WHERE 
-        (
-          (startsAt_notificationType != ${NotificationType.off.index})
-          OR
-          (deadlineAt_notificationType != ${NotificationType.off.index})
-        )
-      ;"""
-    );
-
-    List<Deadline> found = await Future.wait(rawResults.map((e) async => _fromSQLMap(e, (await (await db).rawQuery(
-      """SELECT *
-        FROM removals
-        WHERE
-        (
-          rm_id == ${e["id"]}
-        )
-      ;"""
-    )).map(_rFromSQLMap).toList(growable: false))).toList());
-    // await Future.wait(found.map(DeadlineAlarms.updateAlarmsFor));
-    return found;
-  }
+  //WRONG:: only if also in the future and active
+  // Future<List<Deadline>> queryDeadlinesWithActiveAlarms() async {
+  //   var rawResults = await (await db).rawQuery(
+  //     """SELECT *
+  //       FROM deadlines
+  //       WHERE
+  //       (
+  //         (startsAt_notificationType != ${NotificationType.off.index})
+  //         OR
+  //         (deadlineAt_notificationType != ${NotificationType.off.index})
+  //       )
+  //     ;"""
+  //   );
+  //
+  //   return withRemovals(rawResults);
+  // }
 
   Future<List<Deadline>> queryActiveCriticalDeadlinesInYear(int year) async {
     var rawResults = await (await db).rawQuery(
@@ -331,33 +307,14 @@ final class DeadlinesDatabase {
       ;"""
     );
 
-    List<Deadline> found = await Future.wait(rawResults.map((e) async => _fromSQLMap(e, (await (await db).rawQuery(
-        """SELECT *
-        FROM removals
-        WHERE
-        (
-          rm_id == ${e["id"]}
-        )
-      ;"""
-    )).map(_rFromSQLMap).toList(growable: false))).toList());
-
-    return found;
+    return withRemovals(rawResults);
   }
 
 
   Future<Deadline?> loadById(int id) async {
-    var raw = await (await db).query("deadlines", where: "id = ?", whereArgs: [id]);
-    if(raw.isEmpty) return null;
-    Deadline d = _fromSQLMap(raw.first, (await (await db).rawQuery(
-      """SELECT *
-        FROM removals
-        WHERE
-        (
-          rm_id == ${raw.first["id"]}
-        )
-      ;"""
-    )).map(_rFromSQLMap).toList(growable: false));
-    return d;
+    var rawResults = await (await db).query("deadlines", where: "id = ?", whereArgs: [id]);
+    if(rawResults.isEmpty) return null;
+    return (await withRemovals([rawResults.first])).first;
   }
 
   Future<Deadline> createDeadline(Deadline d) async {

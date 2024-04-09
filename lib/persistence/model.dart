@@ -1,4 +1,5 @@
 import 'package:deadlines/alarm_external_wrapper/model.dart';
+import 'package:deadlines/ui/deadlines_display.dart';
 import 'package:deadlines/utils/utils.dart';
 import 'package:flutter/foundation.dart';
 
@@ -147,4 +148,16 @@ class Removal implements Comparable<Removal> {
   @override int compareTo(Removal other) {
     return allFuture != other.allFuture? (allFuture?-1:1) : day.compareTo(other.day);
   }
+}
+
+List<Deadline> getDeadlinesOnDay(DateTime day, {required Iterable<Deadline> candidates, required ShownType showWhat, required bool showDaily}) {
+  var today = stripTime(DateTime.now()); //stripTime to still show now completed if on same day
+  var l = candidates.where((d) {
+    return !d.isTimeless() && d.isOnThisDay(day) &&
+        (d.active || showWhat == ShownType.showAll) &&
+        (!d.deadlineAt!.date.isDaily() || showDaily) &&
+        (showWhat == ShownType.showAll || !d.isRepeating() || !day.isBefore(today)) ;
+  }).toList();
+  l.sort((a, b) => nullableCompare(a.startsAt?.time ?? a.deadlineAt?.time, b.startsAt?.time ?? b.deadlineAt?.time));
+  return l;
 }

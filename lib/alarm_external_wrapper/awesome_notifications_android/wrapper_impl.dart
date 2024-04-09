@@ -571,7 +571,6 @@ class AwesomeNotificationsWrapper extends NotifyWrapper {
         ),
         actionButtons: actionButtons,
       );
-
       return true;
     }
     return false;

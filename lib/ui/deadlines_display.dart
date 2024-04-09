@@ -40,12 +40,9 @@ Color? getForegroundForColor(Color c) {
 }
 
 abstract class ChildController {
-  void addToCache(Deadline d);
-  bool removeFromCache(Deadline d);
+  void notifyContentsChanged();
 
-  void updateShownList();
-
-  Future<void> init();
+  Future<void> init() async {}
 }
 
 enum ShownType {
@@ -54,19 +51,20 @@ enum ShownType {
 class ParentController {
   final DeadlinesDatabase db = DeadlinesDatabase();
   ParentController() {
+    //tested that NOT technically required, except in fringe cases (first startup after reinstalling)
     db.updateAllAlarms();
   }
 
+
   ShownType showWhat = ShownType.showActive;
 
-
-  Future<bool> newDeadlineWithoutReload(ChildController callingChild, BuildContext context, DateTime? newAt) {
-    return _editOrNewWithoutReload(callingChild, context, null, newAt);
+  Future<bool> newDeadline(ChildController callingChild, BuildContext context, DateTime? newAt) {
+    return _editOrNew(callingChild, context, null, newAt);
   }
-  Future<bool> editDeadlineWithoutReload(ChildController callingChild, BuildContext context, int toEditId) {
-    return _editOrNewWithoutReload(callingChild, context, toEditId, null);
+  Future<bool> editDeadline(ChildController callingChild, BuildContext context, int toEditId) {
+    return _editOrNew(callingChild, context, toEditId, null);
   }
-  Future<bool> _editOrNewWithoutReload(ChildController callingChild, BuildContext context, int? toEditId, DateTime? newAt) async {
+  Future<bool> _editOrNew(ChildController callingChild, BuildContext context, int? toEditId, DateTime? newAt) async {
     var colorScheme = Theme.of(context).colorScheme;
 
     Deadline? toEdit = toEditId==null?null:await db.loadById(toEditId);
@@ -97,21 +95,21 @@ class ParentController {
     }
 
 
-    if(toEdit != null) {
-      callingChild.removeFromCache(toEdit);
-    }
+    // if(toEdit != null) {
+    //   callingChild.removeFromCache(toEdit);
+    // }
 
     if(newDeadline.id == null) {
       newDeadline = await db.createDeadline(newDeadline);
     } else {
       await db.updateDeadline(newDeadline);
     }
-    callingChild.addToCache(newDeadline);
-    callingChild.updateShownList();
+    // callingChild.addToCache(newDeadline);
+    callingChild.notifyContentsChanged();
     return true;
   }
 
-  void deleteDeadlineWithoutReload(ChildController callingChild, BuildContext context, Deadline d, DateTime? day) {
+  void deleteDeadline(ChildController callingChild, BuildContext context, Deadline d, DateTime? day) {
     if(d.isRepeating() && day != null) {
       showDialog(context: context, builder: (BuildContext context) {
         return AlertDialog(
@@ -165,7 +163,7 @@ class ParentController {
           +
           [
             SizedBox(width: double.infinity, child: ElevatedButton(onPressed: () {
-              deleteDeadlineWithoutReloadAll(callingChild, context, d);
+              deleteDeadlineAllOccurrences(callingChild, context, d);
               Navigator.of(context).pop();
             }, child: const Text("Every occurrence"))),
             SizedBox(width: double.infinity, child: ElevatedButton(onPressed: () {
@@ -176,29 +174,29 @@ class ParentController {
         );
       });
     } else {
-      deleteDeadlineWithoutReloadAll(callingChild, context, d);
+      deleteDeadlineAllOccurrences(callingChild, context, d);
     }
   }
-  void deleteDeadlineWithoutReloadAll(ChildController callingChild, BuildContext context, Deadline d) {
+  void deleteDeadlineAllOccurrences(ChildController callingChild, BuildContext context, Deadline d) {
     db.deleteDeadline(d);
-    callingChild.removeFromCache(d);
-    callingChild.updateShownList();
+    // callingChild.removeFromCache(d);
+    callingChild.notifyContentsChanged();
 
     undoUI(
       "\"${d.title}\" deleted", Color(d.color), context,
       () async {
         d = await db.createDeadline(d);
-        callingChild.addToCache(d);
-        callingChild.updateShownList();
+        // callingChild.addToCache(d);
+        callingChild.notifyContentsChanged();
       }
     );
   }
 
-  void toggleDeadlineNotificationTypeWithoutReload(ChildController callingChild, Deadline d, NotifyableRepeatableDateTime nrdt) {
+  void toggleDeadlineNotificationType(ChildController callingChild, Deadline d, NotifyableRepeatableDateTime nrdt) {
     updateWithoutUndoUI(callingChild, d, d.copyWithNextNotifyType(nrdt == d.startsAt));
   }
 
-  void toggleDeadlineActiveWithoutReload(ChildController callingChild, BuildContext context, Deadline d) {
+  void toggleDeadlineActive(ChildController callingChild, BuildContext context, Deadline d) {
     Deadline newD = d.copyToggleActive();
     updateWithoutUndoUI(callingChild, d, newD);
     if(d.active) {//was active
@@ -212,10 +210,10 @@ class ParentController {
   }
 
   Future<void> updateWithoutUndoUI(ChildController callingChild, Deadline d, Deadline dNew) async {
-    callingChild.removeFromCache(d);
+    // callingChild.removeFromCache(d);
     await db.updateDeadline(dNew);
-    callingChild.addToCache(dNew);
-    callingChild.updateShownList();
+    // callingChild.addToCache(dNew);
+    callingChild.notifyContentsChanged();
   }
   Future<void> updateWithUndoUI(ChildController callingChild, BuildContext context, String msg, Deadline d, Deadline dNew) async {
     undoUI(
@@ -283,10 +281,10 @@ class DeadlinesDisplay extends StatelessWidget {
           controller: PageController(initialPage: 100000),
           itemBuilder: (context, index) {
             if (index % 2 == 0) {
-              calendarController.updateShownList();
+              calendarController.notifyContentsChanged();
               return DeadlinesCalendar(calendarController);
             } else {
-              upcomingController.updateShownList();
+              upcomingController.notifyContentsChanged();
               return UpcomingDeadlinesList(upcomingController);
             }
           },
