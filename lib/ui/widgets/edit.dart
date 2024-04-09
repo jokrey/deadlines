@@ -3,10 +3,10 @@ import 'package:deadlines/ui/deadlines_display.dart';
 import 'package:deadlines/ui/widgets/card_in_list.dart';
 import 'package:deadlines/utils/date_and_time_picker.dart';
 import 'package:deadlines/utils/not_dumb_grid_view.dart';
+import 'package:deadlines/utils/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:deadlines/persistence/model.dart';
-import 'package:table_calendar/table_calendar.dart';
 
 class EditDeadlineWidget extends StatefulWidget {
   final Deadline original;
@@ -60,7 +60,7 @@ class EditDeadlineWidgetState extends State<EditDeadlineWidget> {
   @override Widget build(BuildContext context) {
     bool allowSave = titleInputController.text.isNotEmpty && (startsAt==null || deadlineAt==null || deadlineAt!.isAfter(startsAt!));
     if(startsAt != null && deadlineAt != null) {
-      if (repetitionType == RepetitionType.daily && !isSameDay(startsAt!, deadlineAt)) allowSave = false;
+      if (repetitionType == RepetitionType.daily && !isSameDay(startsAt!, deadlineAt!)) allowSave = false;
       if (repetitionType == RepetitionType.weekly && deadlineAt!.difference(startsAt!).inDays > 6) allowSave = false;
       if (repetitionType == RepetitionType.monthly && deadlineAt!.difference(startsAt!).inDays > 28) allowSave = false; //todo
       if (repetitionType == RepetitionType.yearly && deadlineAt!.difference(startsAt!).inDays > 31 * 2.5) allowSave = false; //todo
