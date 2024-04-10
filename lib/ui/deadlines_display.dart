@@ -1,6 +1,6 @@
 import 'dart:math';
 
-import 'package:deadlines/alarm_external_wrapper/model.dart';
+import 'package:deadlines/notifications/alarm_external_wrapper/model.dart';
 import 'package:deadlines/ui/widgets/edit.dart';
 import 'package:deadlines/ui/widgets/upcoming_list.dart';
 import 'package:deadlines/ui/widgets/months.dart';
@@ -100,9 +100,9 @@ class ParentController {
     // }
 
     if(newDeadline.id == null) {
-      newDeadline = await db.createDeadline(newDeadline);
+      newDeadline = await db.add(newDeadline);
     } else {
-      await db.updateDeadline(newDeadline);
+      await db.update(newDeadline);
     }
     // callingChild.addToCache(newDeadline);
     callingChild.notifyContentsChanged();
@@ -178,14 +178,14 @@ class ParentController {
     }
   }
   void deleteDeadlineAllOccurrences(ChildController callingChild, BuildContext context, Deadline d) {
-    db.deleteDeadline(d);
+    db.remove(d);
     // callingChild.removeFromCache(d);
     callingChild.notifyContentsChanged();
 
     undoUI(
       "\"${d.title}\" deleted", Color(d.color), context,
       () async {
-        d = await db.createDeadline(d);
+        d = await db.add(d);
         // callingChild.addToCache(d);
         callingChild.notifyContentsChanged();
       }
@@ -211,7 +211,7 @@ class ParentController {
 
   Future<void> updateWithoutUndoUI(ChildController callingChild, Deadline d, Deadline dNew) async {
     // callingChild.removeFromCache(d);
-    await db.updateDeadline(dNew);
+    await db.update(dNew);
     // callingChild.addToCache(dNew);
     callingChild.notifyContentsChanged();
   }

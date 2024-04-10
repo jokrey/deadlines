@@ -3,7 +3,6 @@ import 'dart:math';
 
 import 'package:audio_session/audio_session.dart';
 import 'package:confetti/confetti.dart';
-import 'package:deadlines/alarm_external_wrapper/notify_wrapper.dart';
 import 'package:deadlines/ui/deadlines_display.dart';
 import 'package:deadlines/utils/size_conditional_text.dart';
 import 'package:deadlines/utils/utils.dart';
@@ -12,6 +11,8 @@ import 'package:just_audio/just_audio.dart';
 import 'package:move_to_background/move_to_background.dart';
 import 'package:slidable_button/slidable_button.dart';
 import 'package:vibration/vibration.dart';
+
+import 'notify_wrapper.dart';
 
 class AlarmNotificationScreen extends StatefulWidget {
   final Map<String, dynamic> notifyPayload;

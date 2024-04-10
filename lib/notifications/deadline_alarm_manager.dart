@@ -1,9 +1,10 @@
 import 'dart:ui';
 
-import 'package:deadlines/alarm_external_wrapper/model.dart';
-import 'package:deadlines/alarm_external_wrapper/notify_wrapper.dart';
 import 'package:deadlines/persistence/model.dart';
 import 'package:flutter/cupertino.dart';
+
+import 'alarm_external_wrapper/model.dart';
+import 'alarm_external_wrapper/notify_wrapper.dart';
 
 class DeadlineAlarms {
   static const deadlineOffset = 100000; //uses range [100000, 200000]

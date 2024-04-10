@@ -1,7 +1,7 @@
-import 'package:deadlines/alarm_external_wrapper/awesome_notifications_android/wrapper_impl.dart';
 import 'package:move_to_background/move_to_background.dart';
 
 import 'alarm_page.dart';
+import 'awesome_notifications_android/wrapper_impl.dart';
 import 'model.dart';
 import 'package:flutter/material.dart';
 

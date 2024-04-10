@@ -1,4 +1,4 @@
-import 'package:deadlines/alarm_external_wrapper/notify_wrapper.dart';
+import 'package:deadlines/notifications/alarm_external_wrapper/notify_wrapper.dart';
 import 'package:deadlines/ui/deadlines_display.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';

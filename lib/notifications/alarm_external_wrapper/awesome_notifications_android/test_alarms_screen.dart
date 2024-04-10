@@ -1,10 +1,10 @@
 import 'dart:math';
 
 import 'package:audio_session/audio_session.dart';
-import 'package:deadlines/alarm_external_wrapper/alarm_page.dart';
-import 'package:deadlines/alarm_external_wrapper/notify_wrapper.dart';
-import '../../ui/deadlines_display.dart';
+import '../../../ui/deadlines_display.dart';
+import '../alarm_page.dart';
 import '../model.dart';
+import '../notify_wrapper.dart';
 import 'wrapper_impl.dart';
 import 'package:flutter/material.dart';
 import 'package:vibration/vibration.dart';

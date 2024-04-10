@@ -1,14 +1,14 @@
 import 'dart:typed_data';
 
 import 'package:awesome_notifications/awesome_notifications.dart';
-import 'package:deadlines/alarm_external_wrapper/notify_wrapper.dart';
 import 'package:deadlines/main.dart';
 import 'package:deadlines/persistence/database.dart';
-import 'package:deadlines/persistence/deadline_alarm_manager.dart';
+import 'package:deadlines/notifications/deadline_alarm_manager.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 
 import '../model.dart';
+import '../notify_wrapper.dart';
 
 class AwesomeNotificationsWrapper extends NotifyWrapper {
   static const String _silentChannelName = "silent";

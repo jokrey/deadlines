@@ -1,7 +1,7 @@
 import 'dart:async';
 
-import 'package:deadlines/alarm_external_wrapper/model.dart';
-import 'package:deadlines/alarm_external_wrapper/notify_wrapper.dart';
+import 'package:deadlines/notifications/alarm_external_wrapper/model.dart';
+import 'package:deadlines/notifications/alarm_external_wrapper/notify_wrapper.dart';
 import 'package:deadlines/persistence/database.dart';
 import 'package:deadlines/ui/deadlines_display.dart';
 import 'package:deadlines/ui/widgets/card_in_list.dart';
@@ -10,7 +10,7 @@ import 'package:deadlines/ui/widgets/timers.dart';
 import 'package:deadlines/utils/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:synchronized/synchronized.dart';
-import '../../persistence/deadline_alarm_manager.dart';
+import '../../notifications/deadline_alarm_manager.dart';
 
 
 class UpcomingDeadlinesListController extends ChildController {
