@@ -498,7 +498,7 @@ class _DeadlineTableCalendarState extends State<DeadlineTableCalendar> {
                 children: [
                   IconButton(
                     onPressed: () {
-                      controller.previousPage(duration: const Duration(milliseconds: 250), curve: accelerateEasing);
+                      controller.previousPage(duration: const Duration(milliseconds: 250), curve: Curves.elasticIn);
                     },
                     icon: const Icon(Icons.keyboard_double_arrow_left)
                   ),
@@ -509,7 +509,7 @@ class _DeadlineTableCalendarState extends State<DeadlineTableCalendar> {
                   ),
                   IconButton(
                     onPressed: () {
-                      controller.nextPage(duration: const Duration(milliseconds: 250), curve: accelerateEasing);
+                      controller.nextPage(duration: const Duration(milliseconds: 250), curve: Curves.elasticIn);
                     },
                     icon: const Icon(Icons.keyboard_double_arrow_right)
                   ),
