@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:deadlines/notifications/alarm_external_wrapper/model.dart';
-import 'package:deadlines/notifications/deadline_alarm_manager.dart';
+import 'package:synchronized/synchronized.dart';
 
 import 'model.dart';
 import 'package:sqflite/sqflite.dart' as sql;
@@ -10,25 +10,19 @@ abstract class DeadlinesStorage {
   //no requirement to have id != null, will be calculated and set accordingly
   Future<Deadline> add(Deadline d);
   //Deadline with id of dNew will be replaced with contents of dNew
-  Future<void> update(Deadline dNew);
+  Future<void> update(Deadline dOld, Deadline dNew);
   //Deadline with id will be removed
   Future<void> remove(Deadline d);
 }
 
-abstract class Cache extends DeadlinesStorage {
-  void invalidate();
+mixin Cache implements DeadlinesStorage {
+  Lock l = Lock();
+  Future<void> invalidate();
 }
 
 
 final class DeadlinesDatabase implements DeadlinesStorage {
   final Future<sql.Database> db = _initDB();
-
-  Future<void> updateAllAlarms() async {
-    var all = await queryDeadlinesActiveOrTimelessOrAfter(DateTime.now());
-    for(var d in all) {
-      await DeadlineAlarms.updateAlarmsFor(d);
-    }
-  }
 
   static Future<sql.Database> _initDB() async {
     String path;
@@ -332,31 +326,25 @@ final class DeadlinesDatabase implements DeadlinesStorage {
   }
 
   @override Future<Deadline> add(Deadline d) async {
-    if(d.rangeLength().inDays > 365) throw ArgumentError("range too long");
-
     final id = await (await db).insert("deadlines", _toSQLMapWithoutId(d));
     d = d.copyWithId(id);
     for (var r in d.removals) {
       await (await db).insert("removals", _toSQLMap(d.id!, r), conflictAlgorithm: sql.ConflictAlgorithm.replace);
     }
-    await DeadlineAlarms.updateAlarmsFor(d);
     return d;
   }
 
   @override Future<void> remove(Deadline d) async {
-    await DeadlineAlarms.cancelAlarmsFor(d);
     await (await db).delete("deadlines", where: "id = ?", whereArgs: [d.id]);
     await (await db).delete("removals", where: "rm_id = ?", whereArgs: [d.id]);
   }
 
-  @override Future<void> update(Deadline d) async {
-    if(d.rangeLength().inDays > 365) throw ArgumentError("range too long");
-    await DeadlineAlarms.updateAlarmsFor(d);
-    await (await db).update("deadlines", _toSQLMapWithoutId(d), where: "id = ?", whereArgs: [d.id]);
+  @override Future<void> update(Deadline _, Deadline dNew) async {
+    await (await db).update("deadlines", _toSQLMapWithoutId(dNew), where: "id = ?", whereArgs: [dNew.id]);
 
-    await (await db).delete("removals", where: "rm_id = ?", whereArgs: [d.id]);
-    for (var r in d.removals) {
-      await (await db).insert("removals", _toSQLMap(d.id!, r), conflictAlgorithm: sql.ConflictAlgorithm.replace);
+    await (await db).delete("removals", where: "rm_id = ?", whereArgs: [dNew.id]);
+    for (var r in dNew.removals) {
+      await (await db).insert("removals", _toSQLMap(dNew.id!, r), conflictAlgorithm: sql.ConflictAlgorithm.replace);
     }
   }
 }

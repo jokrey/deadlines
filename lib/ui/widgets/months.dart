@@ -1,10 +1,11 @@
 import 'dart:math';
 
-import 'package:deadlines/ui/deadlines_display.dart';
+import 'package:deadlines/main.dart';
+import 'package:deadlines/notifications/deadline_alarm_manager.dart';
 import 'package:deadlines/persistence/database.dart';
 import 'package:deadlines/persistence/model.dart';
+import 'package:deadlines/ui/defaults.dart';
 import 'package:deadlines/ui/widgets/card_in_list.dart';
-import 'package:deadlines/ui/widgets/years.dart';
 import 'package:deadlines/utils/fitted_text.dart';
 import 'package:deadlines/utils/not_dumb_grid_view.dart';
 import 'package:deadlines/utils/utils.dart';
@@ -13,12 +14,11 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:intl/intl.dart';
 import 'package:multi_split_view/multi_split_view.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:synchronized/synchronized.dart';
 
-class DeadlinesCalendarController extends ChildController {
-  final ParentController parent;
-  DeadlinesDatabase get db => parent.db;
-  DeadlinesCalendarController(this.parent);
+import 'controller.dart';
+
+class DeadlinesCalendarController extends ChildController with Cache {
+  DeadlinesCalendarController(super.parent);
 
   //ui choices to be restored
   var ratio = 0.6;
@@ -43,6 +43,7 @@ class DeadlinesCalendarController extends ChildController {
   DateTime? getSelectedDay() => _selectedDay;
   void setSelection(DateTime month, DateTime? day) {
     if(_selectedMonth != month || _selectedDay != day) {
+      if(_selectedMonth != month) scrollOffset = 0;
       _selectedMonth = month;
       _selectedDay = day;
       notifyContentsChanged();
@@ -50,6 +51,7 @@ class DeadlinesCalendarController extends ChildController {
   }
   void setSelectedMonth(DateTime month) {
     if(_selectedMonth != month) {
+      scrollOffset = 0;
       _selectedMonth = month;
       notifyContentsChanged();
     }
@@ -68,15 +70,50 @@ class DeadlinesCalendarController extends ChildController {
   }
 
 
-  Lock l = Lock();
-  final Map<(int, int), Iterable<Deadline>> _cache = {};
+  final Map<(int, int), Map<int, Deadline>> _cache = {};
+  @override invalidate() => l.synchronized(() => _cache.clear());
+  @override Future<Deadline> add(Deadline d) => l.synchronized(() {
+    _cache.forEach((key, map) {
+      var (year, month) = key;
+      if ((d.startsAt?.date.isInThisMonth(year, month) ?? false) || (d.deadlineAt?.date.isInThisMonth(year, month) ?? false)) {
+        map[d.id!] = d;
+      }
+    });
+    return d;
+  });
+  @override Future<void> remove(Deadline d) => l.synchronized(() {
+    _cache.forEach((key, map) {
+      var (year, month) = key;
+      if ((d.startsAt?.date.isInThisMonth(year, month) ?? false) || (d.deadlineAt?.date.isInThisMonth(year, month) ?? false)) {
+        map.remove(d.id!);
+      }
+    });
+  });
+  @override Future<void> update(Deadline dOld, Deadline dNew) => l.synchronized(() {
+    _cache.forEach((key, map) {
+      var (year, month) = key;
+      bool wasRemoved;
+      if ((dOld.startsAt?.date.isInThisMonth(year, month) ?? false) || (dOld.deadlineAt?.date.isInThisMonth(year, month) ?? false)) {
+        wasRemoved = map.remove(dOld.id!) != null;
+      } else {
+        wasRemoved = true;
+      }
+      if((dNew.startsAt?.date.isInThisMonth(year, month) ?? false) || (dNew.deadlineAt?.date.isInThisMonth(year, month) ?? false)) {
+        if(wasRemoved) map[dNew.id!] = dNew;
+      }
+    });
+  });
+
   Future<Iterable<Deadline>> queryOrRetrieve(int year, int month) => l.synchronized(() async {
-    var res = _cache[(year, month)];
+    Map<int, Deadline>? res = _cache[(year, month)];
     if(res == null) {
-      res = await db.queryDeadlinesInMonth(year, month);
+      res = {};
+      for(var d in await parent.db.queryDeadlinesInMonth(year, month)) {
+        res[d.id!] = d;
+      }
       _cache[(year, month)] = res;
     }
-    return res;
+    return res.values;
   });
   cleanCache() => l.synchronized(() {
     int year = getSelectedMonth().year;
@@ -89,7 +126,6 @@ class DeadlinesCalendarController extends ChildController {
              (ky > year && month != 12);
     });
   });
-  invalidateCache() => l.synchronized(() => _cache.clear());
   Future<Iterable<Deadline>> queryRelevantDeadlines() async {
     int year = getSelectedMonth().year;
     int month = getSelectedMonth().month;
@@ -101,24 +137,6 @@ class DeadlinesCalendarController extends ChildController {
     await cleanCache();
 
     return deadlines;
-  }
-
-
-
-  final List<VoidCallback> _callbacks = [];
-  void addListener(VoidCallback callback) => _callbacks.add(callback);
-  void removeListener(VoidCallback callback) => _callbacks.remove(callback);
-  void notifySelectionChanged() {
-    for (var callback in _callbacks) {
-      callback();
-    }
-  }
-  @override void notifyContentsChanged() {
-    invalidateCache().then((_) {
-      for (var callback in _callbacks) {
-        callback();
-      }
-    });
   }
 }
 
@@ -192,7 +210,11 @@ class DeadlinesCalendarState extends State<DeadlinesCalendar> {
                       actionsOverflowAlignment: OverflowBarAlignment.center,
                       actions: [
                         SizedBox(width: double.infinity, child: ElevatedButton(onPressed: () async {
-                          await c.db.updateAllAlarms();
+                          c.parent.db.queryDeadlinesActiveOrTimelessOrAfter(DateTime.now()).then((all) {
+                            for(var d in all) {
+                              DeadlineAlarms.updateAlarmsFor(d);
+                            }
+                          });
 
                           Fluttertoast.showToast(
                               msg: "Reloaded",
@@ -206,7 +228,7 @@ class DeadlinesCalendarState extends State<DeadlinesCalendar> {
                         }, child: const Text("reload all alarms"))),
                         SizedBox(width: double.infinity, child: ElevatedButton(onPressed: () async {
                           String builder = "";
-                          for (Deadline d in await c.db.selectAll()) {
+                          for (Deadline d in await c.parent.db.selectAll()) {
                             if (!d.active) builder += "(\n  ";
                             builder += "${d.title}\n";
                             if(d.description.isNotEmpty) {
@@ -263,9 +285,10 @@ class DeadlinesCalendarState extends State<DeadlinesCalendar> {
                     child: Text(value),
                   );
                 }).toList(),
-                onChanged: (newlySelected) => setState(() {
+                onChanged: (newlySelected) => setState(() async {
+                  // todo does not work properly, move these boxes elsewhere
                   c.parent.showWhat = ShownType.values[["Show Active", "Show Month"].indexOf(newlySelected!)];
-                  c.notifyContentsChanged();
+                  await c.invalidate();
                 }),
                 value: ["Show Active", "Show Month"][c.parent.showWhat.index],
               ),
@@ -278,9 +301,10 @@ class DeadlinesCalendarState extends State<DeadlinesCalendar> {
                     child: Text(value),
                   );
                 }).toList(),
-                onChanged: (newlySelected) => setState(() {
+                onChanged: (newlySelected) => setState(() async {
+                  // todo does not work properly, move these boxes elsewhere
                   c.showDaily = newlySelected == "Show Daily";
-                  c.notifyContentsChanged();
+                  await c.invalidate();
                 }),
                 value: c.showDaily ? "Show Daily":"Hide Daily",
               ),
@@ -307,118 +331,129 @@ class _MonthShownBelowState extends State<MonthShownBelow> {
     super.initState();
     listController = ScrollController(initialScrollOffset: c.scrollOffset);
     listController.addListener(() {c.scrollOffset = listController.offset;});
-    c.addListener(reloadShownBelow);
-    reloadShownBelow();
+    c.addContentListener(reload);
   }
   @override void dispose() {
     listController.dispose();
-    c.removeListener(reloadShownBelow);
+    c.removeContentListener(reload);
     super.dispose();
   }
 
-  final List<((DateTime, DateTime), List<Deadline>)> shownBelow = [];
-  void reloadShownBelow() {
-    c.queryRelevantDeadlines().then((deadlines) {
-      setState(() {
-        shownBelow.clear();
-        if (c.getSelectedDay() != null) {
-          shownBelow.add(((c.getSelectedDay()!, c.getSelectedDay()!), getDeadlinesOnDay(c.getSelectedDay()!, candidates: deadlines, showWhat: c.parent.showWhat, showDaily: true,)));
-        } else {
-          //todo: improve readability and maintainability of this insanity:
-          var now = DateTime.now();
-          var firstDayInMonth = c.getFirstDayInSelectedMonth();
+  void reload() {
+    setState(() {});
+    if(c.scrollOffset != listController.offset) {
+      listController.animateTo(c.scrollOffset, duration: Duration(milliseconds: 250), curve: Curves.decelerate);
+    }
+  }
+  Future<List<((DateTime, DateTime), List<Deadline>)>> buildShownBelow() async {
+    var deadlines = await c.queryRelevantDeadlines();
 
-          var occurrencesInMonth = <Deadline, List<DateTime>>{};
-          DateTime i = firstDayInMonth;
-          while(i.month == firstDayInMonth.month) {
-            var ds = getDeadlinesOnDay(i, candidates: deadlines, showWhat: c.parent.showWhat, showDaily: c.showDaily);
-            for(var d in ds) {
-              occurrencesInMonth.update(d, (v) => v + [i], ifAbsent: () => [i]);
-            }
-            i = DateTime(i.year, i.month, i.day+1);
-          }
-          var combined = <(DateTime, DateTime), List<Deadline>>{};
-          for(var e in occurrencesInMonth.entries) {
-            var actualStart = (e.key.startsAt??e.key.deadlineAt!).date.isOnThisDay(e.value.first)? e.value.first : (e.key.startsAt??e.key.deadlineAt!).lastOccurrenceBefore(e.value.first) ?? e.value.first;
-            DateTime i = DateTime(actualStart.year, actualStart.month, actualStart.day);
-            var numSkip = isSameDay(e.value.first, i) ? 1 : 0;
-            var rangeStart = i;
-            var last = rangeStart;
-            for(var dt in e.value.skip(numSkip)) {
-              i = DateTime(i.year, i.month, i.day+1);
-              if(i.isBefore(firstDayInMonth)) i = firstDayInMonth;
-              if(!isSameDay(dt, i) || e.key.deadlineAt!.date.isDaily()) {
-                combined.update((rangeStart, last), (v) => v + [e.key], ifAbsent: () => [e.key]);
-                rangeStart = dt;
-              }
-              last = dt;
-              i = dt;
-            }
-            var actualEnd = e.key.deadlineAt!.nextOccurrenceAfter(rangeStart)?? last;
-            combined.update((rangeStart, DateTime(actualEnd.year, actualEnd.month, actualEnd.day)), (v) => v + [e.key], ifAbsent: () => [e.key]);
-          }
-          shownBelow.addAll(sorted(
-            combined.entries.map((e) => (e.key, sort(e.value, (a, b) {
-              if(a.startsAt != null && a.startsAt!.isOverdue()) {
-                return a.deadlineAt!.compareTo(b.deadlineAt!);
-              }
-              return a.compareTo(b);
-            },))),
-                (a, b) {
-              if(a.$1.$1.isAfter(now)) {
-                var diffA = a.$1.$1.difference(a.$1.$2).inDays;
-                var diffB = b.$1.$1.difference(b.$1.$2).inDays;
-                if(diffA == diffB) {
-                  var compare = a.$1.$2.compareTo(b.$1.$2);
-                  if(compare != 0) return compare;
-                }
-                var compare = a.$1.$1.compareTo(b.$1.$1);
-                if(compare == 0) return diffB - diffA;
-                return compare;
-              }
-              var compare = a.$1.$1.compareTo(b.$1.$1);
-              if(compare == 0) {
-                var diffA = a.$1.$1.difference(a.$1.$2).inDays;
-                var diffB = b.$1.$1.difference(b.$1.$2).inDays;
-                return diffB - diffA;
-              }
-              return compare;
-            },)
-          );
+    final List<((DateTime, DateTime), List<Deadline>)> shownBelow = [];
+
+    if (c.getSelectedDay() != null) {
+      shownBelow.add(((c.getSelectedDay()!, c.getSelectedDay()!), getDeadlinesOnDay(c.getSelectedDay()!, candidates: deadlines, showWhat: c.parent.showWhat, showDaily: true,)));
+    } else {
+      //todo: improve readability and maintainability of this insanity:
+      var now = DateTime.now();
+      var firstDayInMonth = c.getFirstDayInSelectedMonth();
+
+      var occurrencesInMonth = <Deadline, List<DateTime>>{};
+      DateTime i = firstDayInMonth;
+      while(i.month == firstDayInMonth.month) {
+        var ds = getDeadlinesOnDay(i, candidates: deadlines, showWhat: c.parent.showWhat, showDaily: c.showDaily);
+        for(var d in ds) {
+          occurrencesInMonth.update(d, (v) => v + [i], ifAbsent: () => [i]);
         }
-      });
-    });
+        i = DateTime(i.year, i.month, i.day+1);
+      }
+      var combined = <(DateTime, DateTime), List<Deadline>>{};
+      for(var e in occurrencesInMonth.entries) {
+        var actualStart = (e.key.startsAt??e.key.deadlineAt!).date.isOnThisDay(e.value.first)? e.value.first : (e.key.startsAt??e.key.deadlineAt!).lastOccurrenceBefore(e.value.first) ?? e.value.first;
+        DateTime i = DateTime(actualStart.year, actualStart.month, actualStart.day);
+        var numSkip = isSameDay(e.value.first, i) ? 1 : 0;
+        var rangeStart = i;
+        var last = rangeStart;
+        for(var dt in e.value.skip(numSkip)) {
+          i = DateTime(i.year, i.month, i.day+1);
+          if(i.isBefore(firstDayInMonth)) i = firstDayInMonth;
+          if(!isSameDay(dt, i) || e.key.deadlineAt!.date.isDaily()) {
+            combined.update((rangeStart, last), (v) => v + [e.key], ifAbsent: () => [e.key]);
+            rangeStart = dt;
+          }
+          last = dt;
+          i = dt;
+        }
+        var actualEnd = e.key.deadlineAt!.nextOccurrenceAfter(rangeStart)?? last;
+        combined.update((rangeStart, DateTime(actualEnd.year, actualEnd.month, actualEnd.day)), (v) => v + [e.key], ifAbsent: () => [e.key]);
+      }
+      shownBelow.addAll(sorted(
+        combined.entries.map((e) => (e.key, sort(e.value, (a, b) {
+          if(a.startsAt != null && a.startsAt!.isOverdue()) {
+            return a.deadlineAt!.compareTo(b.deadlineAt!);
+          }
+          return a.compareTo(b);
+        },))),
+            (a, b) {
+          if(a.$1.$1.isAfter(now)) {
+            var diffA = a.$1.$1.difference(a.$1.$2).inDays;
+            var diffB = b.$1.$1.difference(b.$1.$2).inDays;
+            if(diffA == diffB) {
+              var compare = a.$1.$2.compareTo(b.$1.$2);
+              if(compare != 0) return compare;
+            }
+            var compare = a.$1.$1.compareTo(b.$1.$1);
+            if(compare == 0) return diffB - diffA;
+            return compare;
+          }
+          var compare = a.$1.$1.compareTo(b.$1.$1);
+          if(compare == 0) {
+            var diffA = a.$1.$1.difference(a.$1.$2).inDays;
+            var diffB = b.$1.$1.difference(b.$1.$2).inDays;
+            return diffB - diffA;
+          }
+          return compare;
+        },)
+      );
+    }
+
+    return shownBelow;
   }
   
   @override Widget build(BuildContext context) {
-    return GestureDetector(
-      child: ListView.builder(
-        controller: listController,
-        itemCount: shownBelow.length,
-        itemBuilder: (context, index) {
-          var ((dtr1, dtr2), ds) = shownBelow[index];
-          return ListView.builder(
-            shrinkWrap: true,
-            physics: const ClampingScrollPhysics(),
-            itemCount: ds.isEmpty?0:1+ds.length,
-            padding: const EdgeInsets.all(5),
+    return FutureBuilder(
+      future: buildShownBelow(),
+      builder: (context, snapshot) {
+        if(!snapshot.hasData) return Container();
+        return GestureDetector(
+          child: ListView.builder(
+            controller: listController,
+            itemCount: snapshot.data!.length,
             itemBuilder: (context, index) {
-              if(index == 0) return Text(isSameDay(dtr1, dtr2)? "${pad0(dtr1.day)}.${pad0(dtr1.month)}.${dtr1.year}" : "${pad0(dtr1.day)}.${pad0(dtr1.month)}.${dtr1.year} - ${pad0(dtr2.day)}.${pad0(dtr2.month)}.${dtr2.year}");
-              var d = ds[index-1];
-              return DeadlineCard(
-                d,
-                (d) => c.parent.editDeadline(c, context, d.id!),
-                (d) => c.parent.deleteDeadline(c, context, d, dtr1),
-                (d) => c.parent.toggleDeadlineActive(c, context, d),
-                (d, nrdt) => c.parent.toggleDeadlineNotificationType(c, d, nrdt),
+              var ((dtr1, dtr2), ds) = snapshot.data![index];
+              return ListView.builder(
+                shrinkWrap: true,
+                physics: const ClampingScrollPhysics(),
+                itemCount: ds.isEmpty?0:1+ds.length,
+                padding: const EdgeInsets.all(5),
+                itemBuilder: (context, index) {
+                  if(index == 0) return Text(isSameDay(dtr1, dtr2)? "${pad0(dtr1.day)}.${pad0(dtr1.month)}.${dtr1.year}" : "${pad0(dtr1.day)}.${pad0(dtr1.month)}.${dtr1.year} - ${pad0(dtr2.day)}.${pad0(dtr2.month)}.${dtr2.year}");
+                  var d = ds[index-1];
+                  return DeadlineCard(
+                    d,
+                    (d) => c.parent.editDeadline(c, context, d.id!),
+                    (d) => c.parent.deleteDeadline(c, context, d, dtr1),
+                    (d) => c.parent.toggleDeadlineActive(c, context, d),
+                    (d, nrdt) => c.parent.toggleDeadlineNotificationType(c, d, nrdt),
+                  );
+                }
               );
-            }
-          );
-        },
-      ),
-      onTap: () {
-        c.setDayUnselected();
-      },
+            },
+          ),
+          onTap: () {
+            c.setDayUnselected();
+          },
+        );
+      }
     );
   }
 }
@@ -451,12 +486,12 @@ class _DeadlineTableCalendarState extends State<DeadlineTableCalendar> {
       var (year, month) = getYearMonthFromPage(controller.page!.round());
       c.setSelection(DateTime(year, month, 1), null);
     });
-    c.addListener(reloadCalendar);
+    c.addContentListener(reloadCalendar);
     reloadCalendar();
   }
   @override void dispose() {
     controller.dispose();
-    c.removeListener(reloadCalendar);
+    c.removeContentListener(reloadCalendar);
     super.dispose();
   }
   void reloadCalendar() {
@@ -481,16 +516,13 @@ class _DeadlineTableCalendarState extends State<DeadlineTableCalendar> {
             GestureDetector(
               behavior: HitTestBehavior.translucent,
               onTap: () async {
-                var tappedMonth = await Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => YearsPage(db: c.db, initialYear: c.getSelectedMonth().year,)),
+                var tappedMonth = await MainApp.navigatorKey.currentState?.pushNamed(
+                    '/years',
+                    arguments: c.getSelectedMonth().year
                 );
 
                 if(tappedMonth is DateTime) {
-                  setState(() {
-                    c.setSelection(tappedMonth, null);
-                    controller.animateToPage(getPage(tappedMonth), duration: const Duration(milliseconds: 500), curve: Curves.linear);
-                  });
+                  controller.animateToPage(getPage(tappedMonth), duration: const Duration(milliseconds: 500), curve: Curves.linear);
                 }
               },
               child: Row(

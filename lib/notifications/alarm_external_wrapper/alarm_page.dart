@@ -3,7 +3,7 @@ import 'dart:math';
 
 import 'package:audio_session/audio_session.dart';
 import 'package:confetti/confetti.dart';
-import 'package:deadlines/ui/deadlines_display.dart';
+import 'package:deadlines/ui/defaults.dart';
 import 'package:deadlines/utils/size_conditional_text.dart';
 import 'package:deadlines/utils/utils.dart';
 import 'package:flutter/material.dart';

@@ -4,11 +4,58 @@ import 'package:deadlines/utils/not_dumb_grid_view.dart';
 import 'package:deadlines/utils/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'controller.dart';
+
+
+
+class DeadlinesInYearsController extends ChildController with Cache {
+  DeadlinesInYearsController(super.parent);
+
+  int cachedYear = -1;
+  final Map<int, Deadline> _cache = {};
+  @override invalidate() => l.synchronized(() {
+    cachedYear = -1;
+    _cache.clear();
+  });
+  @override Future<Deadline> add(Deadline d) => l.synchronized(() {
+    if((d.startsAt?.date.isInThisYear(cachedYear) ?? false) || (d.deadlineAt?.date.isInThisYear(cachedYear) ?? false)) {
+      _cache[d.id!] = d;
+    }
+    return d;
+  });
+  @override Future<void> remove(Deadline d) => l.synchronized(() {
+    if((d.startsAt?.date.isInThisYear(cachedYear) ?? false) || (d.deadlineAt?.date.isInThisYear(cachedYear) ?? false)) {
+      _cache.remove(d.id);
+    }
+  });
+  @override Future<void> update(Deadline dOld, Deadline dNew) => l.synchronized(() {
+    bool wasRemoved;
+    if((dOld.startsAt?.date.isInThisYear(cachedYear) ?? false) || (dOld.deadlineAt?.date.isInThisYear(cachedYear) ?? false)) {
+      wasRemoved = _cache.remove(dOld.id) != null;
+    } else {
+      wasRemoved = true;
+    }
+    if((dNew.startsAt?.date.isInThisYear(cachedYear) ?? false) || (dNew.deadlineAt?.date.isInThisYear(cachedYear) ?? false)) {
+      if(wasRemoved) _cache[dNew.id!] = dNew;
+    }
+  });
+
+  Future<Iterable<Deadline>> queryRelevantDeadlinesInYear(int year) => l.synchronized(() async {
+    if(cachedYear != year) {
+      _cache.clear();
+      for(var d in await parent.db.queryActiveCriticalDeadlinesInYear(year)) {
+        _cache[d.id!] = d;
+      }
+      cachedYear = year;
+    }
+    return _cache.values;
+  });
+}
 
 class YearsPage extends StatefulWidget {
-  final DeadlinesDatabase db;
+  final DeadlinesInYearsController controller;
   final int initialYear;
-  const YearsPage({super.key, required this.db, required this.initialYear});
+  const YearsPage(this.controller, {super.key, required this.initialYear});
 
   @override State<YearsPage> createState() => _YearsPageState();
 }
@@ -31,7 +78,7 @@ class _YearsPageState extends State<YearsPage> {
           controller: controller,
           itemBuilder: (context, year) {
             return FutureBuilder(
-              future: widget.db.queryActiveCriticalDeadlinesInYear(year),
+              future: widget.controller.queryRelevantDeadlinesInYear(year),
               builder: (context, snapshot) {
                 return Container(
                   margin: const EdgeInsets.only(top: 12, bottom: 22),
@@ -63,7 +110,7 @@ class _YearsPageState extends State<YearsPage> {
 class TinyMonthView extends StatelessWidget {
   final int year;
   final int month;
-  final List<Deadline>? deadlines;
+  final Iterable<Deadline>? deadlines;
   const TinyMonthView({super.key, required this.year, required this.month, required this.deadlines});
 
   @override Widget build(BuildContext context) {

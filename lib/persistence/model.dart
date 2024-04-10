@@ -1,5 +1,5 @@
 import 'package:deadlines/notifications/alarm_external_wrapper/model.dart';
-import 'package:deadlines/ui/deadlines_display.dart';
+import 'package:deadlines/ui/widgets/controller.dart';
 import 'package:deadlines/utils/utils.dart';
 import 'package:flutter/foundation.dart';
 
@@ -27,6 +27,7 @@ class Deadline implements Comparable<Deadline> {
     }
     if(deadlineAt == null && startsAt != null) throw ArgumentError("startsAt must be null if timeless (deadlineAt == null)");
     if(removals.where((r) => r.allFuture).length >= 2) throw ArgumentError("cannot have more than one all future removals");
+    if(rangeLength().inDays > 365) throw ArgumentError("range too long");
   }
 
   @override bool operator ==(Object other) {

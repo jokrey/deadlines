@@ -3,47 +3,54 @@ import 'dart:async';
 import 'package:deadlines/notifications/alarm_external_wrapper/model.dart';
 import 'package:deadlines/notifications/alarm_external_wrapper/notify_wrapper.dart';
 import 'package:deadlines/persistence/database.dart';
-import 'package:deadlines/ui/deadlines_display.dart';
 import 'package:deadlines/ui/widgets/card_in_list.dart';
 import 'package:deadlines/persistence/model.dart';
 import 'package:deadlines/ui/widgets/timers.dart';
 import 'package:deadlines/utils/utils.dart';
 import 'package:flutter/material.dart';
-import 'package:synchronized/synchronized.dart';
 import '../../notifications/deadline_alarm_manager.dart';
+import 'controller.dart';
 
 
-class UpcomingDeadlinesListController extends ChildController {
-  final ParentController parent;
-  DeadlinesDatabase get db => parent.db;
-  UpcomingDeadlinesListController(this.parent);
+class UpcomingDeadlinesListController extends ChildController with Cache {
+  UpcomingDeadlinesListController(super.parent);
 
   //ui choices to be restored
   double scrollOffset = -1;
 
 
 
-  Lock l = Lock();
-  final List<Deadline> _cache = [];
-  invalidateCache() => l.synchronized(() => _cache.clear());
-  Future<Iterable<Deadline>> queryRelevantDeadlines() => l.synchronized(() async {
-    if(_cache.isEmpty) {
-      _cache.addAll(await db.queryDeadlinesActiveOrTimelessOrAfter(DateTime.now()));
+  bool cacheValid = false;
+  final Map<int, Deadline> _cache = {};
+  @override invalidate() => l.synchronized(() {
+    cacheValid = false;
+    _cache.clear();
+  });
+  @override Future<Deadline> add(Deadline d) => l.synchronized(() {
+    if(cacheValid) _cache[d.id!] = d;
+    return d;
+  });
+  @override Future<void> remove(Deadline d) => l.synchronized(() {
+    if(cacheValid) _cache.remove(d.id);
+  });
+  @override Future<void> update(Deadline dOld, Deadline dNew) => l.synchronized(() {
+    if(cacheValid) {
+      if(_cache.remove(dOld.id) != null) {
+        _cache[dNew.id!] = dNew;
+      }
     }
-    return _cache;
   });
 
-
-  final List<VoidCallback> _callbacks = [];
-  void addListener(VoidCallback callback) => _callbacks.add(callback);
-  void removeListener(VoidCallback callback) => _callbacks.remove(callback);
-  @override void notifyContentsChanged() {
-    invalidateCache().then((_) {
-      for (var callback in _callbacks) {
-        callback();
+  Future<Iterable<Deadline>> queryRelevantDeadlines() => l.synchronized(() async {
+    if(!cacheValid) {
+      _cache.clear();
+      for(var d in await parent.db.queryDeadlinesActiveOrTimelessOrAfter(DateTime.now())) {
+        _cache[d.id!] = d;
       }
-    });
-  }
+      cacheValid = true;
+    }
+    return _cache.values;
+  });
 }
 
 
@@ -79,13 +86,14 @@ class UpcomingDeadlinesListState extends State<UpcomingDeadlinesList> {
                     child: Text(value),
                   );
                 }).toList(),
-                onChanged: (newlySelected) => setState(() {
+                onChanged: (newlySelected) => setState(() async {
+                  // todo does not work properly, move these boxes elsewhere
                   if(newlySelected == "Show Future") {
                     c.parent.showWhat = ShownType.showAll;
                   } else {
                     c.parent.showWhat = ShownType.showActive;
                   }
-                  c.notifyContentsChanged();
+                  await c.invalidate();
                 }),
                 value: c.parent.showWhat != ShownType.showActive ? "Show Future":"Show Active",
               ),
@@ -126,158 +134,165 @@ class _UpcomingListBelowState extends State<UpcomingListBelow> {
     super.initState();
     listController = ScrollController(initialScrollOffset: c.scrollOffset);
     listController.addListener(() {c.scrollOffset = listController.offset;});
-    c.addListener(reloadShownBelow);
-    reloadShownBelow();
+    c.addContentListener(reload);
   }
   @override void dispose() {
     super.dispose();
     listController.dispose();
-    c.removeListener(reloadShownBelow);
+    c.removeContentListener(reload);
   }
 
-  final List<(String, List<Deadline?>)> shownBelow = [];
-  void reloadShownBelow() {
-    c.queryRelevantDeadlines().then((deadlines) {
-      setState(() {
-        var now = DateTime.now();
-        shownBelow.clear();
-        shownBelow.add(("ToDo(${camel(Importance.critical.name)})", deadlines.where((d) => d.isTimeless() &&
-            d.importance == Importance.critical && (d.active || c.parent.showWhat == ShownType.showAll))
-            .toList(growable: false)));
-        if (shownBelow.last.$2.isNotEmpty) shownBelow.add(("", []));
+  void reload() {
+    setState(() {});
+  }
 
-        //todo: improve readability and maintainability of this insanity:
-        List<Deadline> oneTimeEvents = deadlines.where((d) => !d.isTimeless() && !d.isRepeating()).toList();
-        Map<(DateTime, DateTime), List<Deadline>> nonRepeatingOnEachDay = {};
-        for (var d in oneTimeEvents) {
-          if (!(d.active || c.parent.showWhat == ShownType.showAll)) continue;
-          var cutOff = (d.startsAt ?? d.deadlineAt!).toDateTime();
-          var c1 = DateTime(cutOff.year, cutOff.month, cutOff.day);
-          var c2 = c1;
-          if (d.startsAt != null && !d.startsAt!.date.isSameDay(d.deadlineAt!.date)) {
-            c2 = d.deadlineAt!.date.toDateTime();
-          }
-          if (d.active || (c.parent.showWhat == ShownType.showAll && cutOff.isAfter(now))) {
-            nonRepeatingOnEachDay.update((c1, c2), (v) => v + [d], ifAbsent: () => [d]);
-          }
+  Future<List<(String, List<Deadline?>)>> buildShownBelow() async {
+    final List<(String, List<Deadline?>)> shownBelow = [];
+    var deadlines = await c.queryRelevantDeadlines();
+    var now = DateTime.now();
+    shownBelow.clear();
+    shownBelow.add(("ToDo(${camel(Importance.critical.name)})", deadlines.where((d) => d.isTimeless() &&
+        d.importance == Importance.critical && (d.active || c.parent.showWhat == ShownType.showAll))
+        .toList(growable: false)));
+    if (shownBelow.last.$2.isNotEmpty) shownBelow.add(("", []));
+
+    //todo: improve readability and maintainability of this insanity:
+    List<Deadline> oneTimeEvents = deadlines.where((d) => !d.isTimeless() && !d.isRepeating()).toList();
+    Map<(DateTime, DateTime), List<Deadline>> nonRepeatingOnEachDay = {};
+    for (var d in oneTimeEvents) {
+      if (!(d.active || c.parent.showWhat == ShownType.showAll)) continue;
+      var cutOff = (d.startsAt ?? d.deadlineAt!).toDateTime();
+      var c1 = DateTime(cutOff.year, cutOff.month, cutOff.day);
+      var c2 = c1;
+      if (d.startsAt != null && !d.startsAt!.date.isSameDay(d.deadlineAt!.date)) {
+        c2 = d.deadlineAt!.date.toDateTime();
+      }
+      if (d.active || (c.parent.showWhat == ShownType.showAll && cutOff.isAfter(now))) {
+        nonRepeatingOnEachDay.update((c1, c2), (v) => v + [d], ifAbsent: () => [d]);
+      }
+    }
+    var nonRepeatingOnEachDaySorted = nonRepeatingOnEachDay.entries.map((e) =>
+    (e.key, sort(e.value, (a, b) {
+      if (a.startsAt != null && a.startsAt!.isOverdue()) {
+        return a.deadlineAt!.compareTo(b.deadlineAt!);
+      }
+      return a.compareTo(b);
+    },))
+    ).toList();
+    nonRepeatingOnEachDaySorted.sort((a, b) {
+      var compare = (a.$1.$1.isAfter(now) ? 1 : 0).compareTo((b.$1.$1.isAfter(now) ? 1 : 0));
+      if (compare == 0) return a.$1.$2.compareTo(b.$1.$2);
+      if (a.$1.$1.isAfter(now)) {
+        var diffA = a.$1.$1.difference(a.$1.$2).inDays;
+        var diffB = b.$1.$1.difference(b.$1.$2).inDays;
+        if (diffA == diffB) {
+          var compare = a.$1.$2.compareTo(b.$1.$2);
+          if (compare != 0) return compare;
         }
-        var nonRepeatingOnEachDaySorted = nonRepeatingOnEachDay.entries.map((e) =>
-            (e.key, sort(e.value, (a, b) {
-              if (a.startsAt != null && a.startsAt!.isOverdue()) {
-                return a.deadlineAt!.compareTo(b.deadlineAt!);
+        var compare = a.$1.$1.compareTo(b.$1.$1);
+        if (compare == 0) return diffB - diffA;
+        return compare;
+      }
+      compare = a.$1.$1.compareTo(b.$1.$1);
+      if (compare == 0) {
+        var diffA = a.$1.$1.difference(a.$1.$2).inDays;
+        var diffB = b.$1.$1.difference(b.$1.$2).inDays;
+        return diffB - diffA;
+      }
+      return compare;
+    },);
+
+    Deadline? lastDeadline;
+    shownBelow.addAll(nonRepeatingOnEachDaySorted.map(
+            (e) {
+          var (r1, r2) = e.$1;
+          var list = e.$2;
+          var newList = <Deadline?>[];
+          for (Deadline d in list) {
+            if (lastDeadline != null && lastDeadline?.isOverdue() != d.isOverdue()) {
+              newList.add(null);
+              if ((lastDeadline?.startsAt ?? lastDeadline?.deadlineAt)?.date.day !=
+                  (d.startsAt ?? d.deadlineAt)?.date.day) {
+                newList.add(null);
               }
-              return a.compareTo(b);
-            },))
-        ).toList();
-        nonRepeatingOnEachDaySorted.sort((a, b) {
-          var compare = (a.$1.$1.isAfter(now) ? 1 : 0).compareTo((b.$1.$1.isAfter(now) ? 1 : 0));
-          if (compare == 0) return a.$1.$2.compareTo(b.$1.$2);
-          if (a.$1.$1.isAfter(now)) {
-            var diffA = a.$1.$1.difference(a.$1.$2).inDays;
-            var diffB = b.$1.$1.difference(b.$1.$2).inDays;
-            if (diffA == diffB) {
-              var compare = a.$1.$2.compareTo(b.$1.$2);
-              if (compare != 0) return compare;
             }
-            var compare = a.$1.$1.compareTo(b.$1.$1);
-            if (compare == 0) return diffB - diffA;
-            return compare;
+            if (lastDeadline != null && !d.isOverdue() &&
+                (lastDeadline?.startsAt ?? lastDeadline?.deadlineAt)?.date.month !=
+                    (d.startsAt ?? d.deadlineAt)?.date.month) {
+              newList.add(null);
+            }
+            newList.add(d);
+            lastDeadline = d;
           }
-          compare = a.$1.$1.compareTo(b.$1.$1);
-          if (compare == 0) {
-            var diffA = a.$1.$1.difference(a.$1.$2).inDays;
-            var diffB = b.$1.$1.difference(b.$1.$2).inDays;
-            return diffB - diffA;
-          }
-          return compare;
-        },);
+          return (isSameDay(r1, r2) ? "${pad0(r1.day)}.${pad0(r1.month)}.${r1.year}" : "${pad0(r1.day)}.${pad0(
+              r1.month)}.${r1.year} - ${pad0(r2.day)}.${pad0(r2.month)}.${r2.year}", newList);
+        })
+    );
+    if (shownBelow.last.$2.isNotEmpty) shownBelow.add(("", []));
 
-        Deadline? lastDeadline;
-        shownBelow.addAll(nonRepeatingOnEachDaySorted.map(
-                (e) {
-              var (r1, r2) = e.$1;
-              var list = e.$2;
-              var newList = <Deadline?>[];
-              for (Deadline d in list) {
-                if (lastDeadline != null && lastDeadline?.isOverdue() != d.isOverdue()) {
-                  newList.add(null);
-                  if ((lastDeadline?.startsAt ?? lastDeadline?.deadlineAt)?.date.day !=
-                      (d.startsAt ?? d.deadlineAt)?.date.day) {
-                    newList.add(null);
-                  }
-                }
-                if (lastDeadline != null && !d.isOverdue() &&
-                    (lastDeadline?.startsAt ?? lastDeadline?.deadlineAt)?.date.month !=
-                        (d.startsAt ?? d.deadlineAt)?.date.month) {
-                  newList.add(null);
-                }
-                newList.add(d);
-                lastDeadline = d;
-              }
-              return (isSameDay(r1, r2) ? "${pad0(r1.day)}.${pad0(r1.month)}.${r1.year}" : "${pad0(r1.day)}.${pad0(
-                  r1.month)}.${r1.year} - ${pad0(r2.day)}.${pad0(r2.month)}.${r2.year}", newList);
-            })
-        );
-        if (shownBelow.last.$2.isNotEmpty) shownBelow.add(("", []));
+    shownBelow.add(("ToDo(${camel(Importance.important.name)})", deadlines.where((d) => d.isTimeless() &&
+        d.importance == Importance.important && (d.active || c.parent.showWhat == ShownType.showAll))
+        .toList(growable: false)));
+    if (shownBelow.last.$2.isNotEmpty) shownBelow.add(("", []));
 
-        shownBelow.add(("ToDo(${camel(Importance.important.name)})", deadlines.where((d) => d.isTimeless() &&
-            d.importance == Importance.important && (d.active || c.parent.showWhat == ShownType.showAll))
-            .toList(growable: false)));
-        if (shownBelow.last.$2.isNotEmpty) shownBelow.add(("", []));
+    List<Deadline> repeating = deadlines.where((d) => d.isRepeating()).toList();
+    Map<RepetitionType, List<Deadline>> repeatingByType = {};
+    for (var d in repeating) {
+      if (!d.active && c.parent.showWhat != ShownType.showAll) continue;
+      repeatingByType.update(d.deadlineAt!.date.repetitionType, (v) => v + [d], ifAbsent: () => [d]);
+    }
+    var repeatingByTypeSorted = repeatingByType.entries.map((e) => (e.key, sort(e.value))).toList();
+    repeatingByTypeSorted.sort((a, b) => b.$1.index - a.$1.index,);
+    shownBelow.addAll(repeatingByTypeSorted.map((e) => (camel(e.$1.name), e.$2)));
+    if (shownBelow.last.$2.isNotEmpty) shownBelow.add(("", []));
 
-        List<Deadline> repeating = deadlines.where((d) => d.isRepeating()).toList();
-        Map<RepetitionType, List<Deadline>> repeatingByType = {};
-        for (var d in repeating) {
-          if (!d.active && c.parent.showWhat != ShownType.showAll) continue;
-          repeatingByType.update(d.deadlineAt!.date.repetitionType, (v) => v + [d], ifAbsent: () => [d]);
-        }
-        var repeatingByTypeSorted = repeatingByType.entries.map((e) => (e.key, sort(e.value))).toList();
-        repeatingByTypeSorted.sort((a, b) => b.$1.index - a.$1.index,);
-        shownBelow.addAll(repeatingByTypeSorted.map((e) => (camel(e.$1.name), e.$2)));
-        if (shownBelow.last.$2.isNotEmpty) shownBelow.add(("", []));
+    shownBelow.add(("ToDo(${camel(Importance.normal.name)})", deadlines.where((d) => d.isTimeless() &&
+        d.importance == Importance.normal && (d.active || c.parent.showWhat == ShownType.showAll))
+        .toList(growable: false)));
+    if (shownBelow.last.$2.isNotEmpty) shownBelow.add(("", []));
 
-        shownBelow.add(("ToDo(${camel(Importance.normal.name)})", deadlines.where((d) => d.isTimeless() &&
-            d.importance == Importance.normal && (d.active || c.parent.showWhat == ShownType.showAll))
-            .toList(growable: false)));
-        if (shownBelow.last.$2.isNotEmpty) shownBelow.add(("", []));
-      });
-    });
+    return shownBelow;
   }
-
 
   @override Widget build(BuildContext context) {
-    return ListView.builder(
-      controller: listController,
-      itemCount: shownBelow.length,
-      itemBuilder: (context, index) {
-        var (label, ds) = shownBelow[index];
-        var firstNonNullIndex = ds.takeWhile((d) => d == null).length;
-        if(label.isEmpty) {
-          return const SizedBox(height: 25,);
-        } else {
-          return ListView.builder(
-              shrinkWrap: true,
-              physics: const ClampingScrollPhysics(),
-              itemCount: ds.isEmpty ? 0 : 1 + ds.length,
-              padding: const EdgeInsets.all(5),
-              itemBuilder: (context, index) {
-                if (index == firstNonNullIndex) return Text(label);
-                var d = ds[index < firstNonNullIndex? index:index - 1];
-                if(d == null) {
-                  return const SizedBox(height: 25,);
-                } else {
-                  return DeadlineCard(
-                    d,
-                        (d) => c.parent.editDeadline(c, context, d.id!),
-                        (d) => c.parent.deleteDeadline(c, context, d, null),
-                        (d) => c.parent.toggleDeadlineActive(c, context, d),
-                        (d, nrdt) => c.parent.toggleDeadlineNotificationType(c, d, nrdt),
-                  );
+    return FutureBuilder(
+      future: buildShownBelow(),
+      builder: (context, snapshot) {
+        if(!snapshot.hasData) return Container();
+        return ListView.builder(
+          controller: listController,
+          itemCount: snapshot.data!.length,
+          itemBuilder: (context, index) {
+            var (label, ds) = snapshot.data![index];
+            var firstNonNullIndex = ds.takeWhile((d) => d == null).length;
+            if(label.isEmpty) {
+              return const SizedBox(height: 25,);
+            } else {
+              return ListView.builder(
+                shrinkWrap: true,
+                physics: const ClampingScrollPhysics(),
+                itemCount: ds.isEmpty ? 0 : 1 + ds.length,
+                padding: const EdgeInsets.all(5),
+                itemBuilder: (context, index) {
+                  if (index == firstNonNullIndex) return Text(label);
+                  var d = ds[index < firstNonNullIndex? index:index - 1];
+                  if(d == null) {
+                    return const SizedBox(height: 25,);
+                  } else {
+                    return DeadlineCard(
+                      d,
+                      (d) => c.parent.editDeadline(c, context, d.id!),
+                      (d) => c.parent.deleteDeadline(c, context, d, null),
+                      (d) => c.parent.toggleDeadlineActive(c, context, d),
+                      (d, nrdt) => c.parent.toggleDeadlineNotificationType(c, d, nrdt),
+                    );
+                  }
                 }
-              }
-          );
-        }
-      },
+              );
+            }
+          },
+        );
+      }
     );
   }
 }
@@ -305,7 +320,7 @@ class _NextInDisplayState extends State<NextInDisplay> {
       if(deadlineId == toNextAlarm?.$1?.id) {
         d = toNextAlarm!.$1!;
       } else {
-        d = deadlineId == -1? null : await c.db.loadById(deadlineId);
+        d = deadlineId == -1? null : await c.parent.db.loadById(deadlineId);
       }
       //d can be null, if it is a timer
       toNextAlarm = (d, duration);

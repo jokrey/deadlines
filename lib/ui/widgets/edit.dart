@@ -1,5 +1,5 @@
 import 'package:deadlines/notifications/alarm_external_wrapper/model.dart';
-import 'package:deadlines/ui/deadlines_display.dart';
+import 'package:deadlines/ui/defaults.dart';
 import 'package:deadlines/ui/widgets/card_in_list.dart';
 import 'package:deadlines/utils/date_and_time_picker.dart';
 import 'package:deadlines/utils/not_dumb_grid_view.dart';

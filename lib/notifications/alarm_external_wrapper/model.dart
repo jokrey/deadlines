@@ -153,6 +153,9 @@ class RepeatableDate implements Comparable<RepeatableDate> {
     if(isWeekly()) return toDateTime().weekday == o.weekday;
     return (isMonthly() || isDaily() || (isYearly()? isInThisRepetition(year, o.year) : year == o.year)) && (isDaily() || (isMonthly()? isInThisRepetition(month, o.month) : month == o.month)) && (isDaily()? isInThisRepetition(day, o.day) : day == o.day);
   }
+  bool isInThisMonth(int y, int m) =>
+      (year == y || repetitionType != RepetitionType.none) && (month == m || (repetitionType != RepetitionType.none && repetitionType != RepetitionType.yearly));
+  bool isInThisYear(int y) => (year == y || repetitionType != RepetitionType.none);
   bool isAfterThisDay(DateTime d) {
     if(isRepeating()) throw ArgumentError("after cannot be checked when repeating, always before AND after");
     return year != d.year? year > d.year : month != d.month? month > d.month : day > d.day;

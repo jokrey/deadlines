@@ -1,9 +1,7 @@
 import 'dart:math';
 
 import 'package:deadlines/notifications/alarm_external_wrapper/model.dart';
-import 'package:deadlines/ui/widgets/edit.dart';
-import 'package:deadlines/ui/widgets/upcoming_list.dart';
-import 'package:deadlines/ui/widgets/months.dart';
+import 'package:deadlines/notifications/deadline_alarm_manager.dart';
 import 'package:deadlines/persistence/database.dart';
 import 'package:deadlines/persistence/model.dart';
 import 'package:deadlines/utils/utils.dart';
@@ -11,52 +9,53 @@ import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:intl/intl.dart';
 
-const colors = [
-  /*Color(0xFFF94144),*/ Color(0xFFF3722C), Color(0xFFF8961E), Color(0xFFF9C74F),   Color(0xFF90BE6D), Color(0xFF43AA8B), Color(0xFF577590),
-  /*Colors.red,*/       Colors.deepOrange,   Colors.amber,      Colors.yellowAccent, Colors.green,    Colors.cyan,        Colors.blue,
-];
-Color? getForegroundForColor(Color c) {
-  if (c.value == const Color(0xFFF94144).value || c.value == Colors.red.value) {
-    return Colors.white;
-  } else if (c.value == const Color(0xFFF3722C).value || c.value == Colors.deepOrange.value) {
-    return Colors.white;
-  } else if (c.value == const Color(0xFFF8961E).value || c.value == Colors.amber.value) {
-    return Colors.white;
-  } else if (c.value == const Color(0xFFF9C74F).value || c.value == Colors.yellowAccent.value) {
-    return Colors.black;
-  } else if (c.value == const Color(0xFF90BE6D).value || c.value == Colors.green.value) {
-    return Colors.black;
-  } else if (c.value == const Color(0xFF43AA8B).value) {
-    return Colors.white;
-  } else if (c.value == Colors.cyan.value) {
-    return Colors.black;
-  } else if (c.value == const Color(0xFF577590).value) {
-    return Colors.white;
-  } else if (c.value == Colors.blue.value) {
-    return Colors.black;
-  } else {
-    return null;
-  }
-}
-
-abstract class ChildController {
-  void notifyContentsChanged();
-
-  Future<void> init() async {}
-}
+import '../defaults.dart';
+import 'edit.dart';
 
 enum ShownType {
   showActive, showAll
 }
-class ParentController {
+class ParentController implements DeadlinesStorage {
   final DeadlinesDatabase db = DeadlinesDatabase();
   ParentController() {
     //tested that NOT technically required, except in fringe cases (first startup after reinstalling)
-    db.updateAllAlarms();
+    db.queryDeadlinesActiveOrTimelessOrAfter(DateTime.now()).then((all) {
+      for(var d in all) {
+        DeadlineAlarms.updateAlarmsFor(d);
+      }
+    });
+  }
+  ShownType showWhat = ShownType.showActive;
+
+  final List<Cache> registeredCaches = [];
+  void registerCache(Cache cache) {
+    registeredCaches.add(cache);
+  }
+
+  @override Future<Deadline> add(Deadline d) async {
+    Deadline newD = await db.add(d);
+    for(var c in registeredCaches) {
+      await c.add(newD);
+    }
+    await DeadlineAlarms.updateAlarmsFor(newD);
+    return newD;
+  }
+  @override Future<void> remove(Deadline d) async {
+    for(var c in registeredCaches) {
+      await c.remove(d);
+    }
+    await DeadlineAlarms.cancelAlarmsFor(d);
+    await db.remove(d);
+  }
+  @override Future<void> update(Deadline dOld, Deadline dNew) async {
+    for(var c in registeredCaches) {
+      await c.update(dOld, dNew);
+    }
+    await DeadlineAlarms.updateAlarmsFor(dNew);
+    await db.update(dOld, dNew);
   }
 
 
-  ShownType showWhat = ShownType.showActive;
 
   Future<bool> newDeadline(ChildController callingChild, BuildContext context, DateTime? newAt) {
     return _editOrNew(callingChild, context, null, newAt);
@@ -95,16 +94,11 @@ class ParentController {
     }
 
 
-    // if(toEdit != null) {
-    //   callingChild.removeFromCache(toEdit);
-    // }
-
     if(newDeadline.id == null) {
-      newDeadline = await db.add(newDeadline);
+      newDeadline = await add(newDeadline);
     } else {
-      await db.update(newDeadline);
+      await update(toEdit!, newDeadline);
     }
-    // callingChild.addToCache(newDeadline);
     callingChild.notifyContentsChanged();
     return true;
   }
@@ -140,25 +134,25 @@ class ParentController {
           ]
           +
           (
-            d.deadlineAt!.date.isDaily()?
-            [
-              SizedBox(width: double.infinity, child: ElevatedButton(onPressed: () {
-                var dNew = d.copyRemoveOccurrence(RepeatableDate.from(d.deadlineAt!.nextOccurrenceAfter(day)!, repetitionType: RepetitionType.weekly));
-                updateWithUndoUI(callingChild, context, "${d.title} on every ${DateFormat('EEEE').format(day)} deleted", d, dNew);
+          d.deadlineAt!.date.isDaily()?
+          [
+            SizedBox(width: double.infinity, child: ElevatedButton(onPressed: () {
+              var dNew = d.copyRemoveOccurrence(RepeatableDate.from(d.deadlineAt!.nextOccurrenceAfter(day)!, repetitionType: RepetitionType.weekly));
+              updateWithUndoUI(callingChild, context, "${d.title} on every ${DateFormat('EEEE').format(day)} deleted", d, dNew);
 
-                Navigator.of(context).pop();
-              }, child: const Text("This occurrence every week"))),
-            ]:
-            d.deadlineAt!.date.isMonthly()?
-            [
-              SizedBox(width: double.infinity, child: ElevatedButton(onPressed: () {
-                var dNew = d.copyRemoveOccurrence(RepeatableDate.from(d.deadlineAt!.nextOccurrenceAfter(day)!, repetitionType: RepetitionType.yearly));
-                updateWithUndoUI(callingChild, context, "${d.title} on every ${DateFormat('MMMM').format(day)} deleted", d, dNew);
+              Navigator.of(context).pop();
+            }, child: const Text("This occurrence every week"))),
+          ]:
+          d.deadlineAt!.date.isMonthly()?
+          [
+            SizedBox(width: double.infinity, child: ElevatedButton(onPressed: () {
+              var dNew = d.copyRemoveOccurrence(RepeatableDate.from(d.deadlineAt!.nextOccurrenceAfter(day)!, repetitionType: RepetitionType.yearly));
+              updateWithUndoUI(callingChild, context, "${d.title} on every ${DateFormat('MMMM').format(day)} deleted", d, dNew);
 
-                Navigator.of(context).pop();
-              }, child: const Text("This occurrence every year"))),
-            ]:
-            []
+              Navigator.of(context).pop();
+            }, child: const Text("This occurrence every year"))),
+          ]:
+          []
           )
           +
           [
@@ -170,23 +164,20 @@ class ParentController {
               Navigator.of(context).pop();
             }, child: const Text("Cancel"))),
           ],
-          // content: Text("Saved successfully"),
         );
       });
     } else {
       deleteDeadlineAllOccurrences(callingChild, context, d);
     }
   }
-  void deleteDeadlineAllOccurrences(ChildController callingChild, BuildContext context, Deadline d) {
-    db.remove(d);
-    // callingChild.removeFromCache(d);
+  void deleteDeadlineAllOccurrences(ChildController callingChild, BuildContext context, Deadline d) async {
+    await remove(d);
     callingChild.notifyContentsChanged();
 
     undoUI(
       "\"${d.title}\" deleted", Color(d.color), context,
       () async {
-        d = await db.add(d);
-        // callingChild.addToCache(d);
+        d = await add(d);
         callingChild.notifyContentsChanged();
       }
     );
@@ -210,9 +201,7 @@ class ParentController {
   }
 
   Future<void> updateWithoutUndoUI(ChildController callingChild, Deadline d, Deadline dNew) async {
-    // callingChild.removeFromCache(d);
-    await db.update(dNew);
-    // callingChild.addToCache(dNew);
+    await update(d, dNew);
     callingChild.notifyContentsChanged();
   }
   Future<void> updateWithUndoUI(ChildController callingChild, BuildContext context, String msg, Deadline d, Deadline dNew) async {
@@ -266,30 +255,21 @@ void undoUI(String text, Color color, BuildContext context, Function() undo) {
 
 
 
-class DeadlinesDisplay extends StatelessWidget {
-  DeadlinesDisplay({super.key});
 
-  final ParentController parent = ParentController();
-  late final UpcomingDeadlinesListController upcomingController = UpcomingDeadlinesListController(parent);
-  late final DeadlinesCalendarController calendarController = DeadlinesCalendarController(parent);
-  @override Widget build(BuildContext context) {
-    return FutureBuilder(
-      future: Future.wait([upcomingController.init(), calendarController.init()]),
-      builder: (context, snapshot) {
-        if(!snapshot.hasData) return Container();
-        return PageView.builder(
-          controller: PageController(initialPage: 100000),
-          itemBuilder: (context, index) {
-            if (index % 2 == 0) {
-              calendarController.notifyContentsChanged();
-              return DeadlinesCalendar(calendarController);
-            } else {
-              upcomingController.notifyContentsChanged();
-              return UpcomingDeadlinesList(upcomingController);
-            }
-          },
-        );
-      }
-    );
+abstract class ChildController implements Cache {
+  final ParentController parent;
+  ChildController(this.parent) {
+    parent.registerCache(this);
   }
+
+  final List<VoidCallback> _callbacks = [];
+  void addContentListener(VoidCallback callback) => _callbacks.add(callback);
+  void removeContentListener(VoidCallback callback) => _callbacks.remove(callback);
+  void notifyContentsChanged() {
+    for (var callback in _callbacks) {
+      callback();
+    }
+  }
+
+  Future<void> init() async {}
 }

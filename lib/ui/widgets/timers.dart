@@ -3,12 +3,13 @@ import 'dart:async';
 import 'package:deadlines/notifications/alarm_external_wrapper/model.dart';
 import 'package:deadlines/notifications/alarm_external_wrapper/notify_wrapper.dart';
 import 'package:deadlines/notifications/deadline_alarm_manager.dart';
-import 'package:deadlines/ui/deadlines_display.dart';
 import 'package:deadlines/utils/not_dumb_grid_view.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:numberpicker/numberpicker.dart';
 import 'package:synchronized/synchronized.dart';
+
+import '../defaults.dart';
 
 class TimerPage extends StatefulWidget {
   const TimerPage({super.key});

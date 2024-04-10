@@ -1,7 +1,7 @@
 import 'dart:math';
 
 import 'package:audio_session/audio_session.dart';
-import '../../../ui/deadlines_display.dart';
+import 'package:deadlines/ui/defaults.dart';
 import '../alarm_page.dart';
 import '../model.dart';
 import '../notify_wrapper.dart';
