@@ -579,7 +579,7 @@ class BigMonthView extends StatelessWidget {
 
   Widget buildWidgetForDay(DateTime day, List<(Deadline?, Importance?)> lastDrawnAtIndex, BuildContext context) {
     Iterable<Deadline> events = deadlines == null? [] : getDeadlinesOnDay(day, candidates: deadlines!, showWhat: c.parent.showWhat, showDaily: c.showDaily);
-    var today = DateTime.now();
+    var today = stripTime(DateTime.now());
 
     ShapeDecoration decoration;
     if (c.getSelectedDay() != null && isSameDay(c.getSelectedDay()!, day)) {
