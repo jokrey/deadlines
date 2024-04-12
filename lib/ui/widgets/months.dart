@@ -304,7 +304,6 @@ class _MonthsViewFooterState extends State<MonthsViewFooter> {
             );
           }).toList(),
           onChanged: (newlySelected) => setState(() {
-            // todo does not work properly, move these boxes elsewhere
             widget.c.parent.showWhat = ShownType.values[["Show Active", "Show Month"].indexOf(newlySelected!)];
             widget.c.parent.invalidateAllCaches().then((_) => widget.c.notifyContentsChanged());
           }),
@@ -320,7 +319,6 @@ class _MonthsViewFooterState extends State<MonthsViewFooter> {
             );
           }).toList(),
           onChanged: (newlySelected) => setState(() {
-            // todo does not work properly, move these boxes elsewhere
             widget.c.showDaily = newlySelected == "Show Daily";
             widget.c.parent.invalidateAllCaches().then((_) => widget.c.notifyContentsChanged());
           }),
