@@ -47,7 +47,7 @@ class UpcomingDeadlinesListController extends ChildController with Cache {
   Future<Iterable<Deadline>> queryRelevantDeadlines() => l.synchronized(() async {
     if(!cacheValid) {
       _cache.clear();
-      for(var d in await parent.db.queryDeadlinesActiveOrTimelessOrAfter(DateTime.now())) {
+      for(var d in await parent.db.queryDeadlinesActiveOrTimelessOrAfter(DateTime.now(), requireActive: parent.showWhat == ShownType.showActive)) {
         _cache[d.id!] = d;
       }
       cacheValid = true;

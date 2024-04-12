@@ -19,7 +19,7 @@ class ParentController implements DeadlinesStorage {
   final DeadlinesDatabase db = DeadlinesDatabase();
   ParentController() {
     //tested that NOT technically required, except in fringe cases (first startup after reinstalling)
-    db.queryDeadlinesActiveOrTimelessOrAfter(DateTime.now()).then((all) {
+    db.queryDeadlinesActiveOrTimelessOrAfter(DateTime.now(), requireActive: false).then((all) {
       for(var d in all) {
         DeadlineAlarms.updateAlarmsFor(d);
       }

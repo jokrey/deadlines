@@ -172,22 +172,24 @@ final class DeadlinesDatabase implements DeadlinesStorage {
     return withRemovals(rawResults);
   }
 
-  Future<Set<Deadline>> queryDeadlinesInOrAroundMonth(int year, int month) async {
+  Future<Set<Deadline>> queryDeadlinesInOrAroundMonth(int year, int month, {required bool requireActive}) async {
     var allPossible = await Future.wait([
-      queryDeadlinesInMonth(month==1?year-1:year, month==1?12:month-1),
-      queryDeadlinesInMonth(year, month),
-      queryDeadlinesInMonth(month==12?year+1:year, month==12?1:month+1),
+      queryDeadlinesInMonth(month==1?year-1:year, month==1?12:month-1, requireActive: requireActive),
+      queryDeadlinesInMonth(year, month, requireActive: requireActive),
+      queryDeadlinesInMonth(month==12?year+1:year, month==12?1:month+1, requireActive: requireActive),
     ]);
     Set<Deadline>? inOrAround = {};
-    allPossible.forEach((list) => inOrAround.addAll(list));
+    for (var list in allPossible) {
+      inOrAround.addAll(list);
+    }
     return inOrAround;
   }
-  Future<List<Deadline>> queryDeadlinesInMonth(int year, int month) async {
+  Future<List<Deadline>> queryDeadlinesInMonth(int year, int month, {required bool requireActive}) async {
     var rawResults = await (await db).rawQuery(
       """SELECT *
         FROM deadlines d
         WHERE
-        (
+        ${requireActive?"d.active AND":""} (
           (d.startsAt_year   < $year OR (d.startsAt_year   == $year AND d.startsAt_month <= $month))
           AND
           (
@@ -214,12 +216,12 @@ final class DeadlinesDatabase implements DeadlinesStorage {
     return withRemovals(rawResults);
   }
 
-  Future<List<Deadline>> queryDeadlinesActiveOrTimelessOrAfter(DateTime minute) async {
+  Future<List<Deadline>> queryDeadlinesActiveOrTimelessOrAfter(DateTime minute, {required bool requireActive}) async {
     var rawResults = await (await db).rawQuery(
         """SELECT *
           FROM deadlines d
-          WHERE 
-          (
+          WHERE
+          ${requireActive? "d.active AND":""} (
             d.active
             OR
             (d.startsAt_year == 0 AND d.deadlineAt_year == 0)

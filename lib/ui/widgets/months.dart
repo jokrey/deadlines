@@ -111,7 +111,7 @@ class DeadlinesCalendarController extends ChildController with Cache {
     Map<int, Deadline>? res = _cache[(year, month)];
     if(res == null) {
       res = {};
-      for(var d in await parent.db.queryDeadlinesInMonth(year, month)) {
+      for(var d in await parent.db.queryDeadlinesInMonth(year, month, requireActive: parent.showWhat == ShownType.showActive)) {
         res[d.id!] = d;
       }
       _cache[(year, month)] = res;
@@ -228,7 +228,7 @@ class _MonthsViewFooterState extends State<MonthsViewFooter> {
                     actionsOverflowAlignment: OverflowBarAlignment.center,
                     actions: [
                       SizedBox(width: double.infinity, child: ElevatedButton(onPressed: () async {
-                        widget.c.parent.db.queryDeadlinesActiveOrTimelessOrAfter(DateTime.now()).then((all) {
+                        widget.c.parent.db.queryDeadlinesActiveOrTimelessOrAfter(DateTime.now(), requireActive: false).then((all) {
                           for(var d in all) {
                             DeadlineAlarms.updateAlarmsFor(d);
                           }
@@ -357,7 +357,9 @@ class _MonthShownBelowState extends State<MonthShownBelow> {
   void reload() {
     setState(() {});
     if(c.scrollOffset != listController.offset) {
-      listController.animateTo(c.scrollOffset, duration: const Duration(milliseconds: 250), curve: Curves.decelerate);
+      listController.animateTo(c.scrollOffset, duration: const Duration(milliseconds: 250), curve: Curves.decelerate).then((_) {
+        c.scrollOffset = listController.offset;
+      });
     }
   }
   Future<List<((DateTime, DateTime), List<Deadline>)>> buildShownBelow() async {
