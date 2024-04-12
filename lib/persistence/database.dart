@@ -286,14 +286,12 @@ final class DeadlinesDatabase implements DeadlinesStorage {
   //   return withRemovals(rawResults);
   // }
 
-  Future<List<Deadline>> queryActiveCriticalDeadlinesInYear(int year) async {
+  Future<List<Deadline>> queryCriticalDeadlinesInYear(int year, {required bool requireActive}) async {
     var rawResults = await (await db).rawQuery(
         """SELECT *
         FROM deadlines d
         WHERE
-        (
-          (d.active = 1)
-          AND
+        ${requireActive? "d.active AND":""} (
           (d.importance = ${Importance.critical.index})
           AND
           (

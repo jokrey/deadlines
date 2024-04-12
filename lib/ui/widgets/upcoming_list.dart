@@ -96,7 +96,7 @@ class UpcomingDeadlinesListState extends State<UpcomingDeadlinesList> {
                   } else {
                     c.parent.showWhat = ShownType.showActive;
                   }
-                  c.invalidate().then((_) => c.notifyContentsChanged());
+                  c.parent.invalidateAllCaches().then((_) => c.notifyContentsChanged());
                 }),
                 value: c.parent.showWhat != ShownType.showActive ? "Show Future":"Show Active",
               ),

@@ -31,6 +31,7 @@ class ParentController implements DeadlinesStorage {
   void registerCache(Cache cache) {
     registeredCaches.add(cache);
   }
+  Future<void> invalidateAllCaches() => Future.wait(registeredCaches.map((cache) => cache.invalidate()));
 
   @override Future<Deadline> add(Deadline d) async {
     Deadline newD = await db.add(d);
