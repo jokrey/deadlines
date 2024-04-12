@@ -550,8 +550,8 @@ class _DeadlineTableCalendarState extends State<DeadlineTableCalendar> {
                     icon: const Icon(Icons.keyboard_double_arrow_left)
                   ),
                   Text(
-                    "  ${DateFormat.MMMM().format(firstDayInMonth)}",
-                    textAlign: TextAlign.left,
+                    DateFormat.MMMM().format(firstDayInMonth),
+                    textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.titleSmall,
                   ),
                   IconButton(
