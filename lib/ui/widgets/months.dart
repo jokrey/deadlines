@@ -79,6 +79,7 @@ class DeadlinesCalendarController extends ChildController with Cache {
         map[d.id!] = d;
       }
     });
+    notifyContentsChanged();
     return d;
   });
   @override Future<void> remove(Deadline d) => l.synchronized(() {
@@ -88,6 +89,7 @@ class DeadlinesCalendarController extends ChildController with Cache {
         map.remove(d.id!);
       }
     });
+    notifyContentsChanged();
   });
   @override Future<void> update(Deadline dOld, Deadline dNew) => l.synchronized(() {
     _cache.forEach((key, map) {
@@ -102,6 +104,7 @@ class DeadlinesCalendarController extends ChildController with Cache {
         if(wasRemoved) map[dNew.id!] = dNew;
       }
     });
+    notifyContentsChanged();
   });
 
   Future<Iterable<Deadline>> queryOrRetrieve(int year, int month) => l.synchronized(() async {
@@ -172,7 +175,7 @@ class DeadlinesCalendarState extends State<DeadlinesCalendar> {
       floatingActionButton: FloatingActionButton(
         child: const Icon(Icons.add),
         onPressed: () async {
-          await c.parent.newDeadline(c, context, c.getSelectedDay() ?? (isSameMonth(DateTime.now(), c.getFirstDayInSelectedMonth()) ? DateTime.now() : c.getFirstDayInSelectedMonth()));
+          await c.parent.newDeadline(context, c.getSelectedDay() ?? (isSameMonth(DateTime.now(), c.getFirstDayInSelectedMonth()) ? DateTime.now() : c.getFirstDayInSelectedMonth()));
         },
       ),
       body: SafeArea(child: Column(
@@ -183,135 +186,147 @@ class DeadlinesCalendarState extends State<DeadlinesCalendar> {
                 dividerPainter: DividerPainters.background(color: Theme.of(context).colorScheme.onBackground.withAlpha(50), highlightedColor: Theme.of(context).colorScheme.onBackground.withAlpha(200))
               ),
               child: MultiSplitView(
-                  axis: Axis.vertical,
-                  controller: _controller,
-                  onWeightChange: () {
-                    c.ratio = _controller.areas[0].weight!;
-                    c.safeRatio();
-                  },
-                  children: [DeadlineTableCalendar(c), MonthShownBelow(c,)]
+                axis: Axis.vertical,
+                controller: _controller,
+                onWeightChange: () {
+                  c.ratio = _controller.areas[0].weight!;
+                  c.safeRatio();
+                },
+                children: [DeadlineTableCalendar(c), MonthShownBelow(c,)]
               )
             ),
           ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.start,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              const SizedBox(width: 10,),
-              GestureDetector(
-                child: const Icon(Icons.settings,),
-                onTap: () async {
-                  showDialog(context: context, builder: (BuildContext context) {
-                    return AlertDialog(
-                      title: const Text("Are these settings?"),
-                      alignment: Alignment.center,
-                      titleTextStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
-                      actionsAlignment: MainAxisAlignment.center,
-                      actionsOverflowAlignment: OverflowBarAlignment.center,
-                      actions: [
-                        SizedBox(width: double.infinity, child: ElevatedButton(onPressed: () async {
-                          c.parent.db.queryDeadlinesActiveOrTimelessOrAfter(DateTime.now()).then((all) {
-                            for(var d in all) {
-                              DeadlineAlarms.updateAlarmsFor(d);
-                            }
-                          });
-
-                          Fluttertoast.showToast(
-                              msg: "Reloaded",
-                              backgroundColor: Colors.white,
-                              textColor: Colors.black,
-                              toastLength: Toast.LENGTH_SHORT
-                          );
-
-                          if(!context.mounted) return;
-                          Navigator.of(context).pop();
-                        }, child: const Text("reload all alarms"))),
-                        SizedBox(width: double.infinity, child: ElevatedButton(onPressed: () async {
-                          String builder = "";
-                          for (Deadline d in await c.parent.db.selectAll()) {
-                            if (!d.active) builder += "(\n  ";
-                            builder += "${d.title}\n";
-                            if(d.description.isNotEmpty) {
-                              builder += "    ${d.description}\n";
-                            }
-                            if (d.isTimeless()) {
-                              builder += "    ${d.importance.name}\n";
-                            } else {
-                              if (d.hasRange()) {
-                                builder += "    ${d.startsAt?.date}-${d.startsAt?.time} -> ${d.deadlineAt?.date}-${d.deadlineAt?.time}\n";
-                              } else {
-                                builder += "    ${d.deadlineAt?.date}-${d.deadlineAt?.time}\n";
-                              }
-                              builder += "    repeats ${d.deadlineAt?.date.repetitionType.name}\n";
-                              if(d.removals.isNotEmpty) {
-                                builder += "    removals ${d.removals.where((r) => !r.allFuture).map((r) => "${r.day}")}\n";
-                                if(d.removals.where((r) => r.allFuture).isNotEmpty) {
-                                  builder += "    until ${d.removals.where((r) => r.allFuture).firstOrNull?.day}\n";
-                                }
-                              }
-                            }
-                            if (!d.active) builder += ")\n";
-                            builder += "\n\n";
-                          }
-                          if(!context.mounted) return;
-                          await showDialog(context: context, builder: (context) {
-                            return SimpleDialog(
-                              title: const Text("Calendar as Text: "),
-                              children: [
-                                TextField(
-                                  controller: TextEditingController(text: builder),
-                                  minLines: 10,
-                                  maxLines: 10,
-                                )
-                              ],
-                            );
-                          },);
-
-                          if(!context.mounted) return;
-                          Navigator.of(context).pop();
-                        }, child: const Text("save backup"))),
-                      ]
-                      // content: Text("Saved successfully"),
-                    );
-                  });
-                }
-              ),
-              const SizedBox(width: 20,),
-              DropdownButton<String>(
-                alignment: Alignment.centerRight,
-                items: ["Show Active", "Show Month"].map((String value) {
-                  return DropdownMenuItem<String>(
-                    value: value,
-                    child: Text(value),
-                  );
-                }).toList(),
-                onChanged: (newlySelected) => setState(() async {
-                  // todo does not work properly, move these boxes elsewhere
-                  c.parent.showWhat = ShownType.values[["Show Active", "Show Month"].indexOf(newlySelected!)];
-                  await c.invalidate();
-                }),
-                value: ["Show Active", "Show Month"][c.parent.showWhat.index],
-              ),
-              const SizedBox(width: 20,),
-              DropdownButton<String>(
-                alignment: Alignment.centerRight,
-                items: ["Hide Daily", "Show Daily"].map((String value) {
-                  return DropdownMenuItem<String>(
-                    value: value,
-                    child: Text(value),
-                  );
-                }).toList(),
-                onChanged: (newlySelected) => setState(() async {
-                  // todo does not work properly, move these boxes elsewhere
-                  c.showDaily = newlySelected == "Show Daily";
-                  await c.invalidate();
-                }),
-                value: c.showDaily ? "Show Daily":"Hide Daily",
-              ),
-            ],
-          ),
+          MonthsViewFooter(c)
         ],
       )),
+    );
+  }
+}
+
+class MonthsViewFooter extends StatefulWidget {
+  final DeadlinesCalendarController c;
+  const MonthsViewFooter(this.c, {super.key});
+  @override State<MonthsViewFooter> createState() => _MonthsViewFooterState();
+}
+
+class _MonthsViewFooterState extends State<MonthsViewFooter> {
+  @override Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        const SizedBox(width: 10,),
+        GestureDetector(
+            child: const Icon(Icons.settings,),
+            onTap: () async {
+              showDialog(context: context, builder: (BuildContext context) {
+                return AlertDialog(
+                    title: const Text("Are these settings?"),
+                    alignment: Alignment.center,
+                    titleTextStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+                    actionsAlignment: MainAxisAlignment.center,
+                    actionsOverflowAlignment: OverflowBarAlignment.center,
+                    actions: [
+                      SizedBox(width: double.infinity, child: ElevatedButton(onPressed: () async {
+                        widget.c.parent.db.queryDeadlinesActiveOrTimelessOrAfter(DateTime.now()).then((all) {
+                          for(var d in all) {
+                            DeadlineAlarms.updateAlarmsFor(d);
+                          }
+                        });
+
+                        Fluttertoast.showToast(
+                            msg: "Reloaded",
+                            backgroundColor: Colors.white,
+                            textColor: Colors.black,
+                            toastLength: Toast.LENGTH_SHORT
+                        );
+
+                        if(!context.mounted) return;
+                        Navigator.of(context).pop();
+                      }, child: const Text("reload all alarms"))),
+                      SizedBox(width: double.infinity, child: ElevatedButton(onPressed: () async {
+                        String builder = "";
+                        for (Deadline d in await widget.c.parent.db.selectAll()) {
+                          if (!d.active) builder += "(\n  ";
+                          builder += "${d.title}\n";
+                          if(d.description.isNotEmpty) {
+                            builder += "    ${d.description}\n";
+                          }
+                          if (d.isTimeless()) {
+                            builder += "    ${d.importance.name}\n";
+                          } else {
+                            if (d.hasRange()) {
+                              builder += "    ${d.startsAt?.date}-${d.startsAt?.time} -> ${d.deadlineAt?.date}-${d.deadlineAt?.time}\n";
+                            } else {
+                              builder += "    ${d.deadlineAt?.date}-${d.deadlineAt?.time}\n";
+                            }
+                            builder += "    repeats ${d.deadlineAt?.date.repetitionType.name}\n";
+                            if(d.removals.isNotEmpty) {
+                              builder += "    removals ${d.removals.where((r) => !r.allFuture).map((r) => "${r.day}")}\n";
+                              if(d.removals.where((r) => r.allFuture).isNotEmpty) {
+                                builder += "    until ${d.removals.where((r) => r.allFuture).firstOrNull?.day}\n";
+                              }
+                            }
+                          }
+                          if (!d.active) builder += ")\n";
+                          builder += "\n\n";
+                        }
+                        if(!context.mounted) return;
+                        await showDialog(context: context, builder: (context) {
+                          return SimpleDialog(
+                            title: const Text("Calendar as Text: "),
+                            children: [
+                              TextField(
+                                controller: TextEditingController(text: builder),
+                                minLines: 10,
+                                maxLines: 10,
+                              )
+                            ],
+                          );
+                        },);
+
+                        if(!context.mounted) return;
+                        Navigator.of(context).pop();
+                      }, child: const Text("save backup"))),
+                    ]
+                  // content: Text("Saved successfully"),
+                );
+              });
+            }
+        ),
+        const SizedBox(width: 20,),
+        DropdownButton<String>(
+          alignment: Alignment.centerRight,
+          items: ["Show Active", "Show Month"].map((String value) {
+            return DropdownMenuItem<String>(
+              value: value,
+              child: Text(value),
+            );
+          }).toList(),
+          onChanged: (newlySelected) => setState(() {
+            // todo does not work properly, move these boxes elsewhere
+            widget.c.parent.showWhat = ShownType.values[["Show Active", "Show Month"].indexOf(newlySelected!)];
+            widget.c.invalidate().then((_) => widget.c.notifyContentsChanged());
+          }),
+          value: ["Show Active", "Show Month"][widget.c.parent.showWhat.index],
+        ),
+        const SizedBox(width: 20,),
+        DropdownButton<String>(
+          alignment: Alignment.centerRight,
+          items: ["Hide Daily", "Show Daily"].map((String value) {
+            return DropdownMenuItem<String>(
+              value: value,
+              child: Text(value),
+            );
+          }).toList(),
+          onChanged: (newlySelected) => setState(() {
+            // todo does not work properly, move these boxes elsewhere
+            widget.c.showDaily = newlySelected == "Show Daily";
+            widget.c.invalidate().then((_) => widget.c.notifyContentsChanged());
+          }),
+          value: widget.c.showDaily ? "Show Daily":"Hide Daily",
+        ),
+      ],
     );
   }
 }
@@ -342,7 +357,7 @@ class _MonthShownBelowState extends State<MonthShownBelow> {
   void reload() {
     setState(() {});
     if(c.scrollOffset != listController.offset) {
-      listController.animateTo(c.scrollOffset, duration: Duration(milliseconds: 250), curve: Curves.decelerate);
+      listController.animateTo(c.scrollOffset, duration: const Duration(milliseconds: 250), curve: Curves.decelerate);
     }
   }
   Future<List<((DateTime, DateTime), List<Deadline>)>> buildShownBelow() async {
@@ -440,10 +455,10 @@ class _MonthShownBelowState extends State<MonthShownBelow> {
                   var d = ds[index-1];
                   return DeadlineCard(
                     d,
-                    (d) => c.parent.editDeadline(c, context, d.id!),
-                    (d) => c.parent.deleteDeadline(c, context, d, dtr1),
-                    (d) => c.parent.toggleDeadlineActive(c, context, d),
-                    (d, nrdt) => c.parent.toggleDeadlineNotificationType(c, d, nrdt),
+                    (d) => c.parent.editDeadline(context, d.id!),
+                    (d) => c.parent.deleteDeadline(context, d, dtr1),
+                    (d) => c.parent.toggleDeadlineActive(context, d),
+                    (d, nrdt) => c.parent.toggleDeadlineNotificationType(d, nrdt),
                   );
                 }
               );

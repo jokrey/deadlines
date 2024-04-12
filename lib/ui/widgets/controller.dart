@@ -57,13 +57,13 @@ class ParentController implements DeadlinesStorage {
 
 
 
-  Future<bool> newDeadline(ChildController callingChild, BuildContext context, DateTime? newAt) {
-    return _editOrNew(callingChild, context, null, newAt);
+  Future<bool> newDeadline(BuildContext context, DateTime? newAt) {
+    return _editOrNew(context, null, newAt);
   }
-  Future<bool> editDeadline(ChildController callingChild, BuildContext context, int toEditId) {
-    return _editOrNew(callingChild, context, toEditId, null);
+  Future<bool> editDeadline(BuildContext context, int toEditId) {
+    return _editOrNew(context, toEditId, null);
   }
-  Future<bool> _editOrNew(ChildController callingChild, BuildContext context, int? toEditId, DateTime? newAt) async {
+  Future<bool> _editOrNew(BuildContext context, int? toEditId, DateTime? newAt) async {
     var colorScheme = Theme.of(context).colorScheme;
 
     Deadline? toEdit = toEditId==null?null:await db.loadById(toEditId);
@@ -99,11 +99,10 @@ class ParentController implements DeadlinesStorage {
     } else {
       await update(toEdit!, newDeadline);
     }
-    callingChild.notifyContentsChanged();
     return true;
   }
 
-  void deleteDeadline(ChildController callingChild, BuildContext context, Deadline d, DateTime? day) {
+  void deleteDeadline(BuildContext context, Deadline d, DateTime? day) {
     if(d.isRepeating() && day != null) {
       showDialog(context: context, builder: (BuildContext context) {
         return AlertDialog(
@@ -115,19 +114,19 @@ class ParentController implements DeadlinesStorage {
           actions: [
             SizedBox(width: double.infinity, child: ElevatedButton(onPressed: () {
               var dNew = d.copyRemoveOccurrence(RepeatableDate.from(d.deadlineAt!.nextOccurrenceAfter(day)!));
-              updateWithUndoUI(callingChild, context, "${d.title} on ${day.day}.${day.month}.${day.year} deleted", d, dNew);
+              updateWithUndoUI(context, "${d.title} on ${day.day}.${day.month}.${day.year} deleted", d, dNew);
 
               Navigator.of(context).pop();
             }, child: const Text("Only this occurrence"))),
             SizedBox(width: double.infinity, child: ElevatedButton(onPressed: () async {
               var dNew = d.copyResetFirstOccurrenceTo(day);
-              updateWithUndoUI(callingChild, context, "${d.title}'s past deleted", d, dNew);
+              updateWithUndoUI(context, "${d.title}'s past deleted", d, dNew);
 
               Navigator.of(context).pop();
             }, child: const Text("Only this and before"))),
             SizedBox(width: double.infinity, child: ElevatedButton(onPressed: () {
               var dNew = d.copyRemoveOccurrencesAfter(RepeatableDate(day.year, day.month, day.day));
-              updateWithUndoUI(callingChild, context, "${d.title}'s future deleted", d, dNew);
+              updateWithUndoUI(context, "${d.title}'s future deleted", d, dNew);
 
               Navigator.of(context).pop();
             }, child: const Text("Only this and after"))),
@@ -138,7 +137,7 @@ class ParentController implements DeadlinesStorage {
           [
             SizedBox(width: double.infinity, child: ElevatedButton(onPressed: () {
               var dNew = d.copyRemoveOccurrence(RepeatableDate.from(d.deadlineAt!.nextOccurrenceAfter(day)!, repetitionType: RepetitionType.weekly));
-              updateWithUndoUI(callingChild, context, "${d.title} on every ${DateFormat('EEEE').format(day)} deleted", d, dNew);
+              updateWithUndoUI(context, "${d.title} on every ${DateFormat('EEEE').format(day)} deleted", d, dNew);
 
               Navigator.of(context).pop();
             }, child: const Text("This occurrence every week"))),
@@ -147,7 +146,7 @@ class ParentController implements DeadlinesStorage {
           [
             SizedBox(width: double.infinity, child: ElevatedButton(onPressed: () {
               var dNew = d.copyRemoveOccurrence(RepeatableDate.from(d.deadlineAt!.nextOccurrenceAfter(day)!, repetitionType: RepetitionType.yearly));
-              updateWithUndoUI(callingChild, context, "${d.title} on every ${DateFormat('MMMM').format(day)} deleted", d, dNew);
+              updateWithUndoUI(context, "${d.title} on every ${DateFormat('MMMM').format(day)} deleted", d, dNew);
 
               Navigator.of(context).pop();
             }, child: const Text("This occurrence every year"))),
@@ -157,7 +156,7 @@ class ParentController implements DeadlinesStorage {
           +
           [
             SizedBox(width: double.infinity, child: ElevatedButton(onPressed: () {
-              deleteDeadlineAllOccurrences(callingChild, context, d);
+              deleteDeadlineAllOccurrences(context, d);
               Navigator.of(context).pop();
             }, child: const Text("Every occurrence"))),
             SizedBox(width: double.infinity, child: ElevatedButton(onPressed: () {
@@ -167,49 +166,39 @@ class ParentController implements DeadlinesStorage {
         );
       });
     } else {
-      deleteDeadlineAllOccurrences(callingChild, context, d);
+      deleteDeadlineAllOccurrences(context, d);
     }
   }
-  void deleteDeadlineAllOccurrences(ChildController callingChild, BuildContext context, Deadline d) async {
+  void deleteDeadlineAllOccurrences(BuildContext context, Deadline d) async {
     await remove(d);
-    callingChild.notifyContentsChanged();
 
     undoUI(
       "\"${d.title}\" deleted", Color(d.color), context,
-      () async {
-        d = await add(d);
-        callingChild.notifyContentsChanged();
-      }
+      () => add(d),
     );
   }
 
-  void toggleDeadlineNotificationType(ChildController callingChild, Deadline d, NotifyableRepeatableDateTime nrdt) {
-    updateWithoutUndoUI(callingChild, d, d.copyWithNextNotifyType(nrdt == d.startsAt));
+  void toggleDeadlineNotificationType(Deadline d, NotifyableRepeatableDateTime nrdt) {
+    update(d, d.copyWithNextNotifyType(nrdt == d.startsAt));
   }
 
-  void toggleDeadlineActive(ChildController callingChild, BuildContext context, Deadline d) {
+  void toggleDeadlineActive(BuildContext context, Deadline d) {
     Deadline newD = d.copyToggleActive();
-    updateWithoutUndoUI(callingChild, d, newD);
+    update(d, newD);
     if(d.active) {//was active
       undoUI(
         "\"${d.title}\" is done", Color(d.color), context,
-        () {
-          updateWithoutUndoUI(callingChild, newD, d);
-        }
+        () => update(newD, d),
       );
     }
   }
 
-  Future<void> updateWithoutUndoUI(ChildController callingChild, Deadline d, Deadline dNew) async {
-    await update(d, dNew);
-    callingChild.notifyContentsChanged();
-  }
-  Future<void> updateWithUndoUI(ChildController callingChild, BuildContext context, String msg, Deadline d, Deadline dNew) async {
+  Future<void> updateWithUndoUI(BuildContext context, String msg, Deadline d, Deadline dNew) async {
     undoUI(
       msg, Color(d.color), context,
-      () => updateWithoutUndoUI(callingChild, dNew, d),
+      () => update(dNew, d),
     );
-    await updateWithoutUndoUI(callingChild, d, dNew);
+    await update(d, dNew);
   }
 }
 

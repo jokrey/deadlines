@@ -21,12 +21,14 @@ class DeadlinesInYearsController extends ChildController with Cache {
     if((d.startsAt?.date.isInThisYear(cachedYear) ?? false) || (d.deadlineAt?.date.isInThisYear(cachedYear) ?? false)) {
       _cache[d.id!] = d;
     }
+    notifyContentsChanged();
     return d;
   });
   @override Future<void> remove(Deadline d) => l.synchronized(() {
     if((d.startsAt?.date.isInThisYear(cachedYear) ?? false) || (d.deadlineAt?.date.isInThisYear(cachedYear) ?? false)) {
       _cache.remove(d.id);
     }
+    notifyContentsChanged();
   });
   @override Future<void> update(Deadline dOld, Deadline dNew) => l.synchronized(() {
     bool wasRemoved;
@@ -38,6 +40,7 @@ class DeadlinesInYearsController extends ChildController with Cache {
     if((dNew.startsAt?.date.isInThisYear(cachedYear) ?? false) || (dNew.deadlineAt?.date.isInThisYear(cachedYear) ?? false)) {
       if(wasRemoved) _cache[dNew.id!] = dNew;
     }
+    notifyContentsChanged();
   });
 
   Future<Iterable<Deadline>> queryRelevantDeadlinesInYear(int year) => l.synchronized(() async {

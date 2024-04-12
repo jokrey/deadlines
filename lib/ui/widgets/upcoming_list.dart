@@ -28,10 +28,12 @@ class UpcomingDeadlinesListController extends ChildController with Cache {
   });
   @override Future<Deadline> add(Deadline d) => l.synchronized(() {
     if(cacheValid) _cache[d.id!] = d;
+    notifyContentsChanged();
     return d;
   });
   @override Future<void> remove(Deadline d) => l.synchronized(() {
     if(cacheValid) _cache.remove(d.id);
+    notifyContentsChanged();
   });
   @override Future<void> update(Deadline dOld, Deadline dNew) => l.synchronized(() {
     if(cacheValid) {
@@ -39,6 +41,7 @@ class UpcomingDeadlinesListController extends ChildController with Cache {
         _cache[dNew.id!] = dNew;
       }
     }
+    notifyContentsChanged();
   });
 
   Future<Iterable<Deadline>> queryRelevantDeadlines() => l.synchronized(() async {
@@ -68,7 +71,7 @@ class UpcomingDeadlinesListState extends State<UpcomingDeadlinesList> {
     return Scaffold(
       floatingActionButton: FloatingActionButton(
         child: const Icon(Icons.add),
-        onPressed: () => c.parent.newDeadline(c, context, null),
+        onPressed: () => c.parent.newDeadline(context, null),
       ),
       body: SafeArea(child: Column(
         children: [
@@ -86,14 +89,14 @@ class UpcomingDeadlinesListState extends State<UpcomingDeadlinesList> {
                     child: Text(value),
                   );
                 }).toList(),
-                onChanged: (newlySelected) => setState(() async {
+                onChanged: (newlySelected) => setState(() {
                   // todo does not work properly, move these boxes elsewhere
                   if(newlySelected == "Show Future") {
                     c.parent.showWhat = ShownType.showAll;
                   } else {
                     c.parent.showWhat = ShownType.showActive;
                   }
-                  await c.invalidate();
+                  c.invalidate().then((_) => widget.c.notifyContentsChanged());
                 }),
                 value: c.parent.showWhat != ShownType.showActive ? "Show Future":"Show Active",
               ),
@@ -281,10 +284,10 @@ class _UpcomingListBelowState extends State<UpcomingListBelow> {
                   } else {
                     return DeadlineCard(
                       d,
-                      (d) => c.parent.editDeadline(c, context, d.id!),
-                      (d) => c.parent.deleteDeadline(c, context, d, null),
-                      (d) => c.parent.toggleDeadlineActive(c, context, d),
-                      (d, nrdt) => c.parent.toggleDeadlineNotificationType(c, d, nrdt),
+                      (d) => c.parent.editDeadline(context, d.id!),
+                      (d) => c.parent.deleteDeadline(context, d, null),
+                      (d) => c.parent.toggleDeadlineActive(context, d),
+                      (d, nrdt) => c.parent.toggleDeadlineNotificationType(d, nrdt),
                     );
                   }
                 }
@@ -369,7 +372,7 @@ class _NextInDisplayState extends State<NextInDisplay> {
       child: Text(text, style: const TextStyle(fontSize: 16),),
       onTap: () async {
         if(toNextAlarm != null && toNextAlarm!.$1 != null) {
-          await c.parent.editDeadline(c, context, toNextAlarm!.$1!.id!);
+          await c.parent.editDeadline(context, toNextAlarm!.$1!.id!);
         } else {
           await Navigator.push(
             context,
