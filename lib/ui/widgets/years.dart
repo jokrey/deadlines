@@ -46,7 +46,7 @@ class DeadlinesInYearsController extends ChildController with Cache {
   Future<Iterable<Deadline>> queryRelevantDeadlinesInYear(int year) => l.synchronized(() async {
     if(cachedYear != year) {
       _cache.clear();
-      for(var d in await parent.db.queryActiveCriticalDeadlinesInYear(year)) {
+      for(var d in await parent.db.queryCriticalDeadlinesInYear(year, requireActive: parent.showWhat == ShownType.showActive)) {
         _cache[d.id!] = d;
       }
       cachedYear = year;
