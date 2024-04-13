@@ -66,7 +66,6 @@ class UpcomingDeadlinesList extends StatefulWidget {
 
 class UpcomingDeadlinesListState extends State<UpcomingDeadlinesList> {
   UpcomingDeadlinesListController get c => widget.controller;
-
   @override Widget build(BuildContext context) {
     return Scaffold(
       floatingActionButton: FloatingActionButton(
@@ -76,47 +75,59 @@ class UpcomingDeadlinesListState extends State<UpcomingDeadlinesList> {
       body: SafeArea(child: Column(
         children: [
           Expanded(child: UpcomingListBelow(c)),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.start,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              const SizedBox(width: 15,),
-              DropdownButton<String>(
-                alignment: Alignment.centerRight,
-                items: ["Show Active", "Show Future"].map((String value) {
-                  return DropdownMenuItem<String>(
-                    value: value,
-                    child: Text(value),
-                  );
-                }).toList(),
-                onChanged: (newlySelected) => setState(() {
-                  // todo does not work properly, move these boxes elsewhere
-                  if(newlySelected == "Show Future") {
-                    c.parent.showWhat = ShownType.showAll;
-                  } else {
-                    c.parent.showWhat = ShownType.showActive;
-                  }
-                  c.parent.invalidateAllCaches().then((_) => c.notifyContentsChanged());
-                }),
-                value: c.parent.showWhat != ShownType.showActive ? "Show Future":"Show Active",
-              ),
-              const SizedBox(width: 15,),
-              GestureDetector(
-                child: const Icon(Icons.alarm, size: 44),
-                onTap: () async {
-                  await Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const TimerPage()),
-                  );
-                  setState(() {});
-                },
-              ),
-              const SizedBox(width: 5,),
-              NextInDisplay(c),
-            ],
-          ),
+          UpcomingListViewFooter(c),
         ],
       )),
+    );
+  }
+}
+
+class UpcomingListViewFooter extends StatefulWidget {
+  final UpcomingDeadlinesListController controller;
+  const UpcomingListViewFooter(this.controller, {super.key});
+  @override State<UpcomingListViewFooter> createState() => _UpcomingListViewFooterState();
+}
+
+class _UpcomingListViewFooterState extends State<UpcomingListViewFooter> {
+  UpcomingDeadlinesListController get c => widget.controller;
+  @override Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        const SizedBox(width: 15,),
+        DropdownButton<String>(
+          alignment: Alignment.centerRight,
+          items: ["Show Active", "Show Future"].map((String value) {
+            return DropdownMenuItem<String>(
+              value: value,
+              child: Text(value),
+            );
+          }).toList(),
+          onChanged: (newlySelected) => setState(() {
+            if(newlySelected == "Show Future") {
+              c.parent.showWhat = ShownType.showAll;
+            } else {
+              c.parent.showWhat = ShownType.showActive;
+            }
+            c.parent.invalidateAllCaches().then((_) => c.notifyContentsChanged());
+          }),
+          value: c.parent.showWhat != ShownType.showActive ? "Show Future":"Show Active",
+        ),
+        const SizedBox(width: 15,),
+        GestureDetector(
+          child: const Icon(Icons.alarm, size: 44),
+          onTap: () async {
+            await Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const TimerPage()),
+            );
+            setState(() {});
+          },
+        ),
+        const SizedBox(width: 5,),
+        NextInDisplay(c),
+      ],
     );
   }
 }
@@ -125,7 +136,6 @@ class UpcomingDeadlinesListState extends State<UpcomingDeadlinesList> {
 class UpcomingListBelow extends StatefulWidget {
   final UpcomingDeadlinesListController controller;
   const UpcomingListBelow(this.controller, {super.key});
-
   @override State<UpcomingListBelow> createState() => _UpcomingListBelowState();
 }
 
@@ -154,9 +164,12 @@ class _UpcomingListBelowState extends State<UpcomingListBelow> {
     var deadlines = await c.queryRelevantDeadlines();
     var now = DateTime.now();
     shownBelow.clear();
-    shownBelow.add(("ToDo(${camel(Importance.critical.name)})", deadlines.where((d) => d.isTimeless() &&
-        d.importance == Importance.critical && (d.active || c.parent.showWhat == ShownType.showAll))
-        .toList(growable: false)));
+    shownBelow.add((
+      "ToDo(${camel(Importance.critical.name)})",
+      deadlines.where(
+        (d) => d.isTimeless() && d.importance == Importance.critical && (d.active || c.parent.showWhat == ShownType.showAll)
+      ).toList(growable: false)
+    ));
     if (shownBelow.last.$2.isNotEmpty) shownBelow.add(("", []));
 
     //todo: improve readability and maintainability of this insanity:
@@ -175,12 +188,12 @@ class _UpcomingListBelowState extends State<UpcomingListBelow> {
       }
     }
     var nonRepeatingOnEachDaySorted = nonRepeatingOnEachDay.entries.map((e) =>
-    (e.key, sort(e.value, (a, b) {
-      if (a.startsAt != null && a.startsAt!.isOverdue()) {
-        return a.deadlineAt!.compareTo(b.deadlineAt!);
-      }
-      return a.compareTo(b);
-    },))
+      (e.key, sort(e.value, (a, b) {
+        if (a.startsAt != null && a.startsAt!.isOverdue()) {
+          return a.deadlineAt!.compareTo(b.deadlineAt!);
+        }
+        return a.compareTo(b);
+      },))
     ).toList();
     nonRepeatingOnEachDaySorted.sort((a, b) {
       var compare = (a.$1.$1.isAfter(now) ? 1 : 0).compareTo((b.$1.$1.isAfter(now) ? 1 : 0));
