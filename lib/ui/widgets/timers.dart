@@ -4,11 +4,8 @@ import 'package:deadlines/notifications/alarm_external_wrapper/model.dart';
 import 'package:deadlines/notifications/alarm_external_wrapper/notify_wrapper.dart';
 import 'package:deadlines/notifications/deadline_alarm_manager.dart';
 import 'package:deadlines/utils/not_dumb_grid_view.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:numberpicker/numberpicker.dart';
-import 'package:synchronized/synchronized.dart';
-
 import '../defaults.dart';
 
 class TimerPage extends StatefulWidget {
@@ -51,108 +48,67 @@ class TimerWidget extends StatefulWidget {
 }
 
 class _TimerWidgetState extends State<TimerWidget> {
-  static const H = 0;
-  static const M = 1;
-  static const S = 2;
-  var timeLeft = [-1, 0, 0];
-  var before = [-1, 0, 0];
-  late Color color;
+  final H = 0;
+  final M = 1;
+  final S = 2;
+  var timeLeft = [0, 0, 0];
+  bool isTimerSet = false;
+  bool wasCanceled = false;
   var notifyType = NotificationType.alarm;
 
-  var lock = Lock();
+  late Color color;
+
   late Timer _repeatUpdate;
-  late DelayedNumberPickerController hourController;
-  late DelayedNumberPickerController minuteController;
-  late DelayedNumberPickerController secondController;
   @override void initState() {
     super.initState();
 
     color = colors[widget.notifyId % DeadlineAlarms.timerOffset];
 
-    hourController = DelayedNumberPickerController(
-      onChangeDone: (value) => lock.synchronized(() {
-        timeLeft[H] = value;
-      }),
-      onChanged: (value) {
-        if(timeLeft[H] != 0) {
-          lock.synchronized(() {
-            timeLeft[H] = value;
-          });
-        }
-      },
-    );
-    minuteController = DelayedNumberPickerController(
-      onChangeDone: (value) => lock.synchronized(() {
-        timeLeft[M] = value;
-      }),
-      onChanged: (value) {
-        if(timeLeft[M] != 0) {
-          lock.synchronized(() {
-            timeLeft[M] = value;
-          });
-        }
-      },
-    );
-    secondController = DelayedNumberPickerController(
-      onChangeDone: (value) => lock.synchronized(() {
-        timeLeft[S] = value;
-      }),
-      onChanged: (value) {
-        if(timeLeft[S] != 0) {
-          lock.synchronized(() {
-            timeLeft[S] = value;
-          });
-        }
-      },
-    );
-
-    int loadMinimizer = 8;
     updateFunction(_) async {
-      await lock.synchronized(() async {
-        if(!listEquals(timeLeft, before)) {
-          before.setRange(0, 3, timeLeft);
-          await resetAlarm();
-        } else {
-          if(before[H] == 0 && before[M] == 0 && before[S] == 0) {
-            loadMinimizer++;
-            if(loadMinimizer < 8) return;
-            loadMinimizer = 0;
-          }
-          var (d, t) = await staticNotify.getDurationTo(widget.notifyId);
-          timeLeft = [d.inHours, d.inMinutes % 60, d.inSeconds % 60];
-          if((t == NotificationType.normal || t == NotificationType.alarm) && notifyType != t) {
-            setState(() {
-              notifyType = t;
-            });
-          }
-          before.setRange(0, 3, timeLeft);
+      var (d, t) = await staticNotify.getDurationTo(widget.notifyId);
+      setState(() {
+        if((t == NotificationType.normal || t == NotificationType.alarm) && notifyType != t) {
+          notifyType = t;
         }
-        hourController.setValue(timeLeft[H]);
-        minuteController.setValue(timeLeft[M]);
-        secondController.setValue(timeLeft[S]);
+        if(widget.notifyId == DeadlineAlarms.timerOffset) {
+          print("updateFunction");
+          print("d: $d");
+        }
+        if(d == Duration.zero) {
+          isTimerSet = false;
+
+          if(wasCanceled) {
+            timeLeft = [0, 0, 0];
+            wasCanceled = false;
+          }
+        } else {
+          timeLeft[H] = d.inHours;
+          timeLeft[M] = d.inMinutes % 60;
+          timeLeft[S] = d.inSeconds % 60;
+          isTimerSet = true;
+        }
       });
     }
     updateFunction(null);
-    _repeatUpdate = Timer.periodic(const Duration(milliseconds: 250), updateFunction);
-  }
-  Future<void> resetAlarm() async {
-    if(timeLeft[H] == 0 && timeLeft[M] == 0 && timeLeft[S] == 0) {
-      await staticNotify.cancel(widget.notifyId);
-    } else {
-      await staticNotify.set(
-          widget.notifyId, color, "Timer is Up", "",
-          fromDateTime(
-              DateTime.now().add(Duration(hours: timeLeft[H], minutes: timeLeft[M], seconds: timeLeft[S])),
-              notify: notifyType
-          ),
-          null, null
-      );
-    }
+    _repeatUpdate = Timer.periodic(const Duration(milliseconds: 1000), updateFunction);
   }
   @override void dispose() {
+    print("dispose");
     _repeatUpdate.cancel();
     super.dispose();
   }
+
+  Future<void> setAlarm() async {
+    await staticNotify.set(
+      widget.notifyId, color, "Timer is Up", "",
+      fromDateTime(
+        DateTime.now().add(Duration(hours: timeLeft[H], minutes: timeLeft[M], seconds: timeLeft[S])),
+        notify: notifyType
+      ),
+      null, null
+    );
+  }
+
   @override Widget build(BuildContext context) {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -161,36 +117,57 @@ class _TimerWidgetState extends State<TimerWidget> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              DelayedNumberPicker(
-                hourController,
-                minValue: 0,
-                maxValue: 23,
-                step: 1,
-                infiniteLoop: false,
-                itemWidth: 50,
-                textStyle: TextStyle(color: Theme.of(context).hintColor, fontSize: 14),
-                selectedTextStyle: const TextStyle(fontSize: 18),
+              IgnorePointer(
+                ignoring: isTimerSet,
+                child: NumberPicker(
+                  value: timeLeft[H],
+                  onChanged: (value) => setState(() {
+                    timeLeft[H] = value;
+                  }),
+                  minValue: 0,
+                  maxValue: 23,
+                  step: 1,
+                  zeroPad: true,
+                  infiniteLoop: false,
+                  itemWidth: 50,
+                  textStyle: TextStyle(color: Theme.of(context).hintColor, fontSize: 14),
+                  selectedTextStyle: const TextStyle(fontSize: 18),
+                ),
               ),
-              DelayedNumberPicker(
-                minuteController,
-                minValue: 0,
-                maxValue: 59,
-                step: 1,
-                infiniteLoop: true,
-                itemWidth: 50,
-                textStyle: TextStyle(color: Theme.of(context).hintColor, fontSize: 14),
-                selectedTextStyle: const TextStyle(fontSize: 18),
+              IgnorePointer(
+                ignoring: isTimerSet,
+                child: NumberPicker(
+                  value: timeLeft[M],
+                  onChanged: (value) => setState(() {
+                    timeLeft[M] = value;
+                  }),
+                  minValue: 0,
+                  maxValue: 59,
+                  step: 1,
+                  zeroPad: true,
+                  infiniteLoop: true,
+                  itemWidth: 50,
+                  textStyle: TextStyle(color: Theme.of(context).hintColor, fontSize: 14),
+                  selectedTextStyle: const TextStyle(fontSize: 18),
+                ),
               ),
-              /*IgnorePointer(child: */DelayedNumberPicker(
-                secondController,
-                minValue: 0,
-                maxValue: 59,
-                step: 1,
-                infiniteLoop: true,
-                itemWidth: 50,
-                textStyle: TextStyle(color: Theme.of(context).hintColor, fontSize: 14),
-                selectedTextStyle: const TextStyle(fontSize: 18),
-              )/*)*/,
+              IgnorePointer(
+                ignoring: isTimerSet,
+                child: NumberPicker(
+                  value: timeLeft[S],
+                  onChanged: (value) => setState(() {
+                    timeLeft[S] = value;
+                  }),
+                  minValue: 0,
+                  maxValue: 59,
+                  step: 1,
+                  zeroPad: true,
+                  infiniteLoop: true,
+                  itemWidth: 50,
+                  textStyle: TextStyle(color: Theme.of(context).hintColor, fontSize: 14),
+                  selectedTextStyle: const TextStyle(fontSize: 18),
+                ),
+              ),
             ],
           ),
         ),
@@ -198,118 +175,33 @@ class _TimerWidgetState extends State<TimerWidget> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             GestureDetector(
-                child: Icon(
-                  notifyType == NotificationType.off    ? Icons.notifications_off_rounded :
-                  notifyType == NotificationType.silent ? Icons.notifications_paused_rounded :
-                  notifyType == NotificationType.normal ? Icons.notifications_rounded :
-                  notifyType == NotificationType.fullscreen ? Icons.fullscreen_rounded :
-                  Icons.notifications_active_rounded,
-                  color: color,
-                ),
-                onTap: () => setState(() {
-                  notifyType = notifyType == NotificationType.alarm? NotificationType.normal: NotificationType.alarm;
-                  resetAlarm(); //no need to wait
-                })
+              child: Icon(
+                notifyType == NotificationType.off    ? Icons.notifications_off_rounded :
+                notifyType == NotificationType.silent ? Icons.notifications_paused_rounded :
+                notifyType == NotificationType.normal ? Icons.notifications_rounded :
+                notifyType == NotificationType.fullscreen ? Icons.fullscreen_rounded :
+                Icons.notifications_active_rounded,
+                color: color,
+              ),
+              onTap: ()  {
+                notifyType = notifyType == NotificationType.alarm? NotificationType.normal: NotificationType.alarm;
+                setAlarm().then((_) => setState(() {}));
+              },
             ),
-            ElevatedButton(onPressed: () {
-              lock.synchronized(() {
-                timeLeft = [0, 0, 0];
-                hourController.setValue(timeLeft[H]);
-                minuteController.setValue(timeLeft[M]);
-                secondController.setValue(timeLeft[S]);
-              });
-            }, child: Text("Cancel Timer", style: TextStyle(color: color),)),
+            TextButton(onPressed: () {
+              if(isTimerSet) {
+                staticNotify.cancel(widget.notifyId).then((_) => setState(() {}));
+              } else {
+                setAlarm().then((_) => setState(() {}));
+              }
+            }, child: Text(!isTimerSet?"Start":"Pause", style: TextStyle(color: color),)),
+            TextButton(onPressed: () {
+              wasCanceled = true;
+              staticNotify.cancel(widget.notifyId).then((_) => setState(() {}));
+            }, child: Text("Cancel", style: TextStyle(color: color),)),
           ],
         )
       ],
-    );
-  }
-
-}
-
-
-class DelayedNumberPickerController {
-  var lock = Lock();
-  int _currentValue = 0;
-  void setValue(int newValue) {
-    lock.synchronized(() {
-      if(setState != null && _currentValue != newValue) setState!(() {_currentValue = newValue;});
-    });
-  }
-  Function(VoidCallback)? setState;
-  final ValueChanged<int>? onChanged;
-  final ValueChanged<int>? onChangeDone;
-  DelayedNumberPickerController({this.onChanged, this.onChangeDone});
-}
-class DelayedNumberPicker extends StatefulWidget {
-  final DelayedNumberPickerController controller;
-
-  final int minValue;
-  final int maxValue;
-  final int itemCount;
-  final int step;
-  final double itemHeight;
-  final double itemWidth;
-  final Axis axis;
-  final TextStyle? textStyle;
-  final TextStyle? selectedTextStyle;
-  final bool infiniteLoop;
-  const DelayedNumberPicker(
-    this.controller, {
-    super.key,
-    this.minValue = 0,
-    this.maxValue = 3,
-    this.itemCount = 3,
-    this.step = 1,
-    this.itemHeight = 50,
-    this.itemWidth = 100,
-    this.axis = Axis.vertical,
-    this.textStyle,
-    this.selectedTextStyle,
-    this.infiniteLoop = false,
-  });
-
-  @override State<DelayedNumberPicker> createState() => _DelayedNumberPickerState();
-}
-
-class _DelayedNumberPickerState extends State<DelayedNumberPicker> {
-  @override void initState() {
-    super.initState();
-    widget.controller.setState = setState;
-  }
-  @override void dispose() {
-    widget.controller.setState = null;
-    super.dispose();
-  }
-  @override Widget build(BuildContext context) {
-    return Listener(
-      onPointerUp: (event) {
-        widget.controller.lock.synchronized(() {
-          if(widget.controller.onChangeDone != null) widget.controller.onChangeDone!(widget.controller._currentValue);
-        });
-      },
-      child: NumberPicker(
-        value: widget.controller._currentValue,
-        minValue: widget.minValue,
-        maxValue: widget.maxValue,
-        onChanged: (value) {
-          widget.controller.lock.synchronized(() {
-            widget.controller._currentValue = value;
-            setState(() {});
-            if(widget.controller.onChanged != null) widget.controller.onChanged!(value);
-          });
-        },
-        itemCount: widget.itemCount,
-        step: widget.step,
-        itemHeight: widget.itemHeight,
-        itemWidth: widget.itemWidth,
-        axis: widget.axis,
-        textStyle: widget.textStyle,
-        selectedTextStyle: widget.selectedTextStyle,
-        infiniteLoop: widget.infiniteLoop,
-        zeroPad: true,
-        haptics: true,
-      ),
     );
   }
 }

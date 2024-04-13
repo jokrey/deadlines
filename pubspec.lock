@@ -238,7 +238,7 @@ packages:
     source: hosted
     version: "4.1.7"
   infinite_listview:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: infinite_listview
       sha256: f6062c1720eb59be553dfa6b89813d3e8dd2f054538445aaa5edaddfa5195ce6
