@@ -2,8 +2,6 @@ import 'dart:typed_data';
 
 import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:deadlines/main.dart';
-import 'package:deadlines/persistence/database.dart';
-import 'package:deadlines/notifications/deadline_alarm_manager.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 
@@ -224,14 +222,13 @@ class AwesomeNotificationsWrapper extends NotifyWrapper {
 
     Fluttertoast.showToast(msg: "Snoozed for ${snoozeDuration.inMinutes}m", toastLength: Toast.LENGTH_SHORT);
 
-    int rescheduledId; //breaks coupling rule
-    if(originalId >= DeadlineAlarms.timerOffset) {
+    int rescheduledId;
+    if(originalId >= NotifyWrapper.timerOffset) {
       rescheduledId = originalId;
     } else {
-      //rescheduled notification (with different id, to not reset the actual schedule), will
-      rescheduledId = DeadlineAlarms.snoozeOffset + DeadlineAlarms.toDeadlineId(originalId) + 1;
+      rescheduledId = NotifyWrapper.snoozeOffset + originalId + 1;
 
-      int ongoingId = DeadlineAlarms.snoozeOngoingOffset + DeadlineAlarms.toDeadlineId(originalId) + 1; //breaks coupling rule
+      int ongoingId = NotifyWrapper.snoozeOngoingOffset + originalId + 1;
       //ongoing notification to stop the snooze
       AwesomeNotifications().createNotification(
         content: NotificationContent(
@@ -288,20 +285,10 @@ class AwesomeNotificationsWrapper extends NotifyWrapper {
     int id = receivedNotification.id!;
     var notifyType = NotificationType.values[int.parse(receivedNotification.payload!["type"]!)];
 
-    try {
-      //todo, this should neither be done here nor like this probably... breaks coupling rule
-      int dlId = DeadlineAlarms.toDeadlineId(id);
-      if (dlId != -1 && id < DeadlineAlarms.snoozeOffset && (notifyType == NotificationType.fullscreen || notifyType == NotificationType.alarm)) {
-        var d = await DeadlinesDatabase().loadById(dlId);
-        if (d != null) await DeadlineAlarms.updateAlarmsFor(d);
-      }
-    } catch (e) {
-      print(e);
-    }
-
     if(wasInForeground) {
       if(notifyType == NotificationType.fullscreen) {
         AwesomeNotifications().dismiss(id);
+        staticNotify.notifyNotificationOccurred(id); //only here, everything else would cancel silent and normal right away
         MainApp.navigatorKey.currentState?.pushNamedAndRemoveUntil(
           '/fullscreen',
           (route) => (route.settings.name != '/fullscreen') || route.isFirst,
@@ -309,6 +296,7 @@ class AwesomeNotificationsWrapper extends NotifyWrapper {
         );
       } else if(notifyType == NotificationType.alarm) {
         AwesomeNotifications().dismiss(id);
+        staticNotify.notifyNotificationOccurred(id); //only here, everything else would cancel silent and normal right away
         MainApp.navigatorKey.currentState?.pushNamedAndRemoveUntil(
           '/alarm',
           (route) => (route.settings.name != '/alarm') || route.isFirst,
@@ -324,16 +312,7 @@ class AwesomeNotificationsWrapper extends NotifyWrapper {
 
     int id = receivedAction.id!;
 
-    try {
-      //todo, this should neither be done here nor like this probably... breaks coupling rule
-      int dlId = DeadlineAlarms.toDeadlineId(id);
-      if (dlId != -1 && id < DeadlineAlarms.snoozeOffset) {
-        var d = await DeadlinesDatabase().loadById(dlId);
-        if (d != null) await DeadlineAlarms.updateAlarmsFor(d);
-      }
-    } catch (e) {
-      print(e);
-    }
+    staticNotify.notifyNotificationOccurred(id);
 
     if (receivedAction.buttonKeyPressed == "SNOOZE") {
       staticNotify.snooze(id, const Duration(minutes: 5), receivedAction.backgroundColor!, receivedAction.title!, receivedAction.body!, receivedAction.payload!);

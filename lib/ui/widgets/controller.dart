@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:deadlines/notifications/alarm_external_wrapper/model.dart';
+import 'package:deadlines/notifications/alarm_external_wrapper/notify_wrapper.dart';
 import 'package:deadlines/notifications/deadline_alarm_manager.dart';
 import 'package:deadlines/persistence/database.dart';
 import 'package:deadlines/persistence/model.dart';
@@ -22,6 +23,18 @@ class ParentController implements DeadlinesStorage {
     db.queryDeadlinesActiveOrTimelessOrAfter(DateTime.now(), requireActive: false).then((all) {
       for(var d in all) {
         DeadlineAlarms.updateAlarmsFor(d);
+      }
+    });
+
+    staticNotify.registerNotificationOccurredCallback((id) async {
+      try {
+        int dlId = DeadlineAlarms.toDeadlineId(id);
+        if (dlId != -1 && id < NotifyWrapper.snoozeOffset) {
+          var d = await DeadlinesDatabase().loadById(dlId);
+          if (d != null) await DeadlineAlarms.updateAlarmsFor(d);
+        }
+      } catch (e) {
+        print(e);
       }
     });
   }

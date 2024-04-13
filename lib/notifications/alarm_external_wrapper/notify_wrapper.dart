@@ -10,11 +10,15 @@ NotifyWrapper staticNotify = AwesomeNotificationsWrapper();
 
 
 abstract class NotifyWrapper {
+  static const int userNotificationMaxId = 200000000; //so that *10 is still < 2^31
+  static const int snoozeOffset = userNotificationMaxId *2; //uses range [300000, 400000]
+  static const int snoozeOngoingOffset = userNotificationMaxId * 4; //uses range [400000, 500000]
+  static const int timerOffset = userNotificationMaxId * 10; //uses range [1000000, 1000006]
+
   Future<bool> init() async {
     AppLifecycleListener(
         onStateChange: (newState) {
           debugPrint("newState: $newState");
-          // MoveToBackground.moveTaskToBack();
         },
         //enforce not shown on lock screen, by putting it to the back
         //   -> problem: gone when unlocked, but fml what can you do
@@ -22,6 +26,14 @@ abstract class NotifyWrapper {
     );
 
     return true;
+  }
+
+  final List<Function(int)> _notificationOccurredCallbacks = [];
+  void registerNotificationOccurredCallback(Function(int) callback) {
+    _notificationOccurredCallbacks.add(callback);
+  }
+  void notifyNotificationOccurred(int notifyId) {
+    for (var callback in _notificationOccurredCallbacks) {callback(notifyId);}
   }
 
   Route<dynamic>? handleRoute(String? name, Object? arguments) {

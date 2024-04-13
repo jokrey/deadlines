@@ -7,11 +7,8 @@ import 'alarm_external_wrapper/model.dart';
 import 'alarm_external_wrapper/notify_wrapper.dart';
 
 class DeadlineAlarms {
-  static const deadlineOffset = 100000; //uses range [100000, 200000]
-  static const snoozeOffset = deadlineOffset * 3; //uses range [300000, 400000]
-  static const snoozeOngoingOffset = deadlineOffset * 4; //uses range [400000, 500000]
-  static const timerOffset = deadlineOffset * 10; //uses range [1000000, 1000006]
-  static int toDeadlineId(int notifyId) => notifyId > timerOffset ? -1 : (notifyId % deadlineOffset) - 1;
+  static final int deadlineOffset = (NotifyWrapper.userNotificationMaxId / 2).floor();
+  static int toDeadlineId(int notifyId) => notifyId > NotifyWrapper.timerOffset ? -1 : (notifyId % deadlineOffset) - 1;
   static int toNotificationId(int deadlineId, bool isForStartsAt) {
     if(deadlineId >= deadlineOffset) throw ArgumentError("cannot have deadlineId > $deadlineOffset");
     if(deadlineId < 0) throw ArgumentError("cannot have deadlineId < 0");

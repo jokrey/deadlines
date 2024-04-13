@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:deadlines/notifications/alarm_external_wrapper/model.dart';
 import 'package:deadlines/notifications/alarm_external_wrapper/notify_wrapper.dart';
-import 'package:deadlines/notifications/deadline_alarm_manager.dart';
 import 'package:deadlines/utils/not_dumb_grid_view.dart';
 import 'package:flutter/material.dart';
 import 'package:numberpicker/numberpicker.dart';
@@ -22,7 +21,7 @@ class _TimerPageState extends State<TimerPage> {
           padding: const EdgeInsets.all(10.0),
           child: NotDumbGridView(
             xCount: 2, yCount: 3,
-            builder: (index) => TimerWidget(DeadlineAlarms.timerOffset + index),
+            builder: (index) => TimerWidget(NotifyWrapper.timerOffset + index),
           ),
         ),
       ),
@@ -53,7 +52,7 @@ class _TimerWidgetState extends State<TimerWidget> {
   @override void initState() {
     super.initState();
 
-    color = colors[widget.notifyId % DeadlineAlarms.timerOffset];
+    color = colors[widget.notifyId % NotifyWrapper.timerOffset];
 
     updateFunction(_) async {
       var (d, t) = await staticNotify.getDurationTo(widget.notifyId);
