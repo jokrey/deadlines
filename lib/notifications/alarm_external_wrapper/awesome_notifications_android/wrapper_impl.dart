@@ -383,8 +383,8 @@ class AwesomeNotificationsWrapper extends NotifyWrapper {
             return false;
           }
           if(n != null && (n == atConcrete || n.isBefore(atConcrete))) {
-            print("bug here");
-            return false;
+            debugPrint("bug here, fix me - nextOccurrenceAfter failed");
+            throw Error();
           } else {
             atConcrete = n;
           }
