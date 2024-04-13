@@ -107,6 +107,7 @@ class DeadlinesCalendarController extends ChildController with Cache {
     notifyContentsChanged();
   });
 
+
   Future<Iterable<Deadline>> queryOrRetrieve(int year, int month) => l.synchronized(() async {
     Map<int, Deadline>? res = _cache[(year, month)];
     if(res == null) {
@@ -129,17 +130,23 @@ class DeadlinesCalendarController extends ChildController with Cache {
              (ky > year && month != 12);
     });
   });
-  Future<Iterable<Deadline>> queryRelevantDeadlines() async {
+  Future<Iterable<Deadline>> getFlatCache() => l.synchronized(() {
+    Set<Deadline> l = {};
+    for(var v in _cache.values) {
+      l.addAll(v.values);
+    }
+    return l;
+  });
+  Future<Iterable<Deadline>> queryOrRetrieveCurrentMonth() {
+    return queryOrRetrieve(getSelectedMonth().year, getSelectedMonth().month);
+  }
+  Future<void> ensureAllRelevantDeadlinesInCache() async {
     int year = getSelectedMonth().year;
     int month = getSelectedMonth().month;
-    Set<Deadline> deadlines = {};
-
-    deadlines.addAll(await queryOrRetrieve(month==1?year-1:year, month==1?12:month-1));
-    deadlines.addAll(await queryOrRetrieve(year, month));
-    deadlines.addAll(await queryOrRetrieve(month==12?year+1:year, month==12?1:month+1));
+    await queryOrRetrieve(month==1?year-1:year, month==1?12:month-1);
+    await queryOrRetrieve(year, month);
+    await queryOrRetrieve(month==12?year+1:year, month==12?1:month+1);
     await cleanCache();
-
-    return deadlines;
   }
 }
 
@@ -217,82 +224,81 @@ class _MonthsViewFooterState extends State<MonthsViewFooter> {
       children: [
         const SizedBox(width: 10,),
         GestureDetector(
-            child: const Icon(Icons.settings,),
-            onTap: () async {
-              showDialog(context: context, builder: (BuildContext context) {
-                return AlertDialog(
-                    title: const Text("Are these settings?"),
-                    alignment: Alignment.center,
-                    titleTextStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
-                    actionsAlignment: MainAxisAlignment.center,
-                    actionsOverflowAlignment: OverflowBarAlignment.center,
-                    actions: [
-                      SizedBox(width: double.infinity, child: ElevatedButton(onPressed: () async {
-                        widget.c.parent.db.queryDeadlinesActiveOrTimelessOrAfter(DateTime.now(), requireActive: false).then((all) {
-                          for(var d in all) {
-                            DeadlineAlarms.updateAlarmsFor(d);
-                          }
-                        });
+          child: const Icon(Icons.settings,),
+          onTap: () async {
+            showDialog(context: context, builder: (BuildContext context) {
+              return AlertDialog(
+                title: const Text("Are these settings?"),
+                alignment: Alignment.center,
+                titleTextStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+                actionsAlignment: MainAxisAlignment.center,
+                actionsOverflowAlignment: OverflowBarAlignment.center,
+                actions: [
+                  SizedBox(width: double.infinity, child: ElevatedButton(onPressed: () async {
+                    widget.c.parent.db.queryDeadlinesActiveOrTimelessOrAfter(DateTime.now(), requireActive: false).then((all) {
+                      for(var d in all) {
+                        DeadlineAlarms.updateAlarmsFor(d);
+                      }
+                    });
 
-                        Fluttertoast.showToast(
-                            msg: "Reloaded",
-                            backgroundColor: Colors.white,
-                            textColor: Colors.black,
-                            toastLength: Toast.LENGTH_SHORT
-                        );
+                    Fluttertoast.showToast(
+                        msg: "Reloaded",
+                        backgroundColor: Colors.white,
+                        textColor: Colors.black,
+                        toastLength: Toast.LENGTH_SHORT
+                    );
 
-                        if(!context.mounted) return;
-                        Navigator.of(context).pop();
-                      }, child: const Text("reload all alarms"))),
-                      SizedBox(width: double.infinity, child: ElevatedButton(onPressed: () async {
-                        String builder = "";
-                        for (Deadline d in await widget.c.parent.db.selectAll()) {
-                          if (!d.active) builder += "(\n  ";
-                          builder += "${d.title}\n";
-                          if(d.description.isNotEmpty) {
-                            builder += "    ${d.description}\n";
-                          }
-                          if (d.isTimeless()) {
-                            builder += "    ${d.importance.name}\n";
-                          } else {
-                            if (d.hasRange()) {
-                              builder += "    ${d.startsAt?.date}-${d.startsAt?.time} -> ${d.deadlineAt?.date}-${d.deadlineAt?.time}\n";
-                            } else {
-                              builder += "    ${d.deadlineAt?.date}-${d.deadlineAt?.time}\n";
-                            }
-                            builder += "    repeats ${d.deadlineAt?.date.repetitionType.name}\n";
-                            if(d.removals.isNotEmpty) {
-                              builder += "    removals ${d.removals.where((r) => !r.allFuture).map((r) => "${r.day}")}\n";
-                              if(d.removals.where((r) => r.allFuture).isNotEmpty) {
-                                builder += "    until ${d.removals.where((r) => r.allFuture).firstOrNull?.day}\n";
-                              }
-                            }
-                          }
-                          if (!d.active) builder += ")\n";
-                          builder += "\n\n";
+                    if(!context.mounted) return;
+                    Navigator.of(context).pop();
+                  }, child: const Text("reload all alarms"))),
+                  SizedBox(width: double.infinity, child: ElevatedButton(onPressed: () async {
+                    String builder = "";
+                    for (Deadline d in await widget.c.parent.db.selectAll()) {
+                      if (!d.active) builder += "(\n  ";
+                      builder += "${d.title}\n";
+                      if(d.description.isNotEmpty) {
+                        builder += "    ${d.description}\n";
+                      }
+                      if (d.isTimeless()) {
+                        builder += "    ${d.importance.name}\n";
+                      } else {
+                        if (d.hasRange()) {
+                          builder += "    ${d.startsAt?.date}-${d.startsAt?.time} -> ${d.deadlineAt?.date}-${d.deadlineAt?.time}\n";
+                        } else {
+                          builder += "    ${d.deadlineAt?.date}-${d.deadlineAt?.time}\n";
                         }
-                        if(!context.mounted) return;
-                        await showDialog(context: context, builder: (context) {
-                          return SimpleDialog(
-                            title: const Text("Calendar as Text: "),
-                            children: [
-                              TextField(
-                                controller: TextEditingController(text: builder),
-                                minLines: 10,
-                                maxLines: 10,
-                              )
-                            ],
-                          );
-                        },);
+                        builder += "    repeats ${d.deadlineAt?.date.repetitionType.name}\n";
+                        if(d.removals.isNotEmpty) {
+                          builder += "    removals ${d.removals.where((r) => !r.allFuture).map((r) => "${r.day}")}\n";
+                          if(d.removals.where((r) => r.allFuture).isNotEmpty) {
+                            builder += "    until ${d.removals.where((r) => r.allFuture).firstOrNull?.day}\n";
+                          }
+                        }
+                      }
+                      if (!d.active) builder += ")\n";
+                      builder += "\n\n";
+                    }
+                    if(!context.mounted) return;
+                    await showDialog(context: context, builder: (context) {
+                      return SimpleDialog(
+                        title: const Text("Calendar as Text: "),
+                        children: [
+                          TextField(
+                            controller: TextEditingController(text: builder),
+                            minLines: 10,
+                            maxLines: 10,
+                          )
+                        ],
+                      );
+                    },);
 
-                        if(!context.mounted) return;
-                        Navigator.of(context).pop();
-                      }, child: const Text("save backup"))),
-                    ]
-                  // content: Text("Saved successfully"),
-                );
-              });
-            }
+                    if(!context.mounted) return;
+                    Navigator.of(context).pop();
+                  }, child: const Text("save backup"))),
+                ]
+              );
+            });
+          }
         ),
         const SizedBox(width: 20,),
         DropdownButton<String>(
@@ -347,9 +353,9 @@ class _MonthShownBelowState extends State<MonthShownBelow> {
     c.addContentListener(reload);
   }
   @override void dispose() {
+    super.dispose();
     listController.dispose();
     c.removeContentListener(reload);
-    super.dispose();
   }
 
   void reload() {
@@ -361,7 +367,7 @@ class _MonthShownBelowState extends State<MonthShownBelow> {
     }
   }
   Future<List<((DateTime, DateTime), List<Deadline>)>> buildShownBelow() async {
-    var deadlines = await c.queryRelevantDeadlines();
+    var deadlines = await c.queryOrRetrieveCurrentMonth();
 
     final List<((DateTime, DateTime), List<Deadline>)> shownBelow = [];
 
@@ -440,6 +446,7 @@ class _MonthShownBelowState extends State<MonthShownBelow> {
       builder: (context, snapshot) {
         if(!snapshot.hasData) return Container();
         return GestureDetector(
+          onTap: () => c.setDayUnselected(),
           child: ListView.builder(
             controller: listController,
             itemCount: snapshot.data!.length,
@@ -464,9 +471,6 @@ class _MonthShownBelowState extends State<MonthShownBelow> {
               );
             },
           ),
-          onTap: () {
-            c.setDayUnselected();
-          },
         );
       }
     );
@@ -477,7 +481,6 @@ class _MonthShownBelowState extends State<MonthShownBelow> {
 class DeadlineTableCalendar extends StatefulWidget {
   final DeadlinesCalendarController c;
   const DeadlineTableCalendar(this.c, {super.key});
-
   @override State<DeadlineTableCalendar> createState() => _DeadlineTableCalendarState();
 }
 
@@ -485,12 +488,8 @@ class _DeadlineTableCalendarState extends State<DeadlineTableCalendar> {
   DeadlinesCalendarController get c => widget.c;
 
   late PageController controller;
-  int getPage(DateTime d) {
-    return d.year*12 + d.month;
-  }
-  (int, int) getYearMonthFromPage(int page) {
-    return ((page / 12).floor(), page % 12);
-  }
+  int getPage(DateTime d) => d.year*12 + d.month;
+  (int, int) getYearMonthFromPage(int page) => ((page / 12).floor(), page % 12);
 
   Iterable<Deadline>? deadlines;
 
@@ -510,9 +509,12 @@ class _DeadlineTableCalendarState extends State<DeadlineTableCalendar> {
     super.dispose();
   }
   void reloadCalendar() {
-    c.queryRelevantDeadlines().then((deadlines) {
-      setState(() {
-        this.deadlines = deadlines;
+    setState(() {});
+    c.ensureAllRelevantDeadlinesInCache().then((_) {
+      c.getFlatCache().then((deadlines) {
+        setState(() {
+          this.deadlines = deadlines;
+        });
       });
     });
   }
@@ -608,10 +610,8 @@ class BigMonthView extends StatelessWidget {
       xCount: 7,
       yCount: (numDaysInMonth / 7).ceil() + (showWeekdayLabels?1:0), //if correct size, not all same size which looks bad
       builder: (i) {
-        if(showWeekdayLabels) {
-          if(i < 7) {
-            return Center(child: Text(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][i]));
-          }
+        if(showWeekdayLabels && i < 7) {
+          return Center(child: Text(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][i]));
         }
         var current = firstDayInMonth.add(Duration(days: -firstWeekdayDay + (i-(showWeekdayLabels?6:0))));
         return GestureDetector(
@@ -644,30 +644,15 @@ class BigMonthView extends StatelessWidget {
     List<Widget> children = [];
     children.add(Text("${day.day}", style: TextStyle(fontSize: 14, color: day.weekday >= 6 ? Theme.of(context).hintColor : null),));
     if (events.isNotEmpty) {
-      List<Deadline> oneDayNormalEvents = sorted(
-          events.where((d) =>
-          (d.isOneDay() &&
-              d.importance == Importance.normal)));
-      List<Deadline> oneDayImportantEvents = sorted(
-          events.where((d) =>
-          (d.isOneDay() &&
-              d.importance == Importance.important)));
+      List<Deadline> oneDayNormalEvents = sorted(events.where((d) => (d.isOneDay() && d.importance == Importance.normal)));
+      List<Deadline> oneDayImportantEvents = sorted(events.where((d) => (d.isOneDay() && d.importance == Importance.important)));
 
-      List<Deadline> criticalEvents = sorted(
-          events.where((d) => d.importance == Importance.critical));
-      List<Deadline> multiDayNormalEvents = sorted(
-          events.where((d) =>
-          (!d.isOneDay() &&
-              d.importance == Importance.normal)));
-      List<Deadline> multiDayImportantEvents = sorted(
-          events.where((d) =>
-          (!d.isOneDay() &&
-              d.importance == Importance.important)));
+      List<Deadline> criticalEvents = sorted(events.where((d) => d.importance == Importance.critical));
+      List<Deadline> multiDayNormalEvents = sorted(events.where((d) => (!d.isOneDay() && d.importance == Importance.normal)));
+      List<Deadline> multiDayImportantEvents = sorted(events.where((d) => (!d.isOneDay() && d.importance == Importance.important)));
 
-      List<Deadline> shortEventsSorted = oneDayImportantEvents +
-          oneDayNormalEvents;
-      List<Deadline> wideEventsSorted = criticalEvents +
-          multiDayImportantEvents + multiDayNormalEvents;
+      List<Deadline> shortEventsSorted = oneDayImportantEvents + oneDayNormalEvents;
+      List<Deadline> wideEventsSorted = criticalEvents + multiDayImportantEvents + multiDayNormalEvents;
 
       for (Deadline d in wideEventsSorted) {
         if (d.startsAt?.date.isOnThisDay(day) ?? d.startsAt == null) {
