@@ -25,15 +25,6 @@ class _TimerPageState extends State<TimerPage> {
             builder: (index) => TimerWidget(DeadlineAlarms.timerOffset + index),
           ),
         ),
-        /*Center(child: GridView.builder(
-          shrinkWrap: true, // new line
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, mainAxisSpacing: 6),
-          itemBuilder: (_, index) {
-            return ;
-          },
-          itemCount: 6,
-        )),*/
       ),
     );
   }
@@ -70,10 +61,6 @@ class _TimerWidgetState extends State<TimerWidget> {
         if((t == NotificationType.normal || t == NotificationType.alarm) && notifyType != t) {
           notifyType = t;
         }
-        if(widget.notifyId == DeadlineAlarms.timerOffset) {
-          print("updateFunction");
-          print("d: $d");
-        }
         if(d == Duration.zero) {
           isTimerSet = false;
 
@@ -93,7 +80,6 @@ class _TimerWidgetState extends State<TimerWidget> {
     _repeatUpdate = Timer.periodic(const Duration(milliseconds: 1000), updateFunction);
   }
   @override void dispose() {
-    print("dispose");
     _repeatUpdate.cancel();
     super.dispose();
   }
