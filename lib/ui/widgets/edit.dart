@@ -62,8 +62,8 @@ class EditDeadlineWidgetState extends State<EditDeadlineWidget> {
     if(startsAt != null && deadlineAt != null) {
       if (repetitionType == RepetitionType.daily && !isSameDay(startsAt!, deadlineAt!)) allowSave = false;
       if (repetitionType == RepetitionType.weekly && deadlineAt!.difference(startsAt!).inDays > 6) allowSave = false;
-      if (repetitionType == RepetitionType.monthly && deadlineAt!.difference(startsAt!).inDays > 28) allowSave = false; //todo
-      if (repetitionType == RepetitionType.yearly && deadlineAt!.difference(startsAt!).inDays > 31 * 2.5) allowSave = false; //todo
+      if (repetitionType == RepetitionType.monthly && deadlineAt!.difference(startsAt!).inDays > 28) allowSave = false;
+      if (repetitionType == RepetitionType.yearly && deadlineAt!.difference(startsAt!).inDays > 31 * 2.5) allowSave = false;
     }
 
     return Scaffold(

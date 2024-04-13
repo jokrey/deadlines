@@ -20,7 +20,7 @@ class Deadline implements Comparable<Deadline> {
       if(!deadlineAt!.date.isSameRepetitionType(startsAt!.date)) throw ArgumentError("startsAt and deadline are not of the same repetition type");
       // if(startsAt!.date.isAfterWithinRepetition(deadlineAt.date)) throw ArgumentError("start after deadline");
       if(startsAt == deadlineAt) throw ArgumentError("start == deadline, set start to null instead");
-      if(deadlineAt!.date.isDaily() && ! deadlineAt!.date.isSameDay(startsAt!.date)) throw ArgumentError("range for daily cannot be greater 1");
+      if(deadlineAt!.date.isDaily() && !deadlineAt!.date.isSameDay(startsAt!.date)) throw ArgumentError("range for daily cannot be greater 1");
       if(deadlineAt!.date.isWeekly() && deadlineAt!.date.difference(startsAt!.date).inDays > 6) throw ArgumentError("range for weekly cannot be greater 6");
       if(deadlineAt!.date.isMonthly() && deadlineAt!.date.difference(startsAt!.date).inDays > 28) throw ArgumentError("range for monthly cannot be greater 28");//todo
       if(deadlineAt!.date.isYearly() && deadlineAt!.date.difference(startsAt!.date).inDays > 31*2.5) throw ArgumentError("range for yearly cannot be greater 31*2.5 (because cache only contains three months");//todo
