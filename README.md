@@ -1,3 +1,3 @@
 # deadlines
 
-A most simple marriage between todo-list and calendar
+A drama-free marriage between todo-list and calendar
