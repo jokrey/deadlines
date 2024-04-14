@@ -1,5 +1,5 @@
 import 'package:deadlines/notifications/alarm_external_wrapper/model.dart';
-import 'package:deadlines/ui/widgets/controller.dart';
+import 'package:deadlines/ui/controller/parent_controller.dart';
 import 'package:deadlines/utils/utils.dart';
 import 'package:flutter/foundation.dart';
 
@@ -35,7 +35,7 @@ class Deadline implements Comparable<Deadline> {
       id == other.id && title == other.title && description == other.description &&
       color == other.color && active == other.active &&
       startsAt == other.startsAt && deadlineAt == other.deadlineAt && importance == other.importance &&
-      iterEquals(removals, other.removals)
+      iterableEquals(removals, other.removals)
     ;
   }
   @override int get hashCode => Object.hash(id, title, description, color, active, startsAt, deadlineAt, importance, Object.hashAllUnordered(removals));
@@ -49,13 +49,13 @@ class Deadline implements Comparable<Deadline> {
   }
   @override String toString() => "Deadline[$id, $title, $description, $color, $active, $startsAt, $deadlineAt, ${importance.name}]";
 
-  bool isOneDay() {
-    return !hasRange() || startsAt!.date.isSameDay(deadlineAt!.date);
-  }
-  Duration rangeLength() {
-    return !hasRange()? Duration.zero : deadlineAt!.date.difference(startsAt!.date);
-  }
+  bool isOneDay() => !hasRange() || startsAt!.date.isSameDay(deadlineAt!.date);
   bool hasRange() => startsAt != null;
+  Duration rangeLength() => !hasRange()? Duration.zero : deadlineAt!.date.difference(startsAt!.date);
+  bool isTimeless() => deadlineAt == null;
+  bool isRepeating() => !isTimeless() && deadlineAt!.date.isRepeating();
+
+  bool isOverdue() => active && !isTimeless() && deadlineAt!.isOverdue();
   bool isOnThisDay(DateTime day) {
     if(isTimeless() || ! (startsAt ?? deadlineAt!).date.isInitialOnOrBefore(day)) return false;
     if(hasRange()) {
@@ -73,12 +73,17 @@ class Deadline implements Comparable<Deadline> {
     return isRepeating() && removals.where((e) => e.allFuture && e.day.isBeforeThisDay(day)).isEmpty;
   }
 
-  bool isTimeless() => deadlineAt == null;
 
-  bool isRepeating() => !isTimeless() && deadlineAt!.date.isRepeating();
+  Deadline copyWithId(int id) => Deadline(id, title, description, color, active, startsAt, deadlineAt, importance, removals);
 
-  bool isOverdue() => active && !isTimeless() && deadlineAt!.isOverdue();
-
+  Deadline copyWithNextNotifyType(bool modifyStartsAt) => Deadline(
+    id, title, description, color, active,
+    modifyStartsAt && startsAt!=null?startsAt!.withNextNotifyType():startsAt,
+    !modifyStartsAt && deadlineAt!=null?deadlineAt!.withNextNotifyType():deadlineAt,
+    importance,
+    removals
+  );
+  Deadline copyToggleActive() => Deadline(id, title, description, color, !active, startsAt, deadlineAt, importance, removals);
 
   Deadline copyResetFirstOccurrenceTo(DateTime dayToResetTo) {
     if(!isRepeating()) throw StateError("must be repeating");
@@ -86,16 +91,16 @@ class Deadline implements Comparable<Deadline> {
     if (startsAt != null) {
       dayToResetTo = startsAt!.nextOccurrenceAfter(dayToResetTo.add(const Duration(days: 1)))!;
       newStartsAt = NotifyableRepeatableDateTime(
-        RepeatableDate(dayToResetTo.year, dayToResetTo.month, dayToResetTo.day, repetition: 1, repetitionType: startsAt!.date.repetitionType),
-        startsAt!.time, startsAt!.notifyType
+          RepeatableDate(dayToResetTo.year, dayToResetTo.month, dayToResetTo.day, repetition: 1, repetitionType: startsAt!.date.repetitionType),
+          startsAt!.time, startsAt!.notifyType
       );
       dayToResetTo = deadlineAt!.nextOccurrenceAfter(dayToResetTo)!;
     } else {
       dayToResetTo = deadlineAt!.nextOccurrenceAfter(dayToResetTo.add(const Duration(days: 1)))!;
     }
     var newDeadlineAt = NotifyableRepeatableDateTime(
-      RepeatableDate(dayToResetTo.year, dayToResetTo.month, dayToResetTo.day, repetition: 1, repetitionType: deadlineAt!.date.repetitionType),
-      deadlineAt!.time, deadlineAt!.notifyType
+        RepeatableDate(dayToResetTo.year, dayToResetTo.month, dayToResetTo.day, repetition: 1, repetitionType: deadlineAt!.date.repetitionType),
+        deadlineAt!.time, deadlineAt!.notifyType
     );
     return Deadline(id, title, description, color, active, newStartsAt, newDeadlineAt, importance, removals);
   }
@@ -108,25 +113,6 @@ class Deadline implements Comparable<Deadline> {
     if(day.isRepeating()) throw ArgumentError("day to remove after cannot be repeating");
     return Deadline(id, title, description, color, active, startsAt, deadlineAt, importance, [Removal(day, true)] + removals.where((r) => !r.allFuture).toList(growable: false));
   }
-
-  Deadline copyWithNextNotifyType(bool modifyStartsAt) => Deadline(
-    id, title, description, color, active,
-    modifyStartsAt && startsAt!=null?startsAt!.withNextNotifyType():startsAt,
-    !modifyStartsAt && deadlineAt!=null?deadlineAt!.withNextNotifyType():deadlineAt,
-    importance,
-    removals
-  );
-  Deadline copyWithNotifyType(bool modifyStartsAt, NotificationType ov) => Deadline(
-    id, title, description, color, active,
-    modifyStartsAt && startsAt!=null?startsAt!.withNotifyType(ov):startsAt,
-    !modifyStartsAt && deadlineAt!=null?deadlineAt!.withNotifyType(ov):deadlineAt,
-    importance,
-    removals
-  );
-  Deadline copyToggleActive() => Deadline(id, title, description, color, !active, startsAt, deadlineAt, importance, removals);
-  Deadline copyWithRemovals(List<Removal> removals) => Deadline(id, title, description, color, active, startsAt, deadlineAt, importance, removals);
-
-  Deadline copyWithId(int id) => Deadline(id, title, description, color, active, startsAt, deadlineAt, importance, removals);
 }
 
 enum Importance {
@@ -149,16 +135,4 @@ class Removal implements Comparable<Removal> {
   @override int compareTo(Removal other) {
     return allFuture != other.allFuture? (allFuture?-1:1) : day.compareTo(other.day);
   }
-}
-
-List<Deadline> getDeadlinesOnDay(DateTime day, {required Iterable<Deadline> candidates, required ShownType showWhat, required bool showDaily}) {
-  var today = stripTime(DateTime.now()); //stripTime to still show now completed if on same day
-  var l = candidates.where((d) {
-    return !d.isTimeless() && d.isOnThisDay(day) &&
-        (d.active || showWhat == ShownType.showAll) &&
-        (!d.deadlineAt!.date.isDaily() || showDaily) &&
-        (showWhat == ShownType.showAll || !d.isRepeating() || !day.isBefore(today)) ;
-  }).toList();
-  l.sort((a, b) => nullableCompare(a.startsAt?.time ?? a.deadlineAt?.time, b.startsAt?.time ?? b.deadlineAt?.time));
-  return l;
 }

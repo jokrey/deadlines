@@ -1,4 +1,4 @@
-import 'package:deadlines/ui/widgets/card_in_list.dart';
+import 'package:deadlines/utils/utils.dart';
 import 'package:flutter/cupertino.dart';
 
 enum NotificationType {
@@ -70,6 +70,7 @@ class RepeatableDateTime implements Comparable<RepeatableDateTime> {
   DateTime? nextOccurrenceAfter(DateTime reference) => date.nextOccurrenceAfter(reference, time);
 }
 
+@immutable
 class Time implements Comparable<Time> {
   final int hour;
   final int minute;
@@ -97,6 +98,7 @@ enum RepetitionType {
   none,yearly,monthly,weekly,daily,hourly,minutely
 }
 
+@immutable
 class RepeatableDate implements Comparable<RepeatableDate> {
   final int year;
   final int month;
@@ -137,9 +139,6 @@ class RepeatableDate implements Comparable<RepeatableDate> {
   }
   bool isInThisRepetition(int orig, int current) {
     return (current - orig).abs() % (repetition) == 0;
-  }
-  RepetitionType getRepetitionType() {
-    return repetitionType;
   }
   bool isSameDay(RepeatableDate o) {
     if (!isSameRepetitionType(o)) throw ArgumentError("not of same repetition type");
@@ -263,7 +262,7 @@ class RepeatableDate implements Comparable<RepeatableDate> {
 
 bool includesThisDay(RepeatableDate rStart, RepeatableDate rEnd, int dYear, int dMonth, int dDay, int dWeekday) {
   if(!rStart.isSameRepetitionType(rEnd)) throw ArgumentError("must be of same repetition type");
-  
+
   if(!rStart.isRepeating()) {
     if(rStart.isAfterWithinRepetition(rEnd)) throw ArgumentError("start must not be after end");
     return (rStart.year != dYear? dYear > rStart.year : rStart.month != dMonth? dMonth > rStart.month : dDay >= rStart.day) &&
@@ -281,7 +280,7 @@ bool includesThisDay(RepeatableDate rStart, RepeatableDate rEnd, int dYear, int 
   if(rStart.isMonthly()) {
     if(rStart.day > rEnd.day) {
       return (rStart.isInThisRepetition(rStart.month, dMonth) && dDay >= rStart.day) ||
-          (rEnd.isInThisRepetition(rEnd.month, dMonth)     && dDay <= rEnd.day);
+             (rEnd.isInThisRepetition(rEnd.month, dMonth)     && dDay <= rEnd.day);
     } else {
       return (rStart.isInThisRepetition(rStart.month, dMonth) && dDay >= rStart.day) &&
              (rEnd.isInThisRepetition(rEnd.month, dMonth)     && dDay <= rEnd.day);
@@ -298,19 +297,3 @@ bool includesThisDay(RepeatableDate rStart, RepeatableDate rEnd, int dYear, int 
   }
   return false;
 }
-
-bool between(int v, int rS, int rE) {
-  return v >= rS && v <= rE;
-}
-
-// bool _beforeY(RepeatableDate d1, DateTime d2) {
-//   return d1.year != d2.year? d1.year < d2.year : d1.month != d2.month? d1.month < d2.month : d1.day < d2.day;
-// }
-// bool _afterM(RepeatableDate d1, DateTime d2) {
-//   return d1.month != d2.month? d1.month < d2.month : d1.day < d2.day;
-// }
-// bool _afterD(RepeatableDate d1, DateTime d2) {
-//   return d1.day < d2.day;
-// }
-
-bool invertIf(bool i, bool v) => i? !v:v;

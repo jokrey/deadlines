@@ -55,15 +55,15 @@ class ListIterator<T> {
   T next() => list[_currentIndex++];
 }
 
-bool iterEquals(Iterable elements1, Iterable elements2) {
+bool iterableEquals(Iterable elements1, Iterable elements2) {
   if (elements1 == elements2) return true;
-  var iter1 = elements1.iterator;
-  var iter2 = elements2.iterator;
+  var iterator1 = elements1.iterator;
+  var iterator2 = elements2.iterator;
   while (true) {
-    var hasNext = iter1.moveNext();
-    if (hasNext != iter2.moveNext()) return false;
+    var hasNext = iterator1.moveNext();
+    if (hasNext != iterator2.moveNext()) return false;
     if (!hasNext) return true;
-    if (iter1.current != iter2.current) return false;
+    if (iterator1.current != iterator2.current) return false;
   }
 }
 
@@ -97,6 +97,11 @@ Color lighten(Color c, [int percent = 10]) {
   );
 }
 
+String pad0(int i) => i.toString().padLeft(2, "0");
+String camel(String s) => s.substring(0, 1).toUpperCase() + s.substring(1);
+
+const List<String> weekdayStrings = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+String shortWeekdayString(DateTime dt) => weekdayStrings[dt.weekday-1];
 
 String? convert0To99ToText(int i) {
   if(i < 20) {

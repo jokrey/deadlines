@@ -43,6 +43,8 @@ class DeadlineAlarms {
       throw ArgumentError("nrdt not part of d");
     }
 
+    if(notifyId > NotifyWrapper.userNotificationMaxId) throw StateError("too many notifications");
+
     if(!d.active) {
       await staticNotify.cancel(notifyId);
     } else if(nrdt.notifyType == NotificationType.off) {

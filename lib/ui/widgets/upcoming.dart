@@ -2,70 +2,25 @@ import 'dart:async';
 
 import 'package:deadlines/notifications/alarm_external_wrapper/model.dart';
 import 'package:deadlines/notifications/alarm_external_wrapper/notify_wrapper.dart';
-import 'package:deadlines/persistence/database.dart';
+import 'package:deadlines/ui/controller/upcoming_controller.dart';
 import 'package:deadlines/ui/widgets/card_in_list.dart';
 import 'package:deadlines/persistence/model.dart';
 import 'package:deadlines/ui/widgets/timers.dart';
 import 'package:deadlines/utils/utils.dart';
 import 'package:flutter/material.dart';
 import '../../notifications/deadline_alarm_manager.dart';
-import 'controller.dart';
+import '../controller/parent_controller.dart';
 
 
-class UpcomingDeadlinesListController extends ChildController with Cache {
-  UpcomingDeadlinesListController(super.parent);
+class UpcomingView extends StatefulWidget {
+  final UpcomingController controller;
+  const UpcomingView(this.controller, {super.key});
 
-  //ui choices to be restored
-  double scrollOffset = -1;
-
-
-
-  bool cacheValid = false;
-  final Map<int, Deadline> _cache = {};
-  @override invalidate() => l.synchronized(() {
-    cacheValid = false;
-    _cache.clear();
-  });
-  @override Future<Deadline> add(Deadline d) => l.synchronized(() {
-    if(cacheValid) _cache[d.id!] = d;
-    notifyContentsChanged();
-    return d;
-  });
-  @override Future<void> remove(Deadline d) => l.synchronized(() {
-    if(cacheValid) _cache.remove(d.id);
-    notifyContentsChanged();
-  });
-  @override Future<void> update(Deadline dOld, Deadline dNew) => l.synchronized(() {
-    if(cacheValid) {
-      if(_cache.remove(dOld.id) != null) {
-        _cache[dNew.id!] = dNew;
-      }
-    }
-    notifyContentsChanged();
-  });
-
-  Future<Iterable<Deadline>> queryRelevantDeadlines() => l.synchronized(() async {
-    if(!cacheValid) {
-      _cache.clear();
-      for(var d in await parent.db.queryDeadlinesActiveOrTimelessOrAfter(DateTime.now(), requireActive: parent.showWhat == ShownType.showActive)) {
-        _cache[d.id!] = d;
-      }
-      cacheValid = true;
-    }
-    return _cache.values;
-  });
+  @override State<UpcomingView> createState() => _UpcomingViewState();
 }
 
-
-class UpcomingDeadlinesList extends StatefulWidget {
-  final UpcomingDeadlinesListController controller;
-  const UpcomingDeadlinesList(this.controller, {super.key});
-
-  @override UpcomingDeadlinesListState createState() => UpcomingDeadlinesListState();
-}
-
-class UpcomingDeadlinesListState extends State<UpcomingDeadlinesList> {
-  UpcomingDeadlinesListController get c => widget.controller;
+class _UpcomingViewState extends State<UpcomingView> {
+  UpcomingController get c => widget.controller;
   @override Widget build(BuildContext context) {
     return Scaffold(
       floatingActionButton: FloatingActionButton(
@@ -74,73 +29,24 @@ class UpcomingDeadlinesListState extends State<UpcomingDeadlinesList> {
       ),
       body: SafeArea(child: Column(
         children: [
-          Expanded(child: UpcomingListBelow(c)),
-          UpcomingListViewFooter(c),
+          Expanded(child: UpcomingListView(c)),
+          _UpcomingViewFooter(c),
         ],
       )),
     );
   }
 }
 
-class UpcomingListViewFooter extends StatefulWidget {
-  final UpcomingDeadlinesListController controller;
-  const UpcomingListViewFooter(this.controller, {super.key});
-  @override State<UpcomingListViewFooter> createState() => _UpcomingListViewFooterState();
+
+class UpcomingListView extends StatefulWidget {
+  final UpcomingController controller;
+  const UpcomingListView(this.controller, {super.key});
+
+  @override State<UpcomingListView> createState() => _UpcomingListViewState();
 }
 
-class _UpcomingListViewFooterState extends State<UpcomingListViewFooter> {
-  UpcomingDeadlinesListController get c => widget.controller;
-  @override Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.start,
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        const SizedBox(width: 15,),
-        DropdownButton<String>(
-          alignment: Alignment.centerRight,
-          items: ["Show Active", "Show Future"].map((String value) {
-            return DropdownMenuItem<String>(
-              value: value,
-              child: Text(value),
-            );
-          }).toList(),
-          onChanged: (newlySelected) => setState(() {
-            if(newlySelected == "Show Future") {
-              c.parent.showWhat = ShownType.showAll;
-            } else {
-              c.parent.showWhat = ShownType.showActive;
-            }
-            c.parent.invalidateAllCaches().then((_) => c.notifyContentsChanged());
-          }),
-          value: c.parent.showWhat != ShownType.showActive ? "Show Future":"Show Active",
-        ),
-        const SizedBox(width: 15,),
-        GestureDetector(
-          child: const Icon(Icons.alarm, size: 44),
-          onTap: () async {
-            await Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const TimerPage()),
-            );
-            setState(() {});
-          },
-        ),
-        const SizedBox(width: 5,),
-        NextInDisplay(c),
-      ],
-    );
-  }
-}
-
-
-class UpcomingListBelow extends StatefulWidget {
-  final UpcomingDeadlinesListController controller;
-  const UpcomingListBelow(this.controller, {super.key});
-  @override State<UpcomingListBelow> createState() => _UpcomingListBelowState();
-}
-
-class _UpcomingListBelowState extends State<UpcomingListBelow> {
-  UpcomingDeadlinesListController get c => widget.controller;
+class _UpcomingListViewState extends State<UpcomingListView> {
+  UpcomingController get c => widget.controller;
 
   late ScrollController listController;
   @override void initState() {
@@ -154,23 +60,20 @@ class _UpcomingListBelowState extends State<UpcomingListBelow> {
     listController.dispose();
     c.removeContentListener(reload);
   }
+  void reload() => setState(() {});
 
-  void reload() {
-    setState(() {});
-  }
-
-  Future<List<(String, List<Deadline?>)>> buildShownBelow() async {
-    final List<(String, List<Deadline?>)> shownBelow = [];
+  Future<List<(String, List<Deadline?>)>> buildUpcomingList() async {
+    final List<(String, List<Deadline?>)> upcoming = [];
     var deadlines = await c.queryRelevantDeadlines();
     var now = DateTime.now();
-    shownBelow.clear();
-    shownBelow.add((
-      "ToDo(${camel(Importance.critical.name)})",
+    upcoming.clear();
+    upcoming.add((
+      "ToDo (${camel(Importance.critical.name)})",
       deadlines.where(
         (d) => d.isTimeless() && d.importance == Importance.critical && (d.active || c.parent.showWhat == ShownType.showAll)
       ).toList(growable: false)
     ));
-    if (shownBelow.last.$2.isNotEmpty) shownBelow.add(("", []));
+    if (upcoming.last.$2.isNotEmpty) upcoming.add(("", []));
 
     //todo: improve readability and maintainability of this insanity:
     List<Deadline> oneTimeEvents = deadlines.where((d) => !d.isTimeless() && !d.isRepeating()).toList();
@@ -187,14 +90,15 @@ class _UpcomingListBelowState extends State<UpcomingListBelow> {
         nonRepeatingOnEachDay.update((c1, c2), (v) => v + [d], ifAbsent: () => [d]);
       }
     }
-    var nonRepeatingOnEachDaySorted = nonRepeatingOnEachDay.entries.map((e) =>
-      (e.key, sort(e.value, (a, b) {
-        if (a.startsAt != null && a.startsAt!.isOverdue()) {
-          return a.deadlineAt!.compareTo(b.deadlineAt!);
-        }
-        return a.compareTo(b);
-      },))
-    ).toList();
+    var nonRepeatingOnEachDaySorted = nonRepeatingOnEachDay.entries.map((e) => (
+    e.key,
+    sort(e.value, (a, b) {
+      if (a.startsAt != null && a.startsAt!.isOverdue()) {
+        return a.deadlineAt!.compareTo(b.deadlineAt!);
+      }
+      return a.compareTo(b);
+    },)
+    )).toList();
     nonRepeatingOnEachDaySorted.sort((a, b) {
       var compare = (a.$1.$1.isAfter(now) ? 1 : 0).compareTo((b.$1.$1.isAfter(now) ? 1 : 0));
       if (compare == 0) return a.$1.$2.compareTo(b.$1.$2);
@@ -219,37 +123,40 @@ class _UpcomingListBelowState extends State<UpcomingListBelow> {
     },);
 
     Deadline? lastDeadline;
-    shownBelow.addAll(nonRepeatingOnEachDaySorted.map(
-            (e) {
-          var (r1, r2) = e.$1;
-          var list = e.$2;
-          var newList = <Deadline?>[];
-          for (Deadline d in list) {
-            if (lastDeadline != null && lastDeadline?.isOverdue() != d.isOverdue()) {
-              newList.add(null);
-              if ((lastDeadline?.startsAt ?? lastDeadline?.deadlineAt)?.date.day !=
-                  (d.startsAt ?? d.deadlineAt)?.date.day) {
-                newList.add(null);
-              }
-            }
-            if (lastDeadline != null && !d.isOverdue() &&
-                (lastDeadline?.startsAt ?? lastDeadline?.deadlineAt)?.date.month !=
-                    (d.startsAt ?? d.deadlineAt)?.date.month) {
-              newList.add(null);
-            }
-            newList.add(d);
-            lastDeadline = d;
+    upcoming.addAll(nonRepeatingOnEachDaySorted.map((e) {
+      var (r1, r2) = e.$1;
+      var list = e.$2;
+      var newList = <Deadline?>[];
+      for (Deadline d in list) {
+        if (lastDeadline != null && lastDeadline?.isOverdue() != d.isOverdue()) {
+          newList.add(null);
+          if ((lastDeadline?.startsAt ?? lastDeadline?.deadlineAt)?.date.day != (d.startsAt ?? d.deadlineAt)?.date.day) {
+            newList.add(null);
           }
-          return (isSameDay(r1, r2) ? "${pad0(r1.day)}.${pad0(r1.month)}.${r1.year}" : "${pad0(r1.day)}.${pad0(
-              r1.month)}.${r1.year} - ${pad0(r2.day)}.${pad0(r2.month)}.${r2.year}", newList);
-        })
-    );
-    if (shownBelow.last.$2.isNotEmpty) shownBelow.add(("", []));
+        }
+        if (lastDeadline != null && !d.isOverdue() && (lastDeadline?.startsAt ?? lastDeadline?.deadlineAt)?.date.month != (d.startsAt ?? d.deadlineAt)?.date.month) {
+          newList.add(null);
+        }
+        newList.add(d);
+        lastDeadline = d;
+      }
+      return (
+      isSameDay(r1, r2) ?
+      "${pad0(r1.day)}.${pad0(r1.month)}.${r1.year} (${shortWeekdayString(r1)})"
+          :
+      "${pad0(r1.day)}.${pad0(r1.month)}.${r1.year} (${shortWeekdayString(r1)}) - ${pad0(r2.day)}.${pad0(r2.month)}.${r2.year} (${shortWeekdayString(r2)})",
+      newList
+      );
+    }));
+    if (upcoming.last.$2.isNotEmpty) upcoming.add(("", []));
 
-    shownBelow.add(("ToDo(${camel(Importance.important.name)})", deadlines.where((d) => d.isTimeless() &&
-        d.importance == Importance.important && (d.active || c.parent.showWhat == ShownType.showAll))
-        .toList(growable: false)));
-    if (shownBelow.last.$2.isNotEmpty) shownBelow.add(("", []));
+    upcoming.add((
+      "ToDo (${camel(Importance.important.name)})",
+      deadlines.where(
+        (d) => d.isTimeless() && d.importance == Importance.important && (d.active || c.parent.showWhat == ShownType.showAll)
+      ).toList(growable: false)
+    ));
+    if (upcoming.last.$2.isNotEmpty) upcoming.add(("", []));
 
     List<Deadline> repeating = deadlines.where((d) => d.isRepeating()).toList();
     Map<RepetitionType, List<Deadline>> repeatingByType = {};
@@ -259,20 +166,23 @@ class _UpcomingListBelowState extends State<UpcomingListBelow> {
     }
     var repeatingByTypeSorted = repeatingByType.entries.map((e) => (e.key, sort(e.value))).toList();
     repeatingByTypeSorted.sort((a, b) => b.$1.index - a.$1.index,);
-    shownBelow.addAll(repeatingByTypeSorted.map((e) => (camel(e.$1.name), e.$2)));
-    if (shownBelow.last.$2.isNotEmpty) shownBelow.add(("", []));
+    upcoming.addAll(repeatingByTypeSorted.map((e) => (camel(e.$1.name), e.$2)));
+    if (upcoming.last.$2.isNotEmpty) upcoming.add(("", []));
 
-    shownBelow.add(("ToDo(${camel(Importance.normal.name)})", deadlines.where((d) => d.isTimeless() &&
-        d.importance == Importance.normal && (d.active || c.parent.showWhat == ShownType.showAll))
-        .toList(growable: false)));
-    if (shownBelow.last.$2.isNotEmpty) shownBelow.add(("", []));
+    upcoming.add((
+      "ToDo (${camel(Importance.normal.name)})",
+      deadlines.where((d) =>
+        d.isTimeless() && d.importance == Importance.normal && (d.active || c.parent.showWhat == ShownType.showAll)
+      ).toList(growable: false)
+    ));
+    if (upcoming.last.$2.isNotEmpty) upcoming.add(("", []));
 
-    return shownBelow;
+    return upcoming;
   }
 
   @override Widget build(BuildContext context) {
     return FutureBuilder(
-      future: buildShownBelow(),
+      future: buildUpcomingList(),
       builder: (context, snapshot) {
         if(!snapshot.hasData) return Container();
         return ListView.builder(
@@ -313,15 +223,69 @@ class _UpcomingListBelowState extends State<UpcomingListBelow> {
   }
 }
 
-class NextInDisplay extends StatefulWidget {
-  final UpcomingDeadlinesListController controller;
-  const NextInDisplay(this.controller, {super.key});
 
-  @override State<NextInDisplay> createState() => _NextInDisplayState();
+class _UpcomingViewFooter extends StatefulWidget {
+  final UpcomingController controller;
+  const _UpcomingViewFooter(this.controller);
+
+  @override State<_UpcomingViewFooter> createState() => _UpcomingViewFooterState();
 }
 
-class _NextInDisplayState extends State<NextInDisplay> {
-  UpcomingDeadlinesListController get c => widget.controller;
+class _UpcomingViewFooterState extends State<_UpcomingViewFooter> {
+  UpcomingController get c => widget.controller;
+
+  @override Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        const SizedBox(width: 15,),
+        DropdownButton<String>(
+          alignment: Alignment.centerRight,
+          items: ["Show Active", "Show Future"].map((String value) {
+            return DropdownMenuItem<String>(
+              value: value,
+              child: Text(value),
+            );
+          }).toList(),
+          onChanged: (newlySelected) => setState(() {
+            if(newlySelected == "Show Future") {
+              c.parent.showWhat = ShownType.showAll;
+            } else {
+              c.parent.showWhat = ShownType.showActive;
+            }
+            c.parent.invalidateAllCaches().then((_) => c.notifyContentsChanged());
+          }),
+          value: c.parent.showWhat != ShownType.showActive ? "Show Future":"Show Active",
+        ),
+        const SizedBox(width: 15,),
+        GestureDetector(
+          child: const Icon(Icons.alarm, size: 44),
+          onTap: () async {
+            await Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const TimersView()),
+            );
+            setState(() {});
+          },
+        ),
+        const SizedBox(width: 5,),
+        _DurationToNextNotificationDisplay(c),
+      ],
+    );
+  }
+}
+
+
+class _DurationToNextNotificationDisplay extends StatefulWidget {
+  final UpcomingController controller;
+  const _DurationToNextNotificationDisplay(this.controller, {super.key});
+
+  @override State<_DurationToNextNotificationDisplay> createState() => _DurationToNextNotificationDisplayState();
+}
+
+class _DurationToNextNotificationDisplayState extends State<_DurationToNextNotificationDisplay> {
+  UpcomingController get c => widget.controller;
 
   late Timer timer;
   (Deadline?, Duration)? toNextAlarm;
@@ -334,11 +298,11 @@ class _NextInDisplayState extends State<NextInDisplay> {
       var deadlineId = DeadlineAlarms.toDeadlineId(notifyId);
       Deadline? d;
       if(deadlineId == toNextAlarm?.$1?.id) {
-        d = toNextAlarm!.$1!;
+        d = toNextAlarm!.$1!; //use cached deadline to avoid loading from disk
       } else {
         d = deadlineId == -1? null : await c.parent.db.loadById(deadlineId);
       }
-      //d can be null, if it is a timer
+      //d can be null, if and only if it is a timer
       toNextAlarm = (d, duration);
     }
   }
@@ -346,12 +310,7 @@ class _NextInDisplayState extends State<NextInDisplay> {
     super.initState();
 
     updateNextAlarm().then((value) => setState(() {}));
-    // var minuteBefore = -1;
     timer = Timer.periodic(const Duration(seconds: 1), (_) async {
-      // var minuteAfter = DateTime.now().minute;
-      // if(minuteBefore == minuteAfter) return;
-      // minuteBefore = minuteAfter;
-
       updateNextAlarm().then((value) => setState(() {}));
     },);
   }
@@ -389,7 +348,7 @@ class _NextInDisplayState extends State<NextInDisplay> {
         } else {
           await Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => const TimerPage()),
+            MaterialPageRoute(builder: (context) => const TimersView()),
           );
         }
         updateNextAlarm().then((value) => setState(() {}));

@@ -2,42 +2,38 @@ import 'dart:async';
 
 import 'package:deadlines/notifications/alarm_external_wrapper/model.dart';
 import 'package:deadlines/notifications/alarm_external_wrapper/notify_wrapper.dart';
-import 'package:deadlines/utils/not_dumb_grid_view.dart';
+import 'package:deadlines/utils/ui/not_dumb_grid_view.dart';
 import 'package:flutter/material.dart';
 import 'package:numberpicker/numberpicker.dart';
 import '../defaults.dart';
 
-class TimerPage extends StatefulWidget {
-  const TimerPage({super.key});
+class TimersView extends StatefulWidget {
+  const TimersView({super.key});
 
-  @override State<TimerPage> createState() => _TimerPageState();
+  @override State<TimersView> createState() => _TimersViewState();
 }
 
-class _TimerPageState extends State<TimerPage> {
+class _TimersViewState extends State<TimersView> {
   @override Widget build(BuildContext context) {
-    return Scaffold(
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(10.0),
-          child: NotDumbGridView(
-            xCount: 2, yCount: 3,
-            builder: (index) => TimerWidget(NotifyWrapper.timerOffset + index),
-          ),
-        ),
+    return Scaffold(body: SafeArea(child: Padding(
+      padding: const EdgeInsets.all(10.0),
+      child: NotDumbGridView(
+        xCount: 2, yCount: 3,
+        builder: (index) => _TimerWidget(NotifyWrapper.timerOffset + index),
       ),
-    );
+    ),),);
   }
 }
 
 
-class TimerWidget extends StatefulWidget {
+class _TimerWidget extends StatefulWidget {
   final int notifyId;
-  const TimerWidget(this.notifyId, {super.key});
+  const _TimerWidget(this.notifyId, {super.key});
 
-  @override State<TimerWidget> createState() => _TimerWidgetState();
+  @override State<_TimerWidget> createState() => _TimerWidgetState();
 }
 
-class _TimerWidgetState extends State<TimerWidget> {
+class _TimerWidgetState extends State<_TimerWidget> {
   final H = 0;
   final M = 1;
   final S = 2;
@@ -98,68 +94,70 @@ class _TimerWidgetState extends State<TimerWidget> {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Flexible(
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              IgnorePointer(
-                ignoring: isTimerSet,
-                child: NumberPicker(
-                  value: timeLeft[H],
-                  onChanged: (value) => setState(() {
-                    timeLeft[H] = value;
-                  }),
-                  minValue: 0,
-                  maxValue: 23,
-                  step: 1,
-                  zeroPad: true,
-                  infiniteLoop: false,
-                  itemWidth: 50,
-                  textStyle: TextStyle(color: Theme.of(context).hintColor, fontSize: 14),
-                  selectedTextStyle: const TextStyle(fontSize: 18),
-                ),
+        Flexible(child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            IgnorePointer(
+              ignoring: isTimerSet,
+              child: NumberPicker(
+                value: timeLeft[H],
+                onChanged: (value) => setState(() {
+                  timeLeft[H] = value;
+                }),
+                minValue: 0,
+                maxValue: 23,
+                step: 1,
+                zeroPad: true,
+                infiniteLoop: false,
+                itemWidth: 50,
+                textStyle: TextStyle(color: Theme.of(context).hintColor, fontSize: 14),
+                selectedTextStyle: const TextStyle(fontSize: 18),
               ),
-              IgnorePointer(
-                ignoring: isTimerSet,
-                child: NumberPicker(
-                  value: timeLeft[M],
-                  onChanged: (value) => setState(() {
-                    timeLeft[M] = value;
-                  }),
-                  minValue: 0,
-                  maxValue: 59,
-                  step: 1,
-                  zeroPad: true,
-                  infiniteLoop: true,
-                  itemWidth: 50,
-                  textStyle: TextStyle(color: Theme.of(context).hintColor, fontSize: 14),
-                  selectedTextStyle: const TextStyle(fontSize: 18),
-                ),
+            ),
+            IgnorePointer(
+              ignoring: isTimerSet,
+              child: NumberPicker(
+                value: timeLeft[M],
+                onChanged: (value) => setState(() {
+                  timeLeft[M] = value;
+                }),
+                minValue: 0,
+                maxValue: 59,
+                step: 1,
+                zeroPad: true,
+                infiniteLoop: true,
+                itemWidth: 50,
+                textStyle: TextStyle(color: Theme.of(context).hintColor, fontSize: 14),
+                selectedTextStyle: const TextStyle(fontSize: 18),
               ),
-              IgnorePointer(
-                ignoring: isTimerSet,
-                child: NumberPicker(
-                  value: timeLeft[S],
-                  onChanged: (value) => setState(() {
-                    timeLeft[S] = value;
-                  }),
-                  minValue: 0,
-                  maxValue: 59,
-                  step: 1,
-                  zeroPad: true,
-                  infiniteLoop: true,
-                  itemWidth: 50,
-                  textStyle: TextStyle(color: Theme.of(context).hintColor, fontSize: 14),
-                  selectedTextStyle: const TextStyle(fontSize: 18),
-                ),
+            ),
+            IgnorePointer(
+              ignoring: isTimerSet,
+              child: NumberPicker(
+                value: timeLeft[S],
+                onChanged: (value) => setState(() {
+                  timeLeft[S] = value;
+                }),
+                minValue: 0,
+                maxValue: 59,
+                step: 1,
+                zeroPad: true,
+                infiniteLoop: true,
+                itemWidth: 50,
+                textStyle: TextStyle(color: Theme.of(context).hintColor, fontSize: 14),
+                selectedTextStyle: const TextStyle(fontSize: 18),
               ),
-            ],
-          ),
-        ),
+            ),
+          ],
+        ),),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             GestureDetector(
+              onTap: ()  {
+                notifyType = notifyType == NotificationType.alarm? NotificationType.normal: NotificationType.alarm;
+                setAlarm().then((_) => setState(() {}));
+              },
               child: Icon(
                 notifyType == NotificationType.off    ? Icons.notifications_off_rounded :
                 notifyType == NotificationType.silent ? Icons.notifications_paused_rounded :
@@ -168,10 +166,6 @@ class _TimerWidgetState extends State<TimerWidget> {
                 Icons.notifications_active_rounded,
                 color: color,
               ),
-              onTap: ()  {
-                notifyType = notifyType == NotificationType.alarm? NotificationType.normal: NotificationType.alarm;
-                setAlarm().then((_) => setState(() {}));
-              },
             ),
             TextButton(onPressed: () {
               if(isTimerSet) {

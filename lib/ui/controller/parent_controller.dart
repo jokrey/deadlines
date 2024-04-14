@@ -11,11 +11,30 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:intl/intl.dart';
 
 import '../defaults.dart';
-import 'edit.dart';
+import '../widgets/edit.dart';
 
 enum ShownType {
   showActive, showAll
 }
+
+abstract class ChildController implements Cache {
+  final ParentController parent;
+  ChildController(this.parent) {
+    parent.registerCache(this);
+  }
+
+  final List<VoidCallback> _callbacks = [];
+  void addContentListener(VoidCallback callback) => _callbacks.add(callback);
+  void removeContentListener(VoidCallback callback) => _callbacks.remove(callback);
+  void notifyContentsChanged() {
+    for (var callback in _callbacks) {
+      callback();
+    }
+  }
+
+  Future<void> init() async {}
+}
+
 class ParentController implements DeadlinesStorage {
   final DeadlinesDatabase db = DeadlinesDatabase();
   ParentController() {
@@ -30,11 +49,11 @@ class ParentController implements DeadlinesStorage {
       try {
         int dlId = DeadlineAlarms.toDeadlineId(id);
         if (dlId != -1 && id < NotifyWrapper.snoozeOffset) {
-          var d = await DeadlinesDatabase().loadById(dlId);
+          var d = await db.loadById(dlId);
           if (d != null) await DeadlineAlarms.updateAlarmsFor(d);
         }
       } catch (e) {
-        print(e);
+        debugPrint(e.toString());
       }
     });
   }
@@ -253,26 +272,4 @@ void undoUI(String text, Color color, BuildContext context, Function() undo) {
       )
     )
   );
-}
-
-
-
-
-
-abstract class ChildController implements Cache {
-  final ParentController parent;
-  ChildController(this.parent) {
-    parent.registerCache(this);
-  }
-
-  final List<VoidCallback> _callbacks = [];
-  void addContentListener(VoidCallback callback) => _callbacks.add(callback);
-  void removeContentListener(VoidCallback callback) => _callbacks.remove(callback);
-  void notifyContentsChanged() {
-    for (var callback in _callbacks) {
-      callback();
-    }
-  }
-
-  Future<void> init() async {}
 }

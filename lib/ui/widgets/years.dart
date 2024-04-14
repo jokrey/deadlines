@@ -1,69 +1,20 @@
-import 'package:deadlines/persistence/database.dart';
 import 'package:deadlines/persistence/model.dart';
-import 'package:deadlines/utils/not_dumb_grid_view.dart';
+import 'package:deadlines/ui/controller/years_controller.dart';
+import 'package:deadlines/utils/ui/not_dumb_grid_view.dart';
 import 'package:deadlines/utils/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'controller.dart';
 
 
-
-class DeadlinesInYearsController extends ChildController with Cache {
-  DeadlinesInYearsController(super.parent);
-
-  int cachedYear = -1;
-  final Map<int, Deadline> _cache = {};
-  @override invalidate() => l.synchronized(() {
-    cachedYear = -1;
-    _cache.clear();
-  });
-  @override Future<Deadline> add(Deadline d) => l.synchronized(() {
-    if((d.startsAt?.date.isInThisYear(cachedYear) ?? false) || (d.deadlineAt?.date.isInThisYear(cachedYear) ?? false)) {
-      _cache[d.id!] = d;
-    }
-    notifyContentsChanged();
-    return d;
-  });
-  @override Future<void> remove(Deadline d) => l.synchronized(() {
-    if((d.startsAt?.date.isInThisYear(cachedYear) ?? false) || (d.deadlineAt?.date.isInThisYear(cachedYear) ?? false)) {
-      _cache.remove(d.id);
-    }
-    notifyContentsChanged();
-  });
-  @override Future<void> update(Deadline dOld, Deadline dNew) => l.synchronized(() {
-    bool wasRemoved;
-    if((dOld.startsAt?.date.isInThisYear(cachedYear) ?? false) || (dOld.deadlineAt?.date.isInThisYear(cachedYear) ?? false)) {
-      wasRemoved = _cache.remove(dOld.id) != null;
-    } else {
-      wasRemoved = true;
-    }
-    if((dNew.startsAt?.date.isInThisYear(cachedYear) ?? false) || (dNew.deadlineAt?.date.isInThisYear(cachedYear) ?? false)) {
-      if(wasRemoved) _cache[dNew.id!] = dNew;
-    }
-    notifyContentsChanged();
-  });
-
-  Future<Iterable<Deadline>> queryRelevantDeadlinesInYear(int year) => l.synchronized(() async {
-    if(cachedYear != year) {
-      _cache.clear();
-      for(var d in await parent.db.queryCriticalDeadlinesInYear(year, requireActive: parent.showWhat == ShownType.showActive)) {
-        _cache[d.id!] = d;
-      }
-      cachedYear = year;
-    }
-    return _cache.values;
-  });
-}
-
-class YearsPage extends StatefulWidget {
-  final DeadlinesInYearsController controller;
+class YearsView extends StatefulWidget {
+  final YearsController controller;
   final int initialYear;
-  const YearsPage(this.controller, {super.key, required this.initialYear});
+  const YearsView(this.controller, {super.key, required this.initialYear});
 
-  @override State<YearsPage> createState() => _YearsPageState();
+  @override State<YearsView> createState() => _YearsViewState();
 }
 
-class _YearsPageState extends State<YearsPage> {
+class _YearsViewState extends State<YearsView> {
   late PageController controller;
   @override void initState() {
     super.initState();
@@ -75,41 +26,35 @@ class _YearsPageState extends State<YearsPage> {
   }
 
   @override Widget build(BuildContext context) {
-    return Scaffold(
-      body: SafeArea(
-        child: PageView.builder(
-          controller: controller,
-          itemBuilder: (context, year) {
-            return FutureBuilder(
-              future: widget.controller.queryRelevantDeadlinesInYear(year),
-              builder: (context, snapshot) {
-                return Container(
-                  margin: const EdgeInsets.only(top: 12, bottom: 22),
-                  child: Column(
-                    children: [
-                      Text(
-                        "$year",
-                        // style: Theme.of(context).textTheme.headlineSmall?.copyWith(shadows: DateTime.now().year == year ? [Shadow(blurRadius: 1, color: Color(0xFFF94144).withAlpha(200), offset: Offset(1, 1))] : [] ),
-                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: DateTime.now().year == year ? const Color(0xFFF94144).withAlpha(210) : null),
-                      ),
-                      Expanded(
-                        child: NotDumbGridView(
-                          xMargin: 15, yMargin: 2, xCount: 2, yCount: 6,
-                          builder: (i) => TinyMonthView(year: year, month: i+1, deadlines: snapshot.data),//Container(color: Colors.amber,),
-                        ),
-                      ),
-                    ]
+    return Scaffold(body: SafeArea(child: PageView.builder(
+      controller: controller,
+      itemBuilder: (context, year) {
+        return FutureBuilder(
+          future: widget.controller.queryRelevantDeadlinesInYear(year),
+          builder: (context, snapshot) {
+            return Container(
+              margin: const EdgeInsets.only(top: 12, bottom: 22),
+              child: Column(
+                children: [
+                  Text(
+                    "$year",
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: DateTime.now().year == year ? const Color(0xFFF94144).withAlpha(210) : null),
                   ),
-                );
-              }
+                  Expanded(child: NotDumbGridView(
+                    xMargin: 15, yMargin: 2, xCount: 2, yCount: 6,
+                    builder: (i) => TinyMonthView(year: year, month: i+1, deadlines: snapshot.data),//Container(color: Colors.amber,),
+                  ),),
+                ]
+              ),
             );
-          },
-        ),
-      )
-    );
+          }
+        );
+      },
+    ),),);
   }
 }
 
+// buuug: not showing month overlapping critical multi day events
 class TinyMonthView extends StatelessWidget {
   final int year;
   final int month;
@@ -138,92 +83,88 @@ class TinyMonthView extends StatelessWidget {
             textAlign: TextAlign.left,
             style: Theme.of(context).textTheme.titleSmall?.copyWith(color: isSameMonth(today, firstDayInMonth) ? const Color(0xFFF94144).withAlpha(210) : null),
           ),
-          Expanded(
-            child: NotDumbGridView(
-              xCount: 7,
-              yCount: 6, //(numDaysInMonth / 7).ceil(), //if correct size, not all same size which looks bad
-              builder: (i) {
-                var day = DateTime(year, month, dayOfMonth);
-                if(i+1 < firstWeekdayDay || day.month != month) {
-                  return Container();
-                } else {
-                  var eventsOnThisDay = sorted(deadlines?.where((d) => d.isOnThisDay(day)).toList(growable: false) ?? []);
+          Expanded(child: NotDumbGridView(
+            xCount: 7,
+            yCount: 6, //(numDaysInMonth / 7).ceil(), //if correct size, not all same size which looks bad
+            builder: (i) {
+              var day = DateTime(year, month, dayOfMonth);
+              if(i+1 < firstWeekdayDay || day.month != month) {
+                return Container();
+              } else {
+                var eventsOnThisDay = sorted(deadlines?.where((d) => d.isOnThisDay(day)).toList(growable: false) ?? []);
 
-                  for (Deadline d in eventsOnThisDay) {
-                    if (d.startsAt?.date.isOnThisDay(day) ?? d.startsAt == null) {
-                      bool found = false;
-                      for (var (i, lastAt) in lastDrawnAtIndex.indexed) {
-                        if (lastAt == null) {
-                          lastDrawnAtIndex[i] = d;
-                          found = true;
-                          break;
-                        }
+                for (Deadline d in eventsOnThisDay) {
+                  if (d.startsAt?.date.isOnThisDay(day) ?? d.startsAt == null) {
+                    bool found = false;
+                    for (var (i, lastAt) in lastDrawnAtIndex.indexed) {
+                      if (lastAt == null) {
+                        lastDrawnAtIndex[i] = d;
+                        found = true;
+                        break;
                       }
-                      if (!found) {
-                        lastDrawnAtIndex.add(d);
-                      }
-                    } else {
-                      for (var (i, lastAt) in lastDrawnAtIndex.indexed) {
-                        if (d.id == lastAt?.id) {
-                          lastDrawnAtIndex[i] = d;
-                          break;
-                        }
+                    }
+                    if (!found) {
+                      lastDrawnAtIndex.add(d);
+                    }
+                  } else {
+                    for (var (i, lastAt) in lastDrawnAtIndex.indexed) {
+                      if (d.id == lastAt?.id) {
+                        lastDrawnAtIndex[i] = d;
+                        break;
                       }
                     }
                   }
-
-                  List<Deadline?> eventsToDraw = [];
-                  eventsToDraw.addAll(lastDrawnAtIndex);
-
-                  for (Deadline d in eventsOnThisDay) {
-                    if (d.deadlineAt != null && d.deadlineAt!.date.isOnThisDay(day)) {
-                      var i = lastDrawnAtIndex.indexOf(d);
-                      if (i != -1) lastDrawnAtIndex[i] = null;
-                    }
-                  }
-                  while (lastDrawnAtIndex.isNotEmpty && lastDrawnAtIndex.last == null) {
-                    lastDrawnAtIndex.removeLast();
-                  }
-
-                  dayOfMonth++;
-                  return Stack(
-                    children: <Widget>[
-                      LayoutBuilder(
-                        builder: (context, constraints) {
-                          var w = constraints.maxWidth;
-                          double singleEventHeight = 1.5+1;
-                          return Padding(
-                            padding: const EdgeInsets.only(top: 4.0),
-                            child: Column(
-                              children: eventsToDraw.take(((constraints.maxHeight-4)/singleEventHeight).floor()).map((d) => Container(
-                                color: d==null? null : Color(d.color),
-                                width: w,
-                                height: 1.5,
-                                margin: EdgeInsets.only(
-                                  left: d != null && (d.isOneDay() || d.startsAt!.date.isOnThisDay(day)) ? w*0.15 : 0,
-                                  right: d != null && (d.isOneDay() || d.deadlineAt!.date.isOnThisDay(day)) ? w*0.15 : 0,
-                                  bottom: 1
-                                ),
-                              )).toList(),
-                            ),
-                          );
-                        },
-                      ),
-                      Center(
-                        child: FittedBox(
-                          fit: BoxFit.fitHeight,
-                          child: Text(
-                            "${dayOfMonth-1}", textAlign: TextAlign.center,
-                            style: TextStyle(color: isSameDay(today, day) ? const Color(0xFFF94144) : null),
-                          ),
-                        ),
-                      ),
-                    ],
-                  );
                 }
-              },
-            ),
-          ),
+
+                List<Deadline?> eventsToDraw = [];
+                eventsToDraw.addAll(lastDrawnAtIndex);
+
+                for (Deadline d in eventsOnThisDay) {
+                  if (d.deadlineAt != null && d.deadlineAt!.date.isOnThisDay(day)) {
+                    var i = lastDrawnAtIndex.indexOf(d);
+                    if (i != -1) lastDrawnAtIndex[i] = null;
+                  }
+                }
+                while (lastDrawnAtIndex.isNotEmpty && lastDrawnAtIndex.last == null) {
+                  lastDrawnAtIndex.removeLast();
+                }
+
+                dayOfMonth++;
+                return Stack(
+                  children: <Widget>[
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        var w = constraints.maxWidth;
+                        double singleEventHeight = 1.5+1;
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 4.0),
+                          child: Column(
+                            children: eventsToDraw.take(((constraints.maxHeight-4)/singleEventHeight).floor()).map((d) => Container(
+                              color: d==null? null : Color(d.color),
+                              width: w,
+                              height: 1.5,
+                              margin: EdgeInsets.only(
+                                left: d != null && (d.isOneDay() || d.startsAt!.date.isOnThisDay(day)) ? w*0.15 : 0,
+                                right: d != null && (d.isOneDay() || d.deadlineAt!.date.isOnThisDay(day)) ? w*0.15 : 0,
+                                bottom: 1
+                              ),
+                            )).toList(),
+                          ),
+                        );
+                      },
+                    ),
+                    Center(child: FittedBox(
+                      fit: BoxFit.fitHeight,
+                      child: Text(
+                        "${dayOfMonth-1}", textAlign: TextAlign.center,
+                        style: TextStyle(color: isSameDay(today, day) ? const Color(0xFFF94144) : null),
+                      ),
+                    ),),
+                  ],
+                );
+              }
+            },
+          ),),
         ],
       ),
     );

@@ -11,15 +11,13 @@ class FittedText extends StatelessWidget {
   final double maxFontSize;
   const FittedText({super.key, required this.text, required this.foreground, required this.maxWidth, required this.maxHeight, this.preferredMinFontSize = 5, this.maxFontSize = 14});
 
-
   @override Widget build(BuildContext context) {
     String t = text;
     double fontSize = maxFontSize;
 
     double width;
     double height;
-    // int count = 0;
-    while(fontSize >= 1) {
+    while(fontSize >= 1) {//admitted, this is slightly problematic in terms of performance, but it looks good
       final textSpan = TextSpan(text: t, style: TextStyle(fontSize: fontSize, fontWeight: FontWeight.bold));
       final tp = TextPainter(text: textSpan, textDirection: TextDirection.ltr);
       tp.layout();
@@ -37,11 +35,8 @@ class FittedText extends StatelessWidget {
       } else {
         break;
       }
-      // count++;
     }
-    // print("count: $count");
 
     return Text(t, maxLines: 1, softWrap: false, textAlign: TextAlign.center, style: TextStyle(fontSize: fontSize, color: foreground, fontWeight: FontWeight.bold));
   }
-
 }

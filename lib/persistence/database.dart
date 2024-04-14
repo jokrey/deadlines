@@ -33,7 +33,6 @@ final class DeadlinesDatabase implements DeadlinesStorage {
     } else {
       path = "deadlines.db"; //for public use (WITHOUT MANAGE_EXTERNAL_STORAGE permission)
     }
-    print("path: $path");
 
     // sql.deleteDatabase("deadlines.db");
     return sql.openDatabase(
@@ -166,24 +165,44 @@ final class DeadlinesDatabase implements DeadlinesStorage {
     )).map(_rFromSQLMap).toList(growable: false))).toList());
   }
 
+
+  //overrides:
+  Future<Deadline?> loadById(int id) async {
+    var rawResults = await (await db).query("deadlines", where: "id = ?", whereArgs: [id]);
+    if(rawResults.isEmpty) return null;
+    return (await withRemovals([rawResults.first])).first;
+  }
+
+  @override Future<Deadline> add(Deadline d) async {
+    final id = await (await db).insert("deadlines", _toSQLMapWithoutId(d));
+    d = d.copyWithId(id);
+    for (var r in d.removals) {
+      await (await db).insert("removals", _toSQLMap(d.id!, r), conflictAlgorithm: sql.ConflictAlgorithm.replace);
+    }
+    return d;
+  }
+
+  @override Future<void> remove(Deadline d) async {
+    await (await db).delete("deadlines", where: "id = ?", whereArgs: [d.id]);
+    await (await db).delete("removals", where: "rm_id = ?", whereArgs: [d.id]);
+  }
+
+  @override Future<void> update(Deadline _, Deadline dNew) async {
+    await (await db).update("deadlines", _toSQLMapWithoutId(dNew), where: "id = ?", whereArgs: [dNew.id]);
+
+    await (await db).delete("removals", where: "rm_id = ?", whereArgs: [dNew.id]);
+    for (var r in dNew.removals) {
+      await (await db).insert("removals", _toSQLMap(dNew.id!, r), conflictAlgorithm: sql.ConflictAlgorithm.replace);
+    }
+  }
+
+  //complex queries::
   Future<List<Deadline>> selectAll() async {
     var rawResults = await (await db).rawQuery("SELECT * FROM deadlines d;", []);
 
     return withRemovals(rawResults);
   }
 
-  Future<Set<Deadline>> queryDeadlinesInOrAroundMonth(int year, int month, {required bool requireActive}) async {
-    var allPossible = await Future.wait([
-      queryDeadlinesInMonth(month==1?year-1:year, month==1?12:month-1, requireActive: requireActive),
-      queryDeadlinesInMonth(year, month, requireActive: requireActive),
-      queryDeadlinesInMonth(month==12?year+1:year, month==12?1:month+1, requireActive: requireActive),
-    ]);
-    Set<Deadline>? inOrAround = {};
-    for (var list in allPossible) {
-      inOrAround.addAll(list);
-    }
-    return inOrAround;
-  }
   Future<List<Deadline>> queryDeadlinesInMonth(int year, int month, {required bool requireActive}) async {
     var rawResults = await (await db).rawQuery(
       """SELECT *
@@ -269,23 +288,6 @@ final class DeadlinesDatabase implements DeadlinesStorage {
     return withRemovals(rawResults);
   }
 
-  //WRONG:: only if also in the future and active
-  // Future<List<Deadline>> queryDeadlinesWithActiveAlarms() async {
-  //   var rawResults = await (await db).rawQuery(
-  //     """SELECT *
-  //       FROM deadlines
-  //       WHERE
-  //       (
-  //         (startsAt_notificationType != ${NotificationType.off.index})
-  //         OR
-  //         (deadlineAt_notificationType != ${NotificationType.off.index})
-  //       )
-  //     ;"""
-  //   );
-  //
-  //   return withRemovals(rawResults);
-  // }
-
   Future<List<Deadline>> queryCriticalDeadlinesInYear(int year, {required bool requireActive}) async {
     var rawResults = await (await db).rawQuery(
         """SELECT *
@@ -316,35 +318,5 @@ final class DeadlinesDatabase implements DeadlinesStorage {
     );
 
     return withRemovals(rawResults);
-  }
-
-
-  Future<Deadline?> loadById(int id) async {
-    var rawResults = await (await db).query("deadlines", where: "id = ?", whereArgs: [id]);
-    if(rawResults.isEmpty) return null;
-    return (await withRemovals([rawResults.first])).first;
-  }
-
-  @override Future<Deadline> add(Deadline d) async {
-    final id = await (await db).insert("deadlines", _toSQLMapWithoutId(d));
-    d = d.copyWithId(id);
-    for (var r in d.removals) {
-      await (await db).insert("removals", _toSQLMap(d.id!, r), conflictAlgorithm: sql.ConflictAlgorithm.replace);
-    }
-    return d;
-  }
-
-  @override Future<void> remove(Deadline d) async {
-    await (await db).delete("deadlines", where: "id = ?", whereArgs: [d.id]);
-    await (await db).delete("removals", where: "rm_id = ?", whereArgs: [d.id]);
-  }
-
-  @override Future<void> update(Deadline _, Deadline dNew) async {
-    await (await db).update("deadlines", _toSQLMapWithoutId(dNew), where: "id = ?", whereArgs: [dNew.id]);
-
-    await (await db).delete("removals", where: "rm_id = ?", whereArgs: [dNew.id]);
-    for (var r in dNew.removals) {
-      await (await db).insert("removals", _toSQLMap(dNew.id!, r), conflictAlgorithm: sql.ConflictAlgorithm.replace);
-    }
   }
 }

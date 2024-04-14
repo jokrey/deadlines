@@ -1,7 +1,10 @@
 import 'package:deadlines/notifications/alarm_external_wrapper/notify_wrapper.dart';
-import 'package:deadlines/ui/widgets/controller.dart';
+import 'package:deadlines/ui/controller/months_controller.dart';
+import 'package:deadlines/ui/controller/parent_controller.dart';
+import 'package:deadlines/ui/controller/upcoming_controller.dart';
+import 'package:deadlines/ui/controller/years_controller.dart';
 import 'package:deadlines/ui/widgets/months.dart';
-import 'package:deadlines/ui/widgets/upcoming_list.dart';
+import 'package:deadlines/ui/widgets/upcoming.dart';
 import 'package:deadlines/ui/widgets/years.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -26,9 +29,9 @@ class MainApp extends StatefulWidget {
 class _MainAppState extends State<MainApp> {
   final Future<void> notifyInit = staticNotify.init();
   final ParentController parent = ParentController();
-  late final UpcomingDeadlinesListController upcomingController = UpcomingDeadlinesListController(parent);
-  late final DeadlinesCalendarController calendarController = DeadlinesCalendarController(parent);
-  late final DeadlinesInYearsController yearsController = DeadlinesInYearsController(parent);
+  late final UpcomingController upcomingController = UpcomingController(parent);
+  late final MonthsController calendarController = MonthsController(parent);
+  late final YearsController yearsController = YearsController(parent);
 
   @override Widget build(BuildContext context) {
     return MaterialApp(
@@ -61,9 +64,9 @@ class _MainAppState extends State<MainApp> {
                       controller: PageController(initialPage: 100000),
                       itemBuilder: (context, index) {
                         if (index % 2 == 0) {
-                          return DeadlinesCalendar(calendarController);
+                          return MonthsView(calendarController);
                         } else {
-                          return UpcomingDeadlinesList(upcomingController);
+                          return UpcomingView(upcomingController);
                         }
                       },
                     );
@@ -75,7 +78,7 @@ class _MainAppState extends State<MainApp> {
             });
           case '/years':
             return MaterialPageRoute(builder: (context) {
-              return YearsPage(yearsController, initialYear: settings.arguments as int,);
+              return YearsView(yearsController, initialYear: settings.arguments as int,);
             });
 
           default:
