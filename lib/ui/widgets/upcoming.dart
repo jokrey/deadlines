@@ -279,7 +279,7 @@ class _UpcomingViewFooterState extends State<_UpcomingViewFooter> {
 
 class _DurationToNextNotificationDisplay extends StatefulWidget {
   final UpcomingController controller;
-  const _DurationToNextNotificationDisplay(this.controller, {super.key});
+  const _DurationToNextNotificationDisplay(this.controller);
 
   @override State<_DurationToNextNotificationDisplay> createState() => _DurationToNextNotificationDisplayState();
 }

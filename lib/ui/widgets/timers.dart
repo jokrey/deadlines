@@ -28,7 +28,7 @@ class _TimersViewState extends State<TimersView> {
 
 class _TimerWidget extends StatefulWidget {
   final int notifyId;
-  const _TimerWidget(this.notifyId, {super.key});
+  const _TimerWidget(this.notifyId);
 
   @override State<_TimerWidget> createState() => _TimerWidgetState();
 }
