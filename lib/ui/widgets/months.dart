@@ -703,7 +703,7 @@ class BigMonthView extends StatelessWidget {
       clipBehavior: Clip.hardEdge,
       child: Column(children: children),
     );
-    if (!isSameMonth(c.getSelectedMonth(), day)) {
+    if (day.year != year || day.month != month) {
       return Opacity(opacity: 0.2, child: container);
     } else {
       return container;
