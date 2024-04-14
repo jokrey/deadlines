@@ -487,14 +487,14 @@ class BigMonthView extends StatelessWidget {
         return GestureDetector(
           behavior: HitTestBehavior.translucent,
           onTap: () => onTapped(current),
-          child: buildWidgetForDay(current, lastDrawnAtIndex, context)
+          child: buildWidgetForDay(current, showWeekdayLabels ? i == 7 : i == 0, lastDrawnAtIndex, context)
         );
       },
     );
   }
 
 
-  Widget buildWidgetForDay(DateTime day, List<(Deadline?, Importance?)> lastDrawnAtIndex, BuildContext context) {
+  Widget buildWidgetForDay(DateTime day, bool firstDayDrawn, List<(Deadline?, Importance?)> lastDrawnAtIndex, BuildContext context) {
     Iterable<Deadline> events = deadlines == null? [] : c.getDeadlinesOnDay(day, candidates: deadlines!);
     var today = stripTime(DateTime.now());
 
@@ -525,7 +525,7 @@ class BigMonthView extends StatelessWidget {
       List<Deadline> wideEventsSorted = criticalEvents + multiDayImportantEvents + multiDayNormalEvents;
 
       for (Deadline d in wideEventsSorted) {
-        if (d.startsAt?.date.isOnThisDay(day) ?? d.startsAt == null) {
+        if (d.startsAt == null || d.startsAt!.date.isOnThisDay(day) || (firstDayDrawn && d.startsAt!.date.isBeforeThisDay(day))) {
           bool found = false;
           for (var (i, (lastAt, imp)) in lastDrawnAtIndex.indexed) {
             var hasSameHeight = ((d.importance != Importance.critical) == (imp != Importance.critical));

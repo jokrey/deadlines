@@ -54,7 +54,6 @@ class _YearsViewState extends State<YearsView> {
   }
 }
 
-// buuug: not showing month overlapping critical multi day events
 class TinyMonthView extends StatelessWidget {
   final int year;
   final int month;
@@ -91,10 +90,11 @@ class TinyMonthView extends StatelessWidget {
               if(i+1 < firstWeekdayDay || day.month != month) {
                 return Container();
               } else {
+                var firstDayDrawn = i+1 == firstWeekdayDay;
                 var eventsOnThisDay = sorted(deadlines?.where((d) => d.isOnThisDay(day)).toList(growable: false) ?? []);
 
                 for (Deadline d in eventsOnThisDay) {
-                  if (d.startsAt?.date.isOnThisDay(day) ?? d.startsAt == null) {
+                  if (d.startsAt == null || d.startsAt!.date.isOnThisDay(day) || (firstDayDrawn && d.startsAt!.date.isBeforeThisDay(day))) {
                     bool found = false;
                     for (var (i, lastAt) in lastDrawnAtIndex.indexed) {
                       if (lastAt == null) {
