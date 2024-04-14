@@ -139,16 +139,18 @@ class TinyMonthView extends StatelessWidget {
                         return Padding(
                           padding: const EdgeInsets.only(top: 4.0),
                           child: Column(
-                            children: eventsToDraw.take(((constraints.maxHeight-4)/singleEventHeight).floor()).map((d) => Container(
-                              color: d==null? null : Color(d.color),
-                              width: w,
-                              height: 1.5,
-                              margin: EdgeInsets.only(
-                                left: d != null && (d.isOneDay() || d.startsAt!.date.isOnThisDay(day)) ? w*0.15 : 0,
-                                right: d != null && (d.isOneDay() || d.deadlineAt!.date.isOnThisDay(day)) ? w*0.15 : 0,
-                                bottom: 1
+                            children: eventsToDraw.take(((constraints.maxHeight-4)/singleEventHeight).floor()).map(
+                              (d) => Container(
+                                color: d==null? null : Color(d.color),
+                                width: w,
+                                height: 1.5,
+                                margin: EdgeInsets.only(
+                                  left: d != null && (d.isOneDay() || d.startsAt!.date.isOnThisDay(day)) ? w*0.15 : 0,
+                                  right: d != null && (d.isOneDay() || d.deadlineAt!.date.isOnThisDay(day)) ? w*0.15 : 0,
+                                  bottom: 1
+                                ),
                               ),
-                            )).toList(),
+                            ).toList(),
                           ),
                         );
                       },
