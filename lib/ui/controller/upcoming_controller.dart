@@ -11,23 +11,23 @@ class UpcomingController extends ChildController with Cache {
   //ui choices to be restored
   double scrollOffset = -1;
 
-  bool cacheValid = false;
+  bool _cacheValid = false;
   final Map<int, Deadline> _cache = {};
   @override invalidate() => l.synchronized(() {
-    cacheValid = false;
+    _cacheValid = false;
     _cache.clear();
   });
   @override Future<Deadline> add(Deadline d) => l.synchronized(() {
-    if(cacheValid) _cache[d.id!] = d;
+    if(_cacheValid) _cache[d.id!] = d;
     notifyContentsChanged();
     return d;
   });
   @override Future<void> remove(Deadline d) => l.synchronized(() {
-    if(cacheValid) _cache.remove(d.id);
+    if(_cacheValid) _cache.remove(d.id);
     notifyContentsChanged();
   });
   @override Future<void> update(Deadline dOld, Deadline dNew) => l.synchronized(() {
-    if(cacheValid) {
+    if(_cacheValid) {
       if(_cache.remove(dOld.id) != null) {
         _cache[dNew.id!] = dNew;
       }
@@ -36,12 +36,12 @@ class UpcomingController extends ChildController with Cache {
   });
 
   Future<Iterable<Deadline>> queryRelevantDeadlines() => l.synchronized(() async {
-    if(!cacheValid) {
+    if(!_cacheValid) {
       _cache.clear();
       for(var d in await parent.db.queryDeadlinesActiveOrTimelessOrAfter(DateTime.now(), requireActive: parent.showWhat == ShownType.showActive)) {
         _cache[d.id!] = d;
       }
-      cacheValid = true;
+      _cacheValid = true;
     }
     return _cache.values;
   });

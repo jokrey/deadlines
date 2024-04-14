@@ -125,155 +125,153 @@ class _AlarmNotificationScreenState extends State<AlarmNotificationScreen> {
         backgroundColor: color,
         body: SafeArea(
           minimum: EdgeInsets.only(top: maxHeight / 9),
-          child: Stack(
-            children: [
-              Align(
-                alignment: Alignment.center,
-                child: ConfettiWidget(
-                  confettiController: _confettiController,
-                  blastDirectionality: BlastDirectionality.explosive,
-                  colors: colors,
-                  shouldLoop: true,
+          child: Stack(children: [
+            Align(
+              alignment: Alignment.center,
+              child: ConfettiWidget(
+                confettiController: _confettiController,
+                blastDirectionality: BlastDirectionality.explosive,
+                colors: colors,
+                shouldLoop: true,
 
-                  maxBlastForce: 33,
-                  minBlastForce: 11,
-                  emissionFrequency: widget.repeatVibration ? 0.04 : 0.03,
-                  numberOfParticles: widget.withAudio ? 22 : 11,
-                  gravity: 0.1,
-                ),
+                maxBlastForce: 33,
+                minBlastForce: 11,
+                emissionFrequency: widget.repeatVibration ? 0.04 : 0.03,
+                numberOfParticles: widget.withAudio ? 22 : 11,
+                gravity: 0.1,
               ),
+            ),
 
-              Center(child: Icon(widget.withAudio? Icons.alarm_rounded : Icons.event_available_rounded, size: maxHeight / 4, color: const Color(0xFFF94144),)),
+            Center(child: Icon(widget.withAudio? Icons.alarm_rounded : Icons.event_available_rounded, size: maxHeight / 4, color: const Color(0xFFF94144),)),
 
-              Align(
-                alignment: Alignment.topCenter,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Text(
-                      title,
-                      style: Theme.of(context).textTheme.headlineLarge?.copyWith(color: getForegroundForColor(color)),
-                      softWrap: true,
-                      textAlign: TextAlign.center,
-                      maxLines: 1,
-                    ),
-                    SizedBox(height: maxHeight / 9 / 2,),
-                    Text(
-                      body,
-                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(color: getForegroundForColor(color)?.withAlpha(180)),
-                      softWrap: true,
-                      textAlign: TextAlign.center,
-                      maxLines: 3,
-                    ),
-                  ],
-                ),
+            Align(
+              alignment: Alignment.topCenter,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Text(
+                    title,
+                    style: Theme.of(context).textTheme.headlineLarge?.copyWith(color: getForegroundForColor(color)),
+                    softWrap: true,
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                  ),
+                  SizedBox(height: maxHeight / 9 / 2,),
+                  Text(
+                    body,
+                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(color: getForegroundForColor(color)?.withAlpha(180)),
+                    softWrap: true,
+                    textAlign: TextAlign.center,
+                    maxLines: 3,
+                  ),
+                ],
               ),
+            ),
 
-              Align(
-                alignment: Alignment.bottomCenter,
-                child: Container(
-                  height: maxHeight / 9 / 2,
-                  padding: EdgeInsets.only(bottom: maxHeight / 9 / 2 / 8),
-                  child: RotatedBox(
-                    quarterTurns: 3,
-                    child: ListWheelScrollView.useDelegate(
-                      perspective: 0.01,
-                      squeeze: 1,
-                      controller: _snoozeDurationScrollController,
-                      physics: const FixedExtentScrollPhysics(),
-                      childDelegate: ListWheelChildLoopingListDelegate(
-                        children: <Widget>[
-                          const RotatedBox(quarterTurns: 1, child: Text("|", textAlign: TextAlign.center),),
-                        ]
-                      ),
-                      useMagnifier: true,
-                      magnification: 1,
-                      itemExtent: maxHeight / 9 / 2 / 2,
+            Align(
+              alignment: Alignment.bottomCenter,
+              child: Container(
+                height: maxHeight / 9 / 2,
+                padding: EdgeInsets.only(bottom: maxHeight / 9 / 2 / 8),
+                child: RotatedBox(
+                  quarterTurns: 3,
+                  child: ListWheelScrollView.useDelegate(
+                    perspective: 0.01,
+                    squeeze: 1,
+                    controller: _snoozeDurationScrollController,
+                    physics: const FixedExtentScrollPhysics(),
+                    childDelegate: ListWheelChildLoopingListDelegate(
+                      children: <Widget>[
+                        const RotatedBox(quarterTurns: 1, child: Text("|", textAlign: TextAlign.center),),
+                      ]
                     ),
+                    useMagnifier: true,
+                    magnification: 1,
+                    itemExtent: maxHeight / 9 / 2 / 2,
                   ),
                 ),
               ),
-              Align(
-                alignment: Alignment.bottomCenter,
-                child: Padding(
-                  padding: EdgeInsets.only(bottom: maxHeight / 9 / 2),
-                  child: HorizontalSlidableButton(
-                    width: double.maxFinite,
-                    height: maxHeight / 9,
-                    buttonWidth: maxWidth / 3,
-                    color: getForegroundForColor(color),
-                    buttonColor: color,
-                    dismissible: false,
-                    centerPoint: true,
-                    autoSlide: true,
-                    initialPosition: SlidableButtonPosition.center,
-                    label:  GestureDetector(
-                      onTap: () {
-                        Vibration.cancel();
-                        audioPlayer?.stop();
-                      },
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: <Widget>[
-                          Icon(
-                            Icons.keyboard_double_arrow_left_rounded,
-                            size: maxHeight / 9 / 3,
-                            color: getForegroundForColor(color),
-                          ),
-                        ]+(widget.withAudio || widget.repeatVibration?[
-                          Icon(
-                            Icons.snooze_rounded,
-                            size: maxHeight / 9 / 3 / 2,
-                            color: getForegroundForColor(color),
-                          ),
-                        ]:[])+[
-                          Icon(
-                            Icons.keyboard_double_arrow_right_rounded,
-                            size: maxHeight / 9 / 3,
-                            color: getForegroundForColor(color),
-                          ),
-                        ]
-                      ),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(10.0),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          WidthConditionalText(
-                            text: 'snooze for ${convert0To99ToText(snoozeForMinutes)}',
-                            otherText: 'snooze for\n    ${convert0To99ToText(snoozeForMinutes)}',
-                            switchWidth: maxWidth / 3 - 13,
-                            style: Theme.of(context).textTheme.titleSmall?.copyWith(color: color,),
-                          ),
-                          Text(
-                            'dismiss forever',
-                            style: Theme.of(context).textTheme.titleSmall?.copyWith(color: color),
-                          ),
-                        ],
-                      ),
-                    ),
-                    onChanged: (position) async {
-                      if(position == SlidableButtonPosition.start) {
-                        await snooze();
-
-                        if (!context.mounted) return;
-                        Navigator.pop(context);
-                      } else if(position == SlidableButtonPosition.end) {
-                        wasFinished = true;
-                        Vibration.cancel();
-                        await audioPlayer?.stop();
-
-                        if (!context.mounted) return;
-                        Navigator.pop(context);
-                      }
+            ),
+            Align(
+              alignment: Alignment.bottomCenter,
+              child: Padding(
+                padding: EdgeInsets.only(bottom: maxHeight / 9 / 2),
+                child: HorizontalSlidableButton(
+                  width: double.maxFinite,
+                  height: maxHeight / 9,
+                  buttonWidth: maxWidth / 3,
+                  color: getForegroundForColor(color),
+                  buttonColor: color,
+                  dismissible: false,
+                  centerPoint: true,
+                  autoSlide: true,
+                  initialPosition: SlidableButtonPosition.center,
+                  label:  GestureDetector(
+                    onTap: () {
+                      Vibration.cancel();
+                      audioPlayer?.stop();
                     },
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: <Widget>[
+                        Icon(
+                          Icons.keyboard_double_arrow_left_rounded,
+                          size: maxHeight / 9 / 3,
+                          color: getForegroundForColor(color),
+                        ),
+                      ]+(widget.withAudio || widget.repeatVibration?[
+                        Icon(
+                          Icons.snooze_rounded,
+                          size: maxHeight / 9 / 3 / 2,
+                          color: getForegroundForColor(color),
+                        ),
+                      ]:[])+[
+                        Icon(
+                          Icons.keyboard_double_arrow_right_rounded,
+                          size: maxHeight / 9 / 3,
+                          color: getForegroundForColor(color),
+                        ),
+                      ]
+                    ),
                   ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(10.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        WidthConditionalText(
+                          text: 'snooze for ${convert0To99ToText(snoozeForMinutes)}',
+                          otherText: 'snooze for\n    ${convert0To99ToText(snoozeForMinutes)}',
+                          switchWidth: maxWidth / 3 - 13,
+                          style: Theme.of(context).textTheme.titleSmall?.copyWith(color: color,),
+                        ),
+                        Text(
+                          'dismiss forever',
+                          style: Theme.of(context).textTheme.titleSmall?.copyWith(color: color),
+                        ),
+                      ],
+                    ),
+                  ),
+                  onChanged: (position) async {
+                    if(position == SlidableButtonPosition.start) {
+                      await snooze();
+
+                      if (!context.mounted) return;
+                      Navigator.pop(context);
+                    } else if(position == SlidableButtonPosition.end) {
+                      wasFinished = true;
+                      Vibration.cancel();
+                      await audioPlayer?.stop();
+
+                      if (!context.mounted) return;
+                      Navigator.pop(context);
+                    }
+                  },
                 ),
               ),
-            ],
+            ),],
           ),
         ),
       ),
