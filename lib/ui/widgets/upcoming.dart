@@ -142,16 +142,19 @@ class _UpcomingListViewState extends State<UpcomingListView> {
       return compare;
     },);
 
-    (DateTime, bool)? last;
+    (DateTime, bool, bool)? last;
     upcoming.addAll(eventsOnEachDaySorted.map((e) {
       var (r1, r2) = e.$1;
       var list = e.$2;
       var newList = <Deadline?>[];
+      if(last!=null && last!.$3 && isSameDay(last!.$1, now)) {
+        newList.add(null);
+      }
       if(isSameDay(r1, now)) {
         newList.add(null);
         newList.add(null);
         if(list.isEmpty) {
-          last = (r1, false);
+          last = (r1, false, true);
         }
       }
       for (Deadline d in list) {
@@ -163,10 +166,7 @@ class _UpcomingListViewState extends State<UpcomingListView> {
           newList.add(null);
         }
         newList.add(d);
-        last = (r1, isOverdue);
-      }
-      if(isSameDay(r1, now)) {
-        newList.add(null);
+        last = (r1, isOverdue, false);
       }
       return (
         isSameDay(r1, r2) ?
