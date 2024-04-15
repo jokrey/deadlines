@@ -7,22 +7,23 @@ import 'package:deadlines/persistence/model.dart';
 
 class DeadlineCard extends StatelessWidget {
   final Deadline d;
+  final DateTime day;
   final Function(Deadline) edit;
   final Function(Deadline) delete;
   final Function(Deadline) toggleActive;
   final Function(Deadline, NotifyableRepeatableDateTime) toggleNotificationType;
-  const DeadlineCard(this.d, this.edit, this.delete, this.toggleActive, this.toggleNotificationType, {super.key});
+  const DeadlineCard(this.d, this.day, this.edit, this.delete, this.toggleActive, this.toggleNotificationType, {super.key});
 
   Color get appropriateColor => Color(d.color);//d.active? Color(d.color) : Color(d.color).withAlpha(150);
 
   @override Widget build(BuildContext context) {
     return Dismissible(
-      direction: d.active? DismissDirection.endToStart : DismissDirection.startToEnd,
+      direction: d.isActiveOn(day)? DismissDirection.endToStart : DismissDirection.startToEnd,
       background: Container(
         color: appropriateColor,
-        alignment: d.active?Alignment.centerRight:Alignment.centerLeft,
+        alignment: d.isActiveOn(day)?Alignment.centerRight:Alignment.centerLeft,
         padding: const EdgeInsets.only(left: 20, right: 20),
-        child: Text(d.active? "Done!" : "Set to active again..."),
+        child: Text(d.isActiveOn(day)? "Done!" : "Set to active again..."),
       ),
       key: Key(d.toString()),
       confirmDismiss: (_) async {
@@ -30,8 +31,8 @@ class DeadlineCard extends StatelessWidget {
         return false; //remains visible
       },
       child: Card(
-        shadowColor: d.isOverdue()? const Color(0xFFF94144) : appropriateColor,
-        elevation: d.isOverdue()? 6 : 3,
+        shadowColor: d.isOverdue(day)? const Color(0xFFF94144) : appropriateColor,
+        elevation: d.isOverdue(day)? 6 : 3,
         child: Stack(
           alignment: Alignment.center,
           children:
@@ -65,7 +66,7 @@ class DeadlineCard extends StatelessWidget {
 
             ),]
             +
-            (d.active? (d.isOverdue() ? [Positioned.fill(child: IgnorePointer(child: Container(decoration: ShapeDecoration(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)), color: const Color(0xFFF94144).withAlpha(7)),)))] : []) : [IgnorePointer(child: Container(height: 4, color: appropriateColor))]),
+            (d.isActiveOn(day)? (d.isOverdue(day) ? [Positioned.fill(child: IgnorePointer(child: Container(decoration: ShapeDecoration(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)), color: const Color(0xFFF94144).withAlpha(7)),)))] : []) : [IgnorePointer(child: Container(height: 4, color: appropriateColor))]),
         ),
       ),
     );
@@ -106,7 +107,7 @@ class DeadlineCard extends StatelessWidget {
                 color: appropriateColor,
               ),
               onTap: () {
-                if(!d1.isOverdue()) {
+                if(!d1.isOverdue(day)) {
                   toggleNotificationType(d, d1);
                 }
               }
@@ -115,7 +116,7 @@ class DeadlineCard extends StatelessWidget {
         ),
       ]
       +
-      (d1.isOverdue()? [Positioned(left: 0, right: 0, child: Container(height: 2, color: const Color(0xFFF94144).withAlpha(105)))] : []),
+      (d1.isOverdue(day)? [Positioned(left: 0, right: 0, child: Container(height: 2, color: const Color(0xFFF94144).withAlpha(105)))] : []),
     );
   }
 

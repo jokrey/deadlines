@@ -62,38 +62,57 @@ class _UpcomingListViewState extends State<UpcomingListView> {
   }
   void reload() => setState(() {});
 
-  Future<List<(String, List<Deadline?>)>> buildUpcomingList() async {
-    final List<(String, List<Deadline?>)> upcoming = [];
+  Future<List<(String, DateTime?, List<Deadline?>)>> buildUpcomingList() async {
+    final List<(String, DateTime?, List<Deadline?>)> upcoming = [];
     var deadlines = await c.queryRelevantDeadlines();
     var now = DateTime.now();
     upcoming.clear();
     upcoming.add((
-      "ToDo (${camel(Importance.critical.name)})",
+      "ToDo (${camel(Importance.critical.name)})", null,
       deadlines.where(
-        (d) => d.isTimeless() && d.importance == Importance.critical && (d.active || c.parent.showWhat == ShownType.showAll)
+        (d) => d.isTimeless() && d.importance == Importance.critical && (d.activeAtAll || c.parent.showWhat == ShownType.showAll)
       ).toList(growable: false)
     ));
-    if (upcoming.last.$2.isNotEmpty) upcoming.add(("", []));
+    if (upcoming.last.$3.isNotEmpty) upcoming.add(("", null, []));
 
     //todo: improve readability and maintainability of this insanity:
     List<Deadline> oneTimeEvents = deadlines.where((d) => !d.isTimeless() && !d.isRepeating()).toList();
     Map<(DateTime, DateTime), List<Deadline>> nonRepeatingOnEachDay = {};
     for (var d in oneTimeEvents) {
-      if (!(d.active || c.parent.showWhat == ShownType.showAll)) continue;
+      if (!(d.isActiveOn(now) || c.parent.showWhat == ShownType.showAll)) continue;
       var cutOff = (d.startsAt ?? d.deadlineAt!).toDateTime();
-      var c1 = DateTime(cutOff.year, cutOff.month, cutOff.day);
+      var c1 = cutOff;
       var c2 = c1;
       if (d.startsAt != null && !d.startsAt!.date.isSameDay(d.deadlineAt!.date)) {
         c2 = d.deadlineAt!.date.toDateTime();
       }
-      if (d.active || (c.parent.showWhat == ShownType.showAll && cutOff.isAfter(now))) {
-        nonRepeatingOnEachDay.update((c1, c2), (v) => v + [d], ifAbsent: () => [d]);
+      if (d.isActiveOn(stripTime(c1)) || (c.parent.showWhat == ShownType.showAll && cutOff.isAfter(now))) {
+        nonRepeatingOnEachDay.update((stripTime(c1), stripTime(c2)), (v) => v + [d], ifAbsent: () => [d]);
+      }
+    }
+    var potentiallyOverdueRepeating = deadlines.where(
+      (d) => d.isRepeating() && d.activeAfter != null && d.activeAfter!.isBefore(DateTime.now())
+    );
+    for (var d in potentiallyOverdueRepeating) {
+      var dayCounter = d.activeAfter;
+      while (dayCounter != null && dayCounter.isBefore(DateTime.now())) {
+        var cutOff = (d.startsAt ?? d.deadlineAt!).nextOccurrenceAfter(dayCounter);
+        if(cutOff == null || !cutOff.isBefore(DateTime.now())) break;
+        var c1 = stripTimeNullable(cutOff);
+        var c2 = c1;
+        if (d.startsAt != null && !d.startsAt!.date.isSameDay(d.deadlineAt!.date)) {
+          c2 = stripTimeNullable(d.deadlineAt!.date.nextOccurrenceAfter(dayCounter));
+        }
+        if (c1 != null && c2 != null && d.isActiveOn(c1)) {
+          nonRepeatingOnEachDay.update((c1, c2), (v) => v + [d], ifAbsent: () => [d]);
+        }
+        dayCounter = cutOff != dayCounter? cutOff : dayCounter.add(const Duration(days: 1));
       }
     }
     var nonRepeatingOnEachDaySorted = nonRepeatingOnEachDay.entries.map((e) => (
     e.key,
     sort(e.value, (a, b) {
-      if (a.startsAt != null && a.startsAt!.isOverdue()) {
+      if (a.startsAt != null && a.startsAt!.isOverdue(now)) {
         return a.deadlineAt!.compareTo(b.deadlineAt!);
       }
       return a.compareTo(b);
@@ -122,60 +141,64 @@ class _UpcomingListViewState extends State<UpcomingListView> {
       return compare;
     },);
 
-    Deadline? lastDeadline;
+    (DateTime, bool)? last;
     upcoming.addAll(nonRepeatingOnEachDaySorted.map((e) {
       var (r1, r2) = e.$1;
       var list = e.$2;
       var newList = <Deadline?>[];
       for (Deadline d in list) {
-        if (lastDeadline != null && lastDeadline?.isOverdue() != d.isOverdue()) {
+        bool isOverdue = r2.isBefore(now);
+        if (last != null && last!.$2 != isOverdue) {
           newList.add(null);
-          if ((lastDeadline?.startsAt ?? lastDeadline?.deadlineAt)?.date.day != (d.startsAt ?? d.deadlineAt)?.date.day) {
+          if (last!.$1.day != r1.day) {
+            newList.add(null);
+          }
+          if (last!.$1.month != r1.month) {
             newList.add(null);
           }
         }
-        if (lastDeadline != null && !d.isOverdue() && (lastDeadline?.startsAt ?? lastDeadline?.deadlineAt)?.date.month != (d.startsAt ?? d.deadlineAt)?.date.month) {
-          newList.add(null);
-        }
         newList.add(d);
-        lastDeadline = d;
+        last = (r1, isOverdue);
       }
       return (
-      isSameDay(r1, r2) ?
-      "${pad0(r1.day)}.${pad0(r1.month)}.${r1.year} (${shortWeekdayString(r1)})"
-          :
-      "${pad0(r1.day)}.${pad0(r1.month)}.${r1.year} (${shortWeekdayString(r1)}) - ${pad0(r2.day)}.${pad0(r2.month)}.${r2.year} (${shortWeekdayString(r2)})",
-      newList
+        isSameDay(r1, r2) ?
+          "${pad0(r1.day)}.${pad0(r1.month)}.${r1.year} (${shortWeekdayString(r1)})"
+            :
+          "${pad0(r1.day)}.${pad0(r1.month)}.${r1.year} (${shortWeekdayString(r1)}) - ${pad0(r2.day)}.${pad0(r2.month)}.${r2.year} (${shortWeekdayString(r2)})",
+        r1,
+        newList
       );
     }));
-    if (upcoming.last.$2.isNotEmpty) upcoming.add(("", []));
+    if (upcoming.last.$3.isNotEmpty) upcoming.add(("", null, []));
 
     upcoming.add((
       "ToDo (${camel(Importance.important.name)})",
+      null,
       deadlines.where(
-        (d) => d.isTimeless() && d.importance == Importance.important && (d.active || c.parent.showWhat == ShownType.showAll)
+        (d) => d.isTimeless() && d.importance == Importance.important && (d.activeAtAll || c.parent.showWhat == ShownType.showAll)
       ).toList(growable: false)
     ));
-    if (upcoming.last.$2.isNotEmpty) upcoming.add(("", []));
+    if (upcoming.last.$3.isNotEmpty) upcoming.add(("", null, []));
 
     List<Deadline> repeating = deadlines.where((d) => d.isRepeating()).toList();
     Map<RepetitionType, List<Deadline>> repeatingByType = {};
     for (var d in repeating) {
-      if (!d.active && c.parent.showWhat != ShownType.showAll) continue;
+      if (!d.activeAtAll && c.parent.showWhat != ShownType.showAll) continue;
       repeatingByType.update(d.deadlineAt!.date.repetitionType, (v) => v + [d], ifAbsent: () => [d]);
     }
     var repeatingByTypeSorted = repeatingByType.entries.map((e) => (e.key, sort(e.value))).toList();
     repeatingByTypeSorted.sort((a, b) => b.$1.index - a.$1.index,);
-    upcoming.addAll(repeatingByTypeSorted.map((e) => (camel(e.$1.name), e.$2)));
-    if (upcoming.last.$2.isNotEmpty) upcoming.add(("", []));
+    upcoming.addAll(repeatingByTypeSorted.map((e) => (camel(e.$1.name), null, e.$2)));
+    if (upcoming.last.$3.isNotEmpty) upcoming.add(("", null, []));
 
     upcoming.add((
       "ToDo (${camel(Importance.normal.name)})",
+      null,
       deadlines.where((d) =>
-        d.isTimeless() && d.importance == Importance.normal && (d.active || c.parent.showWhat == ShownType.showAll)
+        d.isTimeless() && d.importance == Importance.normal && (d.activeAtAll || c.parent.showWhat == ShownType.showAll)
       ).toList(growable: false)
     ));
-    if (upcoming.last.$2.isNotEmpty) upcoming.add(("", []));
+    if (upcoming.last.$3.isNotEmpty) upcoming.add(("", null, []));
 
     return upcoming;
   }
@@ -189,7 +212,7 @@ class _UpcomingListViewState extends State<UpcomingListView> {
           controller: listController,
           itemCount: snapshot.data!.length,
           itemBuilder: (context, index) {
-            var (label, ds) = snapshot.data![index];
+            var (label, refDt, ds) = snapshot.data![index];
             var firstNonNullIndex = ds.takeWhile((d) => d == null).length;
             if(label.isEmpty) {
               return const SizedBox(height: 25,);
@@ -207,9 +230,10 @@ class _UpcomingListViewState extends State<UpcomingListView> {
                   } else {
                     return DeadlineCard(
                       d,
+                      refDt?? DateTime.now(),
                       (d) => c.parent.editDeadline(context, d.id!),
                       (d) => c.parent.deleteDeadline(context, d, null),
-                      (d) => c.parent.toggleDeadlineActive(context, d),
+                      (d) => refDt==null?c.parent.toggleDeadlineActiveAtAll(context, d):c.parent.toggleDeadlineActiveOnOrAfter(context, d, refDt),
                       (d, nrdt) => c.parent.toggleDeadlineNotificationType(d, nrdt),
                     );
                   }

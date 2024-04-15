@@ -8,13 +8,13 @@ class Deadline implements Comparable<Deadline> {
   final String title;
   final String description;
   final int color;
-  final bool active;
+  final DateTime? activeAfter;
   final NotifyableRepeatableDateTime? startsAt;
   final NotifyableRepeatableDateTime? deadlineAt;
   final Importance importance;
   final Iterable<Removal> removals;//note: can be only partially loaded for premature optimization and performance reasons, which is why they are not part of == and hash
 
-  Deadline(this.id, this.title, this.description, this.color, this.active, this.startsAt, this.deadlineAt, this.importance, this.removals) {
+  Deadline(this.id, this.title, this.description, this.color, this.activeAfter, this.startsAt, this.deadlineAt, this.importance, this.removals) {
     if(startsAt != null && deadlineAt != null) {
       if(!deadlineAt!.date.isSameRepetitionType(startsAt!.date)) throw ArgumentError("startsAt and deadline are not of the same repetition type");
       // if(startsAt!.date.isAfterWithinRepetition(deadlineAt.date)) throw ArgumentError("start after deadline");
@@ -32,12 +32,12 @@ class Deadline implements Comparable<Deadline> {
   @override bool operator ==(Object other) {
     return other is Deadline &&
       id == other.id && title == other.title && description == other.description &&
-      color == other.color && active == other.active &&
+      color == other.color && activeAfter == other.activeAfter &&
       startsAt == other.startsAt && deadlineAt == other.deadlineAt && importance == other.importance &&
       iterableEquals(removals, other.removals)
     ;
   }
-  @override int get hashCode => Object.hash(id, title, description, color, active, startsAt, deadlineAt, importance, Object.hashAllUnordered(removals));
+  @override int get hashCode => Object.hash(id, title, description, color, activeAfter, startsAt, deadlineAt, importance, Object.hashAllUnordered(removals));
   @override int compareTo(Deadline other) {
     int cmp = nullableCompare(startsAt, other.startsAt);
     if(cmp != 0) return cmp;
@@ -46,15 +46,16 @@ class Deadline implements Comparable<Deadline> {
     cmp = importance.index.compareTo(other.importance.index);
     return cmp;
   }
-  @override String toString() => "Deadline[$id, $title, $description, $color, $active, $startsAt, $deadlineAt, ${importance.name}]";
+  @override String toString() => "Deadline[$id, $title, $description, $color, $activeAfter, $startsAt, $deadlineAt, ${importance.name}]";
 
   bool isOneDay() => !hasRange() || startsAt!.date.isSameDay(deadlineAt!.date);
   bool hasRange() => startsAt != null;
   Duration rangeLength() => !hasRange()? Duration.zero : deadlineAt!.date.difference(startsAt!.date);
   bool isTimeless() => deadlineAt == null;
   bool isRepeating() => !isTimeless() && deadlineAt!.date.isRepeating();
+  bool get activeAtAll => activeAfter != null;
 
-  bool isOverdue() => active && !isTimeless() && deadlineAt!.isOverdue();
+  bool isOverdue(DateTime on) => isActiveOn(on) && !isTimeless() && deadlineAt!.isOverdue(on);
   bool isOnThisDay(DateTime day) {
     if(isTimeless() || ! (startsAt ?? deadlineAt!).date.isInitialOnOrBefore(day)) return false;
     if(hasRange()) {
@@ -71,18 +72,27 @@ class Deadline implements Comparable<Deadline> {
   bool willRepeatAfter(DateTime day) {
     return isRepeating() && removals.where((e) => e.allFuture && e.day.isBeforeThisDay(day)).isEmpty;
   }
+  bool isActiveOn(DateTime day) => activeAtAll && day.isAfter(activeAfter!);
 
 
-  Deadline copyWithId(int id) => Deadline(id, title, description, color, active, startsAt, deadlineAt, importance, removals);
+  Deadline copyWithId(int id) => Deadline(id, title, description, color, activeAfter, startsAt, deadlineAt, importance, removals);
 
   Deadline copyWithNextNotifyType(bool modifyStartsAt) => Deadline(
-    id, title, description, color, active,
+    id, title, description, color, activeAfter,
     modifyStartsAt && startsAt!=null?startsAt!.withNextNotifyType():startsAt,
     !modifyStartsAt && deadlineAt!=null?deadlineAt!.withNextNotifyType():deadlineAt,
     importance,
     removals
   );
-  Deadline copyToggleActive() => Deadline(id, title, description, color, !active, startsAt, deadlineAt, importance, removals);
+  Deadline copyToggleActiveAtAll() => Deadline(id, title, description, color, activeAtAll? null : DateTime(1970), startsAt, deadlineAt, importance, removals);
+  Deadline copyToggleActiveAfter(DateTime day) {
+    if(!isRepeating()) {
+      return copyToggleActiveAtAll();
+    } else {
+      var newActiveAfter = isActiveOn(day) ? day : stripTimeNullable((startsAt ?? deadlineAt)?.lastOccurrenceBefore(day));
+      return Deadline(id, title, description, color, newActiveAfter, startsAt, deadlineAt, importance, removals);
+    }
+  }
 
   Deadline copyResetFirstOccurrenceTo(DateTime dayToResetTo) {
     if(!isRepeating()) throw StateError("must be repeating");
@@ -101,16 +111,16 @@ class Deadline implements Comparable<Deadline> {
         RepeatableDate(dayToResetTo.year, dayToResetTo.month, dayToResetTo.day, repetition: 1, repetitionType: deadlineAt!.date.repetitionType),
         deadlineAt!.time, deadlineAt!.notifyType
     );
-    return Deadline(id, title, description, color, active, newStartsAt, newDeadlineAt, importance, removals);
+    return Deadline(id, title, description, color, activeAfter, newStartsAt, newDeadlineAt, importance, removals);
   }
   Deadline copyRemoveOccurrence(RepeatableDate day) {
     if(!isRepeating()) throw StateError("must be repeating");
-    return Deadline(id, title, description, color, active, startsAt, deadlineAt, importance, [Removal(day, false)] + removals.toList(growable: false));
+    return Deadline(id, title, description, color, activeAfter, startsAt, deadlineAt, importance, [Removal(day, false)] + removals.toList(growable: false));
   }
   Deadline copyRemoveOccurrencesAfter(RepeatableDate day) {
     if(!isRepeating()) throw StateError("must be repeating");
     if(day.isRepeating()) throw ArgumentError("day to remove after cannot be repeating");
-    return Deadline(id, title, description, color, active, startsAt, deadlineAt, importance, [Removal(day, true)] + removals.where((r) => !r.allFuture).toList(growable: false));
+    return Deadline(id, title, description, color, activeAfter, startsAt, deadlineAt, importance, [Removal(day, true)] + removals.where((r) => !r.allFuture).toList(growable: false));
   }
 }
 

@@ -73,7 +73,7 @@ class EditDeadlineWidgetState extends State<EditDeadlineWidget> {
           var fn = startsAt==null?null:fromDateTime(startsAt!, rep:repetitionType!, notify: startsAtNotifyType!);
           var ft = deadlineAt==null?null:fromDateTime(deadlineAt!, rep:repetitionType!, notify: deadlineAtNotifyType!);
           if(fn == null && ft == null) removals.clear();
-          var newD = Deadline(widget.original.id, titleInputController.text, descriptionInputController.text, color.value, true, fn, ft, importance, removals);
+          var newD = Deadline(widget.original.id, titleInputController.text, descriptionInputController.text, color.value, DateTime(1970), fn, ft, importance, removals);
           Navigator.pop(context, newD);
         },
       ),

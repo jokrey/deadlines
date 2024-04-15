@@ -39,7 +39,7 @@ class ParentController implements DeadlinesStorage {
   final DeadlinesDatabase db = DeadlinesDatabase();
   ParentController() {
     //tested that NOT technically required, except in fringe cases (first startup after reinstalling)
-    db.queryDeadlinesActiveOrTimelessOrAfter(DateTime.now(), requireActive: false).then((all) {
+    db.queryDeadlinesActiveAtAllOrTimelessOrAfter(DateTime.now(), requireActive: false).then((all) {
       for(var d in all) {
         DeadlineAlarms.updateAlarmsFor(d);
       }
@@ -101,15 +101,16 @@ class ParentController implements DeadlinesStorage {
 
     Deadline? toEdit = toEditId==null?null:await db.loadById(toEditId);
     if (!context.mounted) return false;
+    var actualNewAt = newAt==null?null:fromDateTime(withTime(newAt, isSameDay(newAt, DateTime.now()) ? DateTime.now().hour+1 : max(6, min(22, DateTime.now().hour+1))), notify: NotificationType.silent);
     var newDeadline = await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => EditDeadlineWidget(
           toEdit ?? Deadline(
             null,
-            "", "", colors.last.value, true,
+            "", "", colors.last.value, DateTime(1970),
             null,
-            newAt==null?null:fromDateTime(withTime(newAt, isSameDay(newAt, DateTime.now()) ? DateTime.now().hour+1 : max(6, min(22, DateTime.now().hour+1))), notify: NotificationType.silent),
+            actualNewAt,
             Importance.important, const []
           ),
           autofocusTitle: toEdit == null,
@@ -215,10 +216,20 @@ class ParentController implements DeadlinesStorage {
     update(d, d.copyWithNextNotifyType(nrdt == d.startsAt));
   }
 
-  void toggleDeadlineActive(BuildContext context, Deadline d) {
-    Deadline newD = d.copyToggleActive();
+  void toggleDeadlineActiveAtAll(BuildContext context, Deadline d) {
+    Deadline newD = d.copyToggleActiveAtAll();
     update(d, newD);
-    if(d.active) {//was active
+    if(d.activeAtAll) {//was active
+      undoUI(
+        "\"${d.title}\" is done", Color(d.color), context,
+        () => update(newD, d),
+      );
+    }
+  }
+  void toggleDeadlineActiveOnOrAfter(BuildContext context, Deadline d, DateTime day) {
+    Deadline newD = d.copyToggleActiveAfter(day);
+    update(d, newD);
+    if(d.activeAfter?.isBefore(day) ?? false) {//more was active before
       undoUI(
         "\"${d.title}\" is done", Color(d.color), context,
         () => update(newD, d),

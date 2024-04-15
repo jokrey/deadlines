@@ -64,7 +64,7 @@ class RepeatableDateTime implements Comparable<RepeatableDateTime> {
     return DateTime(date.year, date.month, date.day, time.hour, time.minute, time.second);
   }
 
-  bool isOverdue() => !date.isRepeating() && toDateTime().isBefore(DateTime.now());
+  bool isOverdue(DateTime on) => nextOccurrenceAfter(on)?.isBefore(DateTime.now()) ?? on.isBefore(DateTime.now()); //if null, no occurrence after on
 
   DateTime? lastOccurrenceBefore(DateTime reference) => date.lastOccurrenceBefore(reference, time);
   DateTime? nextOccurrenceAfter(DateTime reference) => date.nextOccurrenceAfter(reference, time);
@@ -197,7 +197,7 @@ class RepeatableDate implements Comparable<RepeatableDate> {
 
   DateTime? lastOccurrenceBefore(DateTime reference, [Time? time]) {
     var raw = toDateTime().copyWith(hour: time?.hour, minute: time?.minute, second: time?.second);
-    if(raw.isBefore(reference)) return raw;
+    if(!isRepeating() && raw.isBefore(reference)) return raw;
 
     if(isYearly()) {
       var ret = raw.copyWith(year: reference.year, hour: time?.hour, minute: time?.minute, second: time?.second);
@@ -212,7 +212,7 @@ class RepeatableDate implements Comparable<RepeatableDate> {
     if(isWeekly()) {
       var weekday = raw.weekday;
       var ret = reference.copyWith(hour: time?.hour, minute: time?.minute, second: time?.second, millisecond: 0, microsecond: 0);
-      if(ret.isBefore(reference)) return ret;
+      if(ret.weekday == weekday && ret.isBefore(reference)) return ret;
       //reverse of add
       int toSubtract = reference.weekday > weekday ? weekday - reference.weekday : 7 - (reference.weekday - weekday);
       return ret.subtract(Duration(days: toSubtract ));
@@ -241,9 +241,9 @@ class RepeatableDate implements Comparable<RepeatableDate> {
     if(isWeekly()) {
       var weekday = raw.weekday;
       var ret = reference.copyWith(hour: time?.hour, minute: time?.minute, second: time?.second, millisecond: 0, microsecond: 0);
-      if(ret.isAfter(reference)) return ret;
+      if(ret.weekday == weekday && ret.isAfter(reference)) return ret;
       int toAdd = reference.weekday < weekday ? weekday - reference.weekday : 7 - (reference.weekday - weekday);
-      return ret.add(Duration(days: toAdd ));
+      return ret.add(Duration(days: toAdd));
     }
     if(isDaily()) {
       var ret = raw.copyWith(year: reference.year, month: reference.month, day: reference.day, hour: time?.hour, minute: time?.minute, second: time?.second);

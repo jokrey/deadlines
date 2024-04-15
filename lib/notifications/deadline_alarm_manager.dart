@@ -45,13 +45,13 @@ class DeadlineAlarms {
 
     if(notifyId > NotifyWrapper.userNotificationMaxId) throw StateError("too many notifications");
 
-    if(!d.active) {
-      await staticNotify.cancel(notifyId);
-    } else if(nrdt.notifyType == NotificationType.off) {
+    if(nrdt.notifyType == NotificationType.off) {
       await staticNotify.cancel(notifyId);
     } else {
       var next = nrdt.nextOccurrenceAfter(DateTime.now());
       if(next == null) {
+        await staticNotify.cancel(notifyId);
+      } else if(!d.isActiveOn(next)) {
         await staticNotify.cancel(notifyId);
       } else {
         await staticNotify.set(

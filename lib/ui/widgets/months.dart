@@ -88,7 +88,7 @@ class _MonthsCalendarViewState extends State<MonthsCalendarView> {
 
   late PageController controller;
   int getPage(DateTime d) => d.year*12 + d.month;
-  (int, int) getYearMonthFromPage(int page) => ((page / 12).floor(), page % 12);
+  (int, int) getYearMonthFromPage(int page) => ((page / 12).floor() - (page % 12 == 0 ? 1 : 0), page % 12 == 0 ? 12 : page % 12);
 
   Iterable<Deadline>? deadlines;
 
@@ -256,7 +256,7 @@ class _CurrentSelectionListViewState extends State<CurrentSelectionListView> {
       }
       shownBelow.addAll(sorted(
         combined.entries.map((e) => (e.key, sort(e.value, (a, b) {
-          if(a.startsAt != null && a.startsAt!.isOverdue()) {
+          if(a.startsAt != null && a.startsAt!.isOverdue(now)) {
             return a.deadlineAt!.compareTo(b.deadlineAt!);
           }
           return a.compareTo(b);
@@ -316,9 +316,10 @@ class _CurrentSelectionListViewState extends State<CurrentSelectionListView> {
                     var d = ds[index-1];
                     return DeadlineCard(
                       d,
+                      dtr1,
                       (d) => c.parent.editDeadline(context, d.id!),
                       (d) => c.parent.deleteDeadline(context, d, dtr1),
-                      (d) => c.parent.toggleDeadlineActive(context, d),
+                      (d) => c.parent.toggleDeadlineActiveOnOrAfter(context, d, dtr1),
                       (d, nrdt) => c.parent.toggleDeadlineNotificationType(d, nrdt),
                     );
                   }
@@ -358,7 +359,7 @@ class _MonthsViewFooterState extends State<_MonthsViewFooter> {
                 actionsOverflowAlignment: OverflowBarAlignment.center,
                 actions: [
                   SizedBox(width: double.infinity, child: ElevatedButton(onPressed: () async {
-                    widget.c.parent.db.queryDeadlinesActiveOrTimelessOrAfter(DateTime.now(), requireActive: false).then((all) {
+                    widget.c.parent.db.queryDeadlinesActiveAtAllOrTimelessOrAfter(DateTime.now(), requireActive: false).then((all) {
                       for(var d in all) {
                         DeadlineAlarms.updateAlarmsFor(d);
                       }
@@ -377,7 +378,7 @@ class _MonthsViewFooterState extends State<_MonthsViewFooter> {
                   SizedBox(width: double.infinity, child: ElevatedButton(onPressed: () async {
                     String builder = "";
                     for (Deadline d in await widget.c.parent.db.selectAll()) {
-                      if (!d.active) builder += "(\n  ";
+                      if (!d.activeAtAll) builder += "(\n  ";
                       builder += "${d.title}\n";
                       if(d.description.isNotEmpty) {
                         builder += "    ${d.description}\n";
@@ -398,7 +399,7 @@ class _MonthsViewFooterState extends State<_MonthsViewFooter> {
                           }
                         }
                       }
-                      if (!d.active) builder += ")\n";
+                      if (!d.activeAtAll) builder += ")\n";
                       builder += "\n\n";
                     }
                     if(!context.mounted) return;
@@ -578,7 +579,7 @@ class BigMonthView extends StatelessWidget {
               margin: const EdgeInsets.only(left: 0.4, right: 0.4, bottom: 1),
               width: width,
               height: rowHeight,
-              decoration: ShapeDecoration(shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(rowHeight / 2))), color: Color(d.color).withAlpha(d.active && !(d.isRepeating() && day.isBefore(today)) ? 255 : 155)),
+              decoration: ShapeDecoration(shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(rowHeight / 2))), color: Color(d.color).withAlpha(d.isActiveOn(day) ? 255 : 155)),
               // child: FittedBox(
               //   fit: BoxFit.fitHeight,
               //   clipBehavior: Clip.hardEdge,
@@ -589,14 +590,14 @@ class BigMonthView extends StatelessWidget {
               //   )
               // ),
               alignment: Alignment.center,
-              child: FittedText(foreground: getForegroundForColor(Color(d.color))!.withAlpha(d.active && !(d.isRepeating() && day.isBefore(today)) ? 255 : 105), text: d.title, maxWidth: width*0.85, maxHeight: rowHeight*0.9, preferredMinFontSize: 5, maxFontSize: 10),
+              child: FittedText(foreground: getForegroundForColor(Color(d.color))!.withAlpha(d.isActiveOn(day)? 255 : 105), text: d.title, maxWidth: width*0.85, maxHeight: rowHeight*0.9, preferredMinFontSize: 5, maxFontSize: 10),
             )
                 :
             Container(
               margin: const EdgeInsets.only(left: 0.4, right: 0.4, bottom: 1),
               width: rowHeight,
               height: rowHeight,
-              decoration: ShapeDecoration(shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(rowHeight / 2))), color: Color(d.color).withAlpha(d.active && !(d.isRepeating() && day.isBefore(today)) ? 255 : 155)),
+              decoration: ShapeDecoration(shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(rowHeight / 2))), color: Color(d.color).withAlpha(d.isActiveOn(day) ? 255 : 155)),
             );
           }
 
@@ -615,7 +616,7 @@ class BigMonthView extends StatelessWidget {
                 //   )
                 // );
                 var text = "${(!(d.startsAt?.date.isOnThisDay(day) ?? d.startsAt == null) && (day.day == 1 || day.weekday == 1)) ? "..." : " "}${d.title} ";
-                child = FittedText(foreground: getForegroundForColor(Color(d.color))!.withAlpha(d.active && !(d.isRepeating() && day.isBefore(today)) ? 255 : 105), text: text, maxWidth: maxWidth, maxHeight: actualRowHeight*0.9, preferredMinFontSize: 5, maxFontSize: 10);
+                child = FittedText(foreground: getForegroundForColor(Color(d.color))!.withAlpha(d.isActiveOn(day) ? 255 : 105), text: text, maxWidth: maxWidth, maxHeight: actualRowHeight*0.9, preferredMinFontSize: 5, maxFontSize: 10);
               }
               var radius = BorderRadius.zero;
               if ((d.startsAt?.date.isOnThisDay(day) ?? true) &&
@@ -636,7 +637,7 @@ class BigMonthView extends StatelessWidget {
                 margin: const EdgeInsets.only(bottom: 1),
                 width: double.maxFinite,
                 height: actualRowHeight,
-                decoration: ShapeDecoration(shape: RoundedRectangleBorder(borderRadius: radius), color: Color(d.color).withAlpha(d.active && !(d.isRepeating() && day.isBefore(today)) ? 255 : 155)),
+                decoration: ShapeDecoration(shape: RoundedRectangleBorder(borderRadius: radius), color: Color(d.color).withAlpha(d.isActiveOn(day) ? 255 : 155)),
                 alignment: d.isOneDay() ? Alignment.center : Alignment.centerLeft,
                 child: child,
               ));

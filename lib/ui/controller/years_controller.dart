@@ -26,14 +26,11 @@ class YearsController extends ChildController with Cache {
     notifyContentsChanged();
   });
   @override Future<void> update(Deadline dOld, Deadline dNew) => l.synchronized(() {
-    bool wasRemoved;
     if((dOld.startsAt?.date.isInThisYear(_cachedYear) ?? false) || (dOld.deadlineAt?.date.isInThisYear(_cachedYear) ?? false)) {
-      wasRemoved = _cache.remove(dOld.id) != null;
-    } else {
-      wasRemoved = true;
+      _cache.remove(dOld.id) != null;
     }
     if((dNew.startsAt?.date.isInThisYear(_cachedYear) ?? false) || (dNew.deadlineAt?.date.isInThisYear(_cachedYear) ?? false)) {
-      if(wasRemoved) _cache[dNew.id!] = dNew;
+      _cache[dNew.id!] = dNew;
     }
     notifyContentsChanged();
   });

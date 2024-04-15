@@ -37,7 +37,7 @@ final class DeadlinesDatabase implements DeadlinesStorage {
     // sql.deleteDatabase("deadlines.db");
     return sql.openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: (db, version) async {
         await _createTables(db);
       },
@@ -96,7 +96,7 @@ final class DeadlinesDatabase implements DeadlinesStorage {
   static Deadline _fromSQLMap(Map<String, Object?> m, Iterable<Removal> removals) {
     return Deadline(
       _parseInt(m["id"]), m["title"].toString(), m["description"].toString(),
-      _parseInt(m["color"]), _parseInt(m["active"]) == 1,
+      _parseInt(m["color"]), _parseInt(m["active"]) == 0? null : DateTime.fromMillisecondsSinceEpoch(_parseInt(m["active"])),
       _parseInt(m["startsAt_year"]) == 0? null:NotifyableRepeatableDateTime(
         RepeatableDate(
           _parseInt(m["startsAt_year"]), _parseInt(m["startsAt_month"]), _parseInt(m["startsAt_day"]),
@@ -120,7 +120,7 @@ final class DeadlinesDatabase implements DeadlinesStorage {
 
   Map<String, Object?> _toSQLMapWithoutId(Deadline d) {
     return {
-      "title": d.title, "description": d.description, "color": d.color, "active": d.active?1:0, "importance": d.importance.index,
+      "title": d.title, "description": d.description, "color": d.color, "active": d.activeAfter?.millisecondsSinceEpoch ?? 0, "importance": d.importance.index,
       "startsAt_year": d.startsAt==null?0:d.startsAt!.date.year, "startsAt_month": d.startsAt==null?0:d.startsAt!.date.month, "startsAt_day": d.startsAt==null?0:d.startsAt!.date.day,
       "startsAt_repetition": d.startsAt==null?0:d.startsAt!.date.repetition, "startsAt_repetitionType": d.startsAt==null?0:d.startsAt!.date.repetitionType.index,
       "startsAt_hour": d.startsAt==null?0:d.startsAt!.time.hour, "startsAt_minute": d.startsAt==null?0:d.startsAt!.time.minute,
@@ -208,7 +208,7 @@ final class DeadlinesDatabase implements DeadlinesStorage {
       """SELECT *
         FROM deadlines d
         WHERE
-        ${requireActive?"d.active AND":""} (
+        ${requireActive?"d.active != 0 AND d.active < ${DateTime(year, month+1).millisecondsSinceEpoch} AND":""} (
           (d.startsAt_year   < $year OR (d.startsAt_year   == $year AND d.startsAt_month <= $month))
           AND
           (
@@ -235,12 +235,12 @@ final class DeadlinesDatabase implements DeadlinesStorage {
     return withRemovals(rawResults);
   }
 
-  Future<List<Deadline>> queryDeadlinesActiveOrTimelessOrAfter(DateTime minute, {required bool requireActive}) async {
+  Future<List<Deadline>> queryDeadlinesActiveAtAllOrTimelessOrAfter(DateTime minute, {required bool requireActive}) async {
     var rawResults = await (await db).rawQuery(
         """SELECT *
           FROM deadlines d
           WHERE
-          ${requireActive? "d.active AND":""} (
+          ${requireActive? "d.active != 0 AND":""} (
             d.active
             OR
             (d.startsAt_year == 0 AND d.deadlineAt_year == 0)
@@ -293,7 +293,7 @@ final class DeadlinesDatabase implements DeadlinesStorage {
         """SELECT *
         FROM deadlines d
         WHERE
-        ${requireActive? "d.active AND":""} (
+        ${requireActive? "d.active != 0 AND d.active < ${DateTime(year+1).millisecondsSinceEpoch} AND":""} (
           (d.importance = ${Importance.critical.index})
           AND
           (

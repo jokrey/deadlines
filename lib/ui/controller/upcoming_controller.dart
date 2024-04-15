@@ -28,9 +28,8 @@ class UpcomingController extends ChildController with Cache {
   });
   @override Future<void> update(Deadline dOld, Deadline dNew) => l.synchronized(() {
     if(_cacheValid) {
-      if(_cache.remove(dOld.id) != null) {
-        _cache[dNew.id!] = dNew;
-      }
+      _cache.remove(dOld.id); //possible that nothing removed if would be newly in cache
+      _cache[dNew.id!] = dNew;
     }
     notifyContentsChanged();
   });
@@ -38,7 +37,7 @@ class UpcomingController extends ChildController with Cache {
   Future<Iterable<Deadline>> queryRelevantDeadlines() => l.synchronized(() async {
     if(!_cacheValid) {
       _cache.clear();
-      for(var d in await parent.db.queryDeadlinesActiveOrTimelessOrAfter(DateTime.now(), requireActive: parent.showWhat == ShownType.showActive)) {
+      for(var d in await parent.db.queryDeadlinesActiveAtAllOrTimelessOrAfter(DateTime.now(), requireActive: parent.showWhat == ShownType.showActive)) {
         _cache[d.id!] = d;
       }
       _cacheValid = true;

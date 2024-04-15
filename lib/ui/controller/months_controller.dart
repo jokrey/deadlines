@@ -83,14 +83,11 @@ class MonthsController extends ChildController with Cache {
   @override Future<void> update(Deadline dOld, Deadline dNew) => l.synchronized(() {
     _cache.forEach((key, map) {
       var (year, month) = key;
-      bool wasRemoved;
       if ((dOld.startsAt?.date.isInThisMonth(year, month) ?? false) || (dOld.deadlineAt?.date.isInThisMonth(year, month) ?? false)) {
-        wasRemoved = map.remove(dOld.id!) != null;
-      } else {
-        wasRemoved = true;
+        map.remove(dOld.id!) != null;
       }
       if((dNew.startsAt?.date.isInThisMonth(year, month) ?? false) || (dNew.deadlineAt?.date.isInThisMonth(year, month) ?? false)) {
-        if(wasRemoved) map[dNew.id!] = dNew;
+        map[dNew.id!] = dNew;
       }
     });
     notifyContentsChanged();
@@ -140,12 +137,10 @@ class MonthsController extends ChildController with Cache {
 
   List<Deadline> getDeadlinesOnDay(DateTime day, {required Iterable<Deadline> candidates, bool? showDaily}) {
     showDaily ??= this.showDaily;
-    var today = stripTime(DateTime.now()); //stripTime to still show now completed if on same day
     var l = candidates.where((d) =>
-    !d.isTimeless() && d.isOnThisDay(day) &&
-        (d.active || parent.showWhat == ShownType.showAll) &&
-        (!d.deadlineAt!.date.isDaily() || showDaily!) &&
-        (parent.showWhat == ShownType.showAll || !d.isRepeating() || !day.isBefore(today))
+      !d.isTimeless() && d.isOnThisDay(day) &&
+      (parent.showWhat == ShownType.showAll || d.isActiveOn(day)) &&
+      (showDaily! || !d.deadlineAt!.date.isDaily())
     ).toList();
     l.sort((a, b) => nullableCompare(a.startsAt?.time ?? a.deadlineAt?.time, b.startsAt?.time ?? b.deadlineAt?.time));
     return l;
