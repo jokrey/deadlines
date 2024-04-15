@@ -77,7 +77,7 @@ class _UpcomingListViewState extends State<UpcomingListView> {
 
     //todo: improve readability and maintainability of this insanity:
     List<Deadline> oneTimeEvents = deadlines.where((d) => !d.isTimeless() && !d.isRepeating()).toList();
-    Map<(DateTime, DateTime), List<Deadline>> nonRepeatingOnEachDay = {};
+    Map<(DateTime, DateTime), List<Deadline>> eventsOnEachDay = {};
     for (var d in oneTimeEvents) {
       if (!(d.isActiveOn(now) || c.parent.showWhat == ShownType.showAll)) continue;
       var cutOff = (d.startsAt ?? d.deadlineAt!).toDateTime();
@@ -87,7 +87,7 @@ class _UpcomingListViewState extends State<UpcomingListView> {
         c2 = d.deadlineAt!.date.toDateTime();
       }
       if (d.isActiveOn(stripTime(c1)) || (c.parent.showWhat == ShownType.showAll && cutOff.isAfter(now))) {
-        nonRepeatingOnEachDay.update((stripTime(c1), stripTime(c2)), (v) => v + [d], ifAbsent: () => [d]);
+        eventsOnEachDay.update((stripTime(c1), stripTime(c2)), (v) => v + [d], ifAbsent: () => [d]);
       }
     }
     var potentiallyOverdueRepeating = deadlines.where(
@@ -104,21 +104,22 @@ class _UpcomingListViewState extends State<UpcomingListView> {
           c2 = stripTimeNullable(d.deadlineAt!.date.nextOccurrenceAfter(dayCounter));
         }
         if (c1 != null && c2 != null && d.isActiveOn(c1)) {
-          nonRepeatingOnEachDay.update((c1, c2), (v) => v + [d], ifAbsent: () => [d]);
+          eventsOnEachDay.update((c1, c2), (v) => v + [d], ifAbsent: () => [d]);
         }
         dayCounter = cutOff != dayCounter? cutOff : dayCounter.add(const Duration(days: 1));
       }
     }
-    var nonRepeatingOnEachDaySorted = nonRepeatingOnEachDay.entries.map((e) => (
+    eventsOnEachDay.putIfAbsent((stripTime(now), stripTime(now)), () => []);
+    var eventsOnEachDaySorted = eventsOnEachDay.entries.map((e) => (
     e.key,
     sort(e.value, (a, b) {
       if (a.startsAt != null && a.startsAt!.isOverdue(now)) {
         return a.deadlineAt!.compareTo(b.deadlineAt!);
       }
-      return a.compareTo(b);
+      return nullableCompare((a.startsAt??a.deadlineAt)?.time, (b.startsAt??b.deadlineAt)?.time);
     },)
     )).toList();
-    nonRepeatingOnEachDaySorted.sort((a, b) {
+    eventsOnEachDaySorted.sort((a, b) {
       var compare = (a.$1.$1.isAfter(now) ? 1 : 0).compareTo((b.$1.$1.isAfter(now) ? 1 : 0));
       if (compare == 0) return a.$1.$2.compareTo(b.$1.$2);
       if (a.$1.$1.isAfter(now)) {
@@ -142,23 +143,30 @@ class _UpcomingListViewState extends State<UpcomingListView> {
     },);
 
     (DateTime, bool)? last;
-    upcoming.addAll(nonRepeatingOnEachDaySorted.map((e) {
+    upcoming.addAll(eventsOnEachDaySorted.map((e) {
       var (r1, r2) = e.$1;
       var list = e.$2;
       var newList = <Deadline?>[];
+      if(isSameDay(r1, now)) {
+        newList.add(null);
+        newList.add(null);
+        if(list.isEmpty) {
+          last = (r1, false);
+        }
+      }
       for (Deadline d in list) {
-        bool isOverdue = r2.isBefore(now);
+        bool isOverdue = d.isRepeating() || d.isOverdue(now);
         if (last != null && last!.$2 != isOverdue) {
           newList.add(null);
-          if (last!.$1.day != r1.day) {
-            newList.add(null);
-          }
-          if (last!.$1.month != r1.month) {
-            newList.add(null);
-          }
+        }
+        if (last != null && last!.$1.month != r1.month) {
+          newList.add(null);
         }
         newList.add(d);
         last = (r1, isOverdue);
+      }
+      if(isSameDay(r1, now)) {
+        newList.add(null);
       }
       return (
         isSameDay(r1, r2) ?
@@ -220,10 +228,12 @@ class _UpcomingListViewState extends State<UpcomingListView> {
               return ListView.builder(
                 shrinkWrap: true,
                 physics: const ClampingScrollPhysics(),
-                itemCount: ds.isEmpty ? 0 : 1 + ds.length,
+                itemCount: 1 + ds.length,
                 padding: const EdgeInsets.all(5),
                 itemBuilder: (context, index) {
-                  if (index == firstNonNullIndex) return Text(label);
+                  if (index == firstNonNullIndex) {
+                    return Text(label, style: TextStyle(color: refDt != null && isSameDay(refDt, DateTime.now()) ? const Color(0xFFF94144) : null),);
+                  }
                   var d = ds[index < firstNonNullIndex? index:index - 1];
                   if(d == null) {
                     return const SizedBox(height: 25,);
