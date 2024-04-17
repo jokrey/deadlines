@@ -140,9 +140,11 @@ class MonthsController extends ChildController with Cache {
     var l = candidates.where((d) =>
       !d.isTimeless() && d.isOnThisDay(day) &&
       (parent.showWhat == ShownType.showAll || d.isActiveOn(day)) &&
-      (showDaily! || !d.deadlineAt!.date.isDaily())
+      (showDaily! || !d.deadlineAt!.date.isDaily() || d.isOverdue(day))
     ).toList();
-    l.sort((a, b) => nullableCompare(a.startsAt?.time ?? a.deadlineAt?.time, b.startsAt?.time ?? b.deadlineAt?.time));
+    l.sort((a, b) {
+      return nullableCompare(a.startsAt?.time ?? a.deadlineAt?.time, b.startsAt?.time ?? b.deadlineAt?.time);
+    });
     return l;
   }
 }

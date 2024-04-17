@@ -257,11 +257,11 @@ class _CurrentSelectionListViewState extends State<CurrentSelectionListView> {
       shownBelow.addAll(sorted(
         combined.entries.map((e) => (e.key, sort(e.value, (a, b) {
           if(a.startsAt != null && a.startsAt!.isOverdue(now)) {
-            return a.deadlineAt!.compareTo(b.deadlineAt!);
+            return a.deadlineAt!.time.compareTo(b.deadlineAt!.time);
           }
-          return a.compareTo(b);
+          return nullableCompare(a.startsAt?.time ?? a.deadlineAt?.time, b.startsAt?.time ?? b.deadlineAt?.time);
         },))),
-            (a, b) {
+        (a, b) {
           if(a.$1.$1.isAfter(now)) {
             var diffA = a.$1.$1.difference(a.$1.$2).inDays;
             var diffB = b.$1.$1.difference(b.$1.$2).inDays;

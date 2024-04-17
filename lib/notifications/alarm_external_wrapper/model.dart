@@ -17,6 +17,7 @@ enum NotificationType {
   alarm
 }
 
+/// A RepeatableDateTime with a notification type
 @immutable
 class NotifyableRepeatableDateTime extends RepeatableDateTime {
   final NotificationType notifyType;
@@ -89,7 +90,7 @@ class Time implements Comparable<Time> {
   @override String toString() => "${pad0(hour)}:${pad0(minute)}:${pad0(second)}";
 
   @override int compareTo(Time other) {
-    return hour != other.hour ? hour - other.hour : minute != other.minute ? minute - other.minute : second - other.second;
+    return hour != other.hour ? hour.compareTo(other.hour) : minute != other.minute ? minute.compareTo(other.minute) : second.compareTo(other.second);
   }
 }
 
@@ -114,20 +115,20 @@ class RepeatableDate implements Comparable<RepeatableDate> {
   @override operator==(Object other) => other is RepeatableDate && year == other.year && month == other.month && day == other.day && repetitionType == other.repetitionType && repetition == other.repetition;
   @override int get hashCode => Object.hash(year, month, day, repetitionType, repetition);
   @override int compareTo(RepeatableDate other) {
-    if(!isSameRepetitionType(other)) return repetitionType.index - other.repetitionType.index;
+    if(!isSameRepetitionType(other)) return repetitionType.index.compareTo(other.repetitionType.index);
     if(!isRepeating()) {
-      if (year != other.year) return year - other.year;
-      if (month != other.month) return month - other.month;
-      if (day != other.day) return day - other.day;
+      if (year != other.year) return year.compareTo(year);
+      if (month != other.month) return month.compareTo(month);
+      if (day != other.day) return day.compareTo(day);
     }
     if(isYearly()) {
-      if (month != other.month) return month - other.month;
-      if (day != other.day) return day - other.day;
+      if (month != other.month) return month.compareTo(month);
+      if (day != other.day) return day.compareTo(day);
     }
     if(isMonthly()) {
-      if (day != other.day) return day - other.day;
+      if (day != other.day) return day.compareTo(day);
     }
-    if(isWeekly()) return toDateTime().weekday - other.toDateTime().weekday;
+    if(isWeekly()) return toDateTime().weekday.compareTo(toDateTime().weekday);
     return 0;
   }
   @override String toString() {
