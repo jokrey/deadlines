@@ -76,7 +76,7 @@ class _EditDeadlineViewState extends State<EditDeadlineView> {
           var fn = _startsAt==null?null:fromDateTime(_startsAt!, rep:_repetitionType!, notify: _startsAtNotifyType!);
           var ft = _deadlineAt==null?null:fromDateTime(_deadlineAt!, rep:_repetitionType!, notify: _deadlineAtNotifyType!);
           if(fn == null && ft == null) _removals.clear();
-          var newD = Deadline(widget.original.id, _titleInputController.text, _descriptionInputController.text, _color.value, DateTime(1970), fn, ft, _importance, _removals);
+          var newD = Deadline(widget.original.id, _titleInputController.text, _descriptionInputController.text, _color.value, widget.original.activeAfter, fn, ft, _importance, _removals);
           Navigator.pop(context, newD);
         },
       ),
