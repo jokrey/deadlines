@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:deadlines/notifications/alarm_external_wrapper/model.dart';
 import 'package:deadlines/notifications/alarm_external_wrapper/notify_wrapper.dart';
 import 'package:deadlines/ui/controller/upcoming_controller.dart';
-import 'package:deadlines/ui/widgets/card_in_list.dart';
 import 'package:deadlines/persistence/model.dart';
 import 'package:deadlines/ui/widgets/deadline_list.dart';
 import 'package:deadlines/ui/widgets/timers.dart';

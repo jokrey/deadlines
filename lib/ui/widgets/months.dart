@@ -5,7 +5,6 @@ import 'package:deadlines/notifications/deadline_alarm_manager.dart';
 import 'package:deadlines/persistence/model.dart';
 import 'package:deadlines/ui/controller/months_controller.dart';
 import 'package:deadlines/ui/defaults.dart';
-import 'package:deadlines/ui/widgets/card_in_list.dart';
 import 'package:deadlines/ui/widgets/deadline_list.dart';
 import 'package:deadlines/utils/ui/fitted_text.dart';
 import 'package:deadlines/utils/ui/not_dumb_grid_view.dart';

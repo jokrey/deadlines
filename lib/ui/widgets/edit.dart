@@ -31,7 +31,6 @@ class _EditDeadlineViewState extends State<EditDeadlineView> {
   NotificationType? _deadlineAtNotifyType;
   static final _repetitionTypeChoices = ["None", "Yearly", "Monthly", "Weekly", "Daily"];
   RepetitionType? _repetitionType;
-  int? _repetition;
   late Color _color;
   late Importance _importance;
   late List<Removal> _removals;
@@ -49,7 +48,6 @@ class _EditDeadlineViewState extends State<EditDeadlineView> {
     }
     _color = Color(widget.original.color);
     _repetitionType = widget.original.deadlineAt?.date.repetitionType;
-    _repetition = widget.original.deadlineAt?.date.repetition;
 
     _importance = widget.original.importance;
     _removals = widget.original.removals.toSet().toList();
@@ -178,7 +176,6 @@ class _EditDeadlineViewState extends State<EditDeadlineView> {
           _deadlineAt = DateTime(now.year, now.month, now.day, now.hour + 1);
           _deadlineAtNotifyType = NotificationType.off;
           _repetitionType = RepetitionType.none;
-          _repetition = 1;
         }),
         child: const Text("Add Deadline")
       ));
@@ -253,7 +250,6 @@ class _EditDeadlineViewState extends State<EditDeadlineView> {
                   _deadlineAt = null;
                   _deadlineAtNotifyType = null;
                   _repetitionType = null;
-                  _repetition = null;
                   _removals.clear();
                 }),
               child: const Icon(Icons.remove_circle_rounded, size: 15,),
@@ -307,7 +303,6 @@ class _EditDeadlineViewState extends State<EditDeadlineView> {
               }).toList(),
               onChanged: (newlySelected) => setState(() {
                 if (newlySelected == null) return;
-                _repetition = 1;
                 if (newlySelected == "None") {
                   _repetitionType = RepetitionType.none;
                 } else if (newlySelected == "Yearly") {
