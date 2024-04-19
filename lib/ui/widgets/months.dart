@@ -6,6 +6,7 @@ import 'package:deadlines/persistence/model.dart';
 import 'package:deadlines/ui/controller/months_controller.dart';
 import 'package:deadlines/ui/defaults.dart';
 import 'package:deadlines/ui/widgets/card_in_list.dart';
+import 'package:deadlines/ui/widgets/deadline_list.dart';
 import 'package:deadlines/utils/ui/fitted_text.dart';
 import 'package:deadlines/utils/ui/not_dumb_grid_view.dart';
 import 'package:deadlines/utils/utils.dart';
@@ -16,15 +17,16 @@ import 'package:multi_split_view/multi_split_view.dart';
 
 import '../controller/parent_controller.dart';
 
-
+/// Months View, shows overview of a single month (both calendar and list) and allows switching between months
 class MonthsView extends StatefulWidget {
+  /// Appropriate MonthsController (should exist only once per app instance, but only set in one active ui instance)
   final MonthsController controller;
   const MonthsView(this.controller, {super.key});
 
-  @override MonthsViewState createState() => MonthsViewState();
+  @override State<MonthsView> createState() => _MonthsViewState();
 }
 
-class MonthsViewState extends State<MonthsView> {
+class _MonthsViewState extends State<MonthsView> {
   MonthsController get c => widget.controller;
 
   late MultiSplitViewController _controller;
@@ -66,7 +68,7 @@ class MonthsViewState extends State<MonthsView> {
                 c.ratio = _controller.areas[0].weight!;
                 c.safeRatio();
               },
-              children: [MonthsCalendarView(c), CurrentSelectionListView(c,)]
+              children: [_MonthsCalendarView(c), _CurrentSelectionListView(c,)]
             )
           ),),
           _MonthsViewFooter(c)
@@ -77,33 +79,33 @@ class MonthsViewState extends State<MonthsView> {
 }
 
 
-class MonthsCalendarView extends StatefulWidget {
+class _MonthsCalendarView extends StatefulWidget {
   final MonthsController c;
-  const MonthsCalendarView(this.c, {super.key});
-  @override State<MonthsCalendarView> createState() => _MonthsCalendarViewState();
+  const _MonthsCalendarView(this.c);
+  @override State<_MonthsCalendarView> createState() => _MonthsCalendarViewState();
 }
 
-class _MonthsCalendarViewState extends State<MonthsCalendarView> {
+class _MonthsCalendarViewState extends State<_MonthsCalendarView> {
   MonthsController get c => widget.c;
 
-  late PageController controller;
-  int getPage(DateTime d) => d.year*12 + d.month;
-  (int, int) getYearMonthFromPage(int page) => ((page / 12).floor() - (page % 12 == 0 ? 1 : 0), page % 12 == 0 ? 12 : page % 12);
+  late PageController _controller;
+  int _getPage(DateTime d) => d.year*12 + d.month;
+  (int, int) _getYearMonthFromPage(int page) => ((page / 12).floor() - (page % 12 == 0 ? 1 : 0), page % 12 == 0 ? 12 : page % 12);
 
-  Iterable<Deadline>? deadlines;
+  Iterable<Deadline>? _deadlines;
 
   @override void initState() {
     super.initState();
-    controller = PageController(initialPage: getPage(c.getSelectedMonth()));
-    controller.addListener(() {
-      var (year, month) = getYearMonthFromPage(controller.page!.round());
+    _controller = PageController(initialPage: _getPage(c.getSelectedMonth()));
+    _controller.addListener(() {
+      var (year, month) = _getYearMonthFromPage(_controller.page!.round());
       c.setSelection(DateTime(year, month, 1), null);
     });
     c.addContentListener(reloadCalendar);
     reloadCalendar();
   }
   @override void dispose() {
-    controller.dispose();
+    _controller.dispose();
     c.removeContentListener(reloadCalendar);
     super.dispose();
   }
@@ -112,7 +114,7 @@ class _MonthsCalendarViewState extends State<MonthsCalendarView> {
     c.ensureAllRelevantDeadlinesInCache().then((_) {
       c.getFlatCache().then((deadlines) {
         setState(() {
-          this.deadlines = deadlines;
+          _deadlines = deadlines;
         });
       });
     });
@@ -120,9 +122,9 @@ class _MonthsCalendarViewState extends State<MonthsCalendarView> {
 
   @override Widget build(BuildContext context) {
     return PageView.builder(
-      controller: controller,
+      controller: _controller,
       itemBuilder: (context, page) {
-        var (year, month) = getYearMonthFromPage(page);
+        var (year, month) = _getYearMonthFromPage(page);
         var firstDayInMonth = DateTime(year, month, 1);
 
         return Column(
@@ -138,7 +140,7 @@ class _MonthsCalendarViewState extends State<MonthsCalendarView> {
                 );
 
                 if(tappedMonth is DateTime) {
-                  controller.animateToPage(getPage(tappedMonth), duration: const Duration(milliseconds: 500), curve: Curves.linear);
+                  _controller.animateToPage(_getPage(tappedMonth), duration: const Duration(milliseconds: 500), curve: Curves.linear);
                 }
               },
               child: Row(
@@ -146,7 +148,7 @@ class _MonthsCalendarViewState extends State<MonthsCalendarView> {
                 children: [
                   IconButton(
                     onPressed: () {
-                      controller.previousPage(duration: const Duration(milliseconds: 250), curve: Curves.elasticIn);
+                      _controller.previousPage(duration: const Duration(milliseconds: 250), curve: Curves.elasticIn);
                     },
                     icon: const Icon(Icons.keyboard_double_arrow_left)
                   ),
@@ -157,15 +159,15 @@ class _MonthsCalendarViewState extends State<MonthsCalendarView> {
                   ),
                   IconButton(
                     onPressed: () {
-                      controller.nextPage(duration: const Duration(milliseconds: 250), curve: Curves.elasticIn);
+                      _controller.nextPage(duration: const Duration(milliseconds: 250), curve: Curves.elasticIn);
                     },
                     icon: const Icon(Icons.keyboard_double_arrow_right)
                   ),
                 ],
               ),
             ),
-            Expanded(child: BigMonthView(
-              year: year, month: month, c: c, deadlines: deadlines,
+            Expanded(child: _BigMonthView(
+              c: c, year: year, month: month, deadlines: _deadlines, showWeekdayLabels: true,
               onTapped: (day) {
                 if (c.getSelectedDay() != null && isSameDay(c.getSelectedDay()!, day)) return;
                 if(isSameMonth(day, firstDayInMonth)) {
@@ -182,321 +184,45 @@ class _MonthsCalendarViewState extends State<MonthsCalendarView> {
   }
 }
 
-class CurrentSelectionListView extends StatefulWidget {
-  final MonthsController controller;
-  const CurrentSelectionListView(this.controller, {super.key});
 
-  @override State<CurrentSelectionListView> createState() => _CurrentSelectionListViewState();
-}
-
-class _CurrentSelectionListViewState extends State<CurrentSelectionListView> {
-  MonthsController get c => widget.controller;
-
-  late ScrollController listController;
-  @override void initState() {
-    super.initState();
-    listController = ScrollController(initialScrollOffset: c.scrollOffset);
-    listController.addListener(() {c.scrollOffset = listController.offset;});
-    c.addContentListener(reload);
-  }
-  @override void dispose() {
-    super.dispose();
-    listController.dispose();
-    c.removeContentListener(reload);
-  }
-
-  void reload() {
-    setState(() {});
-    if(c.scrollOffset != listController.offset) {
-      listController.animateTo(c.scrollOffset, duration: const Duration(milliseconds: 250), curve: Curves.decelerate).then((_) {
-        c.scrollOffset = listController.offset;
-      });
-    }
-  }
-  Future<List<((DateTime, DateTime), List<Deadline>)>> buildListForSelection() async {
-    var deadlines = await c.queryOrRetrieveCurrentMonth();
-
-    final List<((DateTime, DateTime), List<Deadline>)> shownBelow = [];
-
-    if (c.getSelectedDay() != null) {
-      shownBelow.add(((c.getSelectedDay()!, c.getSelectedDay()!), c.getDeadlinesOnDay(c.getSelectedDay()!, candidates: deadlines, showDaily: true)));
-    } else {
-      //todo: improve readability and maintainability of this insanity:
-      var now = DateTime.now();
-      var firstDayInMonth = c.getFirstDayInSelectedMonth();
-
-      var occurrencesInMonth = <Deadline, List<DateTime>>{};
-      DateTime i = firstDayInMonth;
-      while(i.month == firstDayInMonth.month) {
-        var ds = c.getDeadlinesOnDay(i, candidates: deadlines);
-        for(var d in ds) {
-          occurrencesInMonth.update(d, (v) => v + [i], ifAbsent: () => [i]);
-        }
-        i = DateTime(i.year, i.month, i.day+1);
-      }
-      var combined = <(DateTime, DateTime), List<Deadline>>{};
-      for(var e in occurrencesInMonth.entries) {
-        var actualStart = (e.key.startsAt??e.key.deadlineAt!).date.isOnThisDay(e.value.first)? e.value.first : (e.key.startsAt??e.key.deadlineAt!).lastOccurrenceBefore(e.value.first) ?? e.value.first;
-        DateTime i = DateTime(actualStart.year, actualStart.month, actualStart.day);
-        var numSkip = isSameDay(e.value.first, i) ? 1 : 0;
-        var rangeStart = i;
-        var last = rangeStart;
-        for(var dt in e.value.skip(numSkip)) {
-          i = DateTime(i.year, i.month, i.day+1);
-          if(i.isBefore(firstDayInMonth)) i = firstDayInMonth;
-          if(!isSameDay(dt, i) || e.key.deadlineAt!.date.isDaily()) {
-            combined.update((rangeStart, last), (v) => v + [e.key], ifAbsent: () => [e.key]);
-            rangeStart = dt;
-          }
-          last = dt;
-          i = dt;
-        }
-        var actualEnd = e.key.deadlineAt!.nextOccurrenceAfter(rangeStart)?? last;
-        combined.update((rangeStart, DateTime(actualEnd.year, actualEnd.month, actualEnd.day)), (v) => v + [e.key], ifAbsent: () => [e.key]);
-      }
-      shownBelow.addAll(sorted(
-        combined.entries.map((e) => (e.key, sort(e.value, (a, b) {
-          if(a.startsAt != null && a.startsAt!.isOverdue(now)) {
-            return a.deadlineAt!.time.compareTo(b.deadlineAt!.time);
-          }
-          return nullableCompare(a.startsAt?.time ?? a.deadlineAt?.time, b.startsAt?.time ?? b.deadlineAt?.time);
-        },))),
-        (a, b) {
-          if(a.$1.$1.isAfter(now)) {
-            var diffA = a.$1.$1.difference(a.$1.$2).inDays;
-            var diffB = b.$1.$1.difference(b.$1.$2).inDays;
-            if(diffA == diffB) {
-              var compare = a.$1.$2.compareTo(b.$1.$2);
-              if(compare != 0) return compare;
-            }
-            var compare = a.$1.$1.compareTo(b.$1.$1);
-            if(compare == 0) return diffB - diffA;
-            return compare;
-          }
-          var compare = a.$1.$1.compareTo(b.$1.$1);
-          if(compare == 0) {
-            var diffA = a.$1.$1.difference(a.$1.$2).inDays;
-            var diffB = b.$1.$1.difference(b.$1.$2).inDays;
-            return diffB - diffA;
-          }
-          return compare;
-        },)
-      );
-    }
-
-    return shownBelow;
-  }
-
-  @override Widget build(BuildContext context) {
-    return FutureBuilder(
-        future: buildListForSelection(),
-        builder: (context, snapshot) {
-          if(!snapshot.hasData) return Container();
-          return GestureDetector(
-            onTap: () => c.setDayUnselected(),
-            child: ListView.builder(
-              controller: listController,
-              itemCount: snapshot.data!.length,
-              itemBuilder: (context, index) {
-                var ((dtr1, dtr2), ds) = snapshot.data![index];
-                return ListView.builder(
-                  shrinkWrap: true,
-                  physics: const ClampingScrollPhysics(),
-                  itemCount: ds.isEmpty?0:1+ds.length,
-                  padding: const EdgeInsets.all(5),
-                  itemBuilder: (context, index) {
-                    if(index == 0) {
-                      return Text(
-                        isSameDay(dtr1, dtr2)?
-                          "${pad0(dtr1.day)}.${pad0(dtr1.month)}.${dtr1.year} (${shortWeekdayString(dtr1)})"
-                          :
-                          "${pad0(dtr1.day)}.${pad0(dtr1.month)}.${dtr1.year} (${shortWeekdayString(dtr1)}) - ${pad0(dtr2.day)}.${pad0(dtr2.month)}.${dtr2.year}(${shortWeekdayString(dtr2)})"
-                      );
-                    }
-                    var d = ds[index-1];
-                    return DeadlineCard(
-                      d,
-                      dtr1,
-                      (d) => c.parent.editDeadline(context, d.id!),
-                      (d) => c.parent.deleteDeadline(context, d, dtr1),
-                      (d) => c.parent.toggleDeadlineActiveOnOrAfter(context, d, dtr1),
-                      (d, nrdt) => c.parent.toggleDeadlineNotificationType(d, nrdt),
-                    );
-                  }
-                );
-              },
-            ),
-          );
-        }
-    );
-  }
-}
-
-
-class _MonthsViewFooter extends StatefulWidget {
+class _BigMonthView extends StatelessWidget {
   final MonthsController c;
-  const _MonthsViewFooter(this.c);
+  final Iterable<Deadline>? _deadlines;
+  final int _year;
+  final int _month;
 
-  @override State<_MonthsViewFooter> createState() => _MonthsViewFooterState();
-}
+  final Function(DateTime) _onDayTapped;
 
-class _MonthsViewFooterState extends State<_MonthsViewFooter> {
-  @override Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.start,
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        const SizedBox(width: 10,),
-        GestureDetector(
-          child: const Icon(Icons.settings,),
-          onTap: () async {
-            showDialog(context: context, builder: (BuildContext context) {
-              return AlertDialog(
-                title: const Text("Are these settings?"),
-                alignment: Alignment.center,
-                titleTextStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
-                actionsAlignment: MainAxisAlignment.center,
-                actionsOverflowAlignment: OverflowBarAlignment.center,
-                actions: [
-                  SizedBox(width: double.infinity, child: ElevatedButton(onPressed: () async {
-                    widget.c.parent.db.queryDeadlinesActiveAtAllOrTimelessOrAfter(DateTime.now(), requireActive: false).then((all) {
-                      for(var d in all) {
-                        DeadlineAlarms.updateAlarmsFor(d);
-                      }
-                    });
-
-                    Fluttertoast.showToast(
-                      msg: "Reloaded",
-                      backgroundColor: Colors.white,
-                      textColor: Colors.black,
-                      toastLength: Toast.LENGTH_SHORT
-                    );
-
-                    if(!context.mounted) return;
-                    Navigator.of(context).pop();
-                  }, child: const Text("reload all alarms"))),
-                  SizedBox(width: double.infinity, child: ElevatedButton(onPressed: () async {
-                    String builder = "";
-                    for (Deadline d in await widget.c.parent.db.selectAll()) {
-                      if (!d.activeAtAll) builder += "(\n  ";
-                      builder += "${d.title}\n";
-                      if(d.description.isNotEmpty) {
-                        builder += "    ${d.description}\n";
-                      }
-                      if (d.isTimeless()) {
-                        builder += "    ${d.importance.name}\n";
-                      } else {
-                        if (d.hasRange()) {
-                          builder += "    ${d.startsAt?.date}-${d.startsAt?.time} -> ${d.deadlineAt?.date}-${d.deadlineAt?.time}\n";
-                        } else {
-                          builder += "    ${d.deadlineAt?.date}-${d.deadlineAt?.time}\n";
-                        }
-                        builder += "    repeats ${d.deadlineAt?.date.repetitionType.name}\n";
-                        if(d.removals.isNotEmpty) {
-                          builder += "    removals ${d.removals.where((r) => !r.allFuture).map((r) => "${r.day}")}\n";
-                          if(d.removals.where((r) => r.allFuture).isNotEmpty) {
-                            builder += "    until ${d.removals.where((r) => r.allFuture).firstOrNull?.day}\n";
-                          }
-                        }
-                      }
-                      if (!d.activeAtAll) builder += ")\n";
-                      builder += "\n\n";
-                    }
-                    if(!context.mounted) return;
-                    await showDialog(context: context, builder: (context) {
-                      return SimpleDialog(
-                        title: const Text("Calendar as Text: "),
-                        children: [
-                          TextField(
-                            controller: TextEditingController(text: builder),
-                            minLines: 10,
-                            maxLines: 10,
-                          )
-                        ],
-                      );
-                    },);
-
-                    if(!context.mounted) return;
-                    Navigator.of(context).pop();
-                  }, child: const Text("save backup"))),
-                ]
-              );
-            });
-          }
-        ),
-        const SizedBox(width: 20,),
-        DropdownButton<String>(
-          alignment: Alignment.centerRight,
-          items: ["Show Active", "Show Month"].map((String value) {
-            return DropdownMenuItem<String>(
-              value: value,
-              child: Text(value),
-            );
-          }).toList(),
-          onChanged: (newlySelected) => setState(() {
-            widget.c.parent.showWhat = ShownType.values[["Show Active", "Show Month"].indexOf(newlySelected!)];
-            widget.c.parent.invalidateAllCaches().then((_) => widget.c.notifyContentsChanged());
-          }),
-          value: ["Show Active", "Show Month"][widget.c.parent.showWhat.index],
-        ),
-        const SizedBox(width: 20,),
-        DropdownButton<String>(
-          alignment: Alignment.centerRight,
-          items: ["Hide Daily", "Show Daily"].map((String value) {
-            return DropdownMenuItem<String>(
-              value: value,
-              child: Text(value),
-            );
-          }).toList(),
-          onChanged: (newlySelected) => setState(() {
-            widget.c.showDaily = newlySelected == "Show Daily";
-            widget.c.parent.invalidateAllCaches().then((_) => widget.c.notifyContentsChanged());
-          }),
-          value: widget.c.showDaily ? "Show Daily":"Hide Daily",
-        ),
-      ],
-    );
-  }
-}
-
-class BigMonthView extends StatelessWidget {
-  final MonthsController c;
-  final Iterable<Deadline>? deadlines;
-  final int year;
-  final int month;
-
-  final Function(DateTime) onTapped;
-
-  final bool showWeekdayLabels;
-  const BigMonthView({super.key, required this.year, required this.month, required this.c, required this.onTapped, this.showWeekdayLabels = true, required this.deadlines});
+  final bool _showWeekdayLabels;
+  const _BigMonthView({required int year, required int month, required this.c, required dynamic Function(DateTime) onTapped, bool showWeekdayLabels = true, required Iterable<Deadline>? deadlines})
+      : _showWeekdayLabels = showWeekdayLabels, _onDayTapped = onTapped, _month = month, _year = year, _deadlines = deadlines;
 
   @override Widget build(BuildContext context) {
-    int firstWeekdayDay = DateTime(year, month, 1).weekday;
-    var firstDayInMonth = DateTime(year, month, 1);
-    var firstDayOfNextMonth = DateTime(year, month+1, 1);
+    int firstWeekdayDay = DateTime(_year, _month, 1).weekday;
+    var firstDayInMonth = DateTime(_year, _month, 1);
+    var firstDayOfNextMonth = DateTime(_year, _month+1, 1);
     var numDaysInMonth = (firstWeekdayDay-1) + DateTimeRange(start: firstDayInMonth, end: firstDayOfNextMonth).duration.inDays;
 
     List<(Deadline?, Importance?)> lastDrawnAtIndex = [];
     return NotDumbGridView(
       xCount: 7,
-      yCount: (numDaysInMonth / 7).ceil() + (showWeekdayLabels?1:0), //if correct size, not all same size which looks bad
+      yCount: (numDaysInMonth / 7).ceil() + (_showWeekdayLabels?1:0), //if correct size, not all same size which looks bad
       builder: (i) {
-        if(showWeekdayLabels && i < 7) {
+        if(_showWeekdayLabels && i < 7) {
           return Center(child: Text(weekdayStrings[i]));
         }
-        var current = firstDayInMonth.add(Duration(days: -firstWeekdayDay + (i-(showWeekdayLabels?6:0))));
+        var current = firstDayInMonth.add(Duration(days: -firstWeekdayDay + (i-(_showWeekdayLabels?6:0))));
         return GestureDetector(
-          behavior: HitTestBehavior.translucent,
-          onTap: () => onTapped(current),
-          child: buildWidgetForDay(current, showWeekdayLabels ? i == 7 : i == 0, lastDrawnAtIndex, context)
+            behavior: HitTestBehavior.translucent,
+            onTap: () => _onDayTapped(current),
+            child: _buildWidgetForDay(current, _showWeekdayLabels ? i == 7 : i == 0, lastDrawnAtIndex, context)
         );
       },
     );
   }
 
-
-  Widget buildWidgetForDay(DateTime day, bool firstDayDrawn, List<(Deadline?, Importance?)> lastDrawnAtIndex, BuildContext context) {
-    Iterable<Deadline> events = deadlines == null? [] : c.getDeadlinesOnDay(day, candidates: deadlines!);
+  Widget _buildWidgetForDay(DateTime day, bool firstDayDrawn, List<(Deadline?, Importance?)> lastDrawnAtIndex, BuildContext context) {
+    Iterable<Deadline> events = _deadlines == null? [] : c.getDeadlinesShownOnDay(day, candidates: _deadlines!);
     var today = stripTime(DateTime.now());
 
     ShapeDecoration decoration;
@@ -704,10 +430,226 @@ class BigMonthView extends StatelessWidget {
       clipBehavior: Clip.hardEdge,
       child: Column(children: children),
     );
-    if (day.year != year || day.month != month) {
+    if (day.year != _year || day.month != _month) {
       return Opacity(opacity: 0.2, child: container);
     } else {
       return container;
     }
+  }
+}
+
+
+class _CurrentSelectionListView extends StatefulWidget {
+  final MonthsController controller;
+  const _CurrentSelectionListView(this.controller);
+
+  @override State<_CurrentSelectionListView> createState() => _CurrentSelectionListViewState();
+}
+
+class _CurrentSelectionListViewState extends State<_CurrentSelectionListView> {
+  MonthsController get c => widget.controller;
+
+  late ScrollController _listController;
+  @override void initState() {
+    super.initState();
+    _listController = ScrollController(initialScrollOffset: c.scrollOffset);
+    _listController.addListener(() {c.scrollOffset = _listController.offset;});
+    c.addContentListener(_reload);
+  }
+  @override void dispose() {
+    super.dispose();
+    _listController.dispose();
+    c.removeContentListener(_reload);
+  }
+
+  void _reload() {
+    setState(() {});
+    if(c.scrollOffset != _listController.offset) {
+      _listController.animateTo(c.scrollOffset, duration: const Duration(milliseconds: 250), curve: Curves.decelerate).then((_) {
+        c.scrollOffset = _listController.offset;
+      });
+    }
+  }
+
+  @override Widget build(BuildContext context) {
+    return ListOfGroupedDeadlinesWidget(
+      c.parent, listFuture: _buildListForSelection(), scrollController: _listController,
+      onTappedOutsideItems: () => c.setDayUnselected(),
+    );
+  }
+
+  Future<List<Group>> _buildListForSelection() async {
+    var deadlines = await c.queryOrRetrieveCurrentMonth();
+
+    if (c.getSelectedDay() != null) {
+      return [Group.fromDay(
+        c.getSelectedDay()!,
+        c.getDeadlinesShownOnDay(c.getSelectedDay()!, candidates: deadlines, showDaily: true)
+      ),];
+    } else {
+      var firstDayInMonth = c.getFirstDayInSelectedMonth();
+
+      var occurrencesInMonth = <Deadline, List<DateTime>>{};
+      DateTime i = firstDayInMonth;
+      while(i.month == firstDayInMonth.month) {
+        var ds = c.getDeadlinesShownOnDay(i, candidates: deadlines);
+        for(var d in ds) {
+          occurrencesInMonth.update(d, (v) => v + [i], ifAbsent: () => [i]);
+        }
+        i = DateTime(i.year, i.month, i.day+1);
+      }
+
+      var combined = <(DateTime, DateTime), List<Deadline>>{};
+      for(var e in occurrencesInMonth.entries) {
+        var actualStart = (e.key.startsAt??e.key.deadlineAt!).date.isOnThisDay(e.value.first)? e.value.first : (e.key.startsAt??e.key.deadlineAt!).lastOccurrenceBefore(e.value.first) ?? e.value.first;
+        DateTime i = DateTime(actualStart.year, actualStart.month, actualStart.day);
+        var numSkip = isSameDay(e.value.first, i) ? 1 : 0;
+        var rangeStart = i;
+        var last = rangeStart;
+        for(var dt in e.value.skip(numSkip)) {
+          i = DateTime(i.year, i.month, i.day+1);
+          if(i.isBefore(firstDayInMonth)) i = firstDayInMonth;
+          if(!isSameDay(dt, i) || e.key.deadlineAt!.date.isDaily()) {
+            combined.update((rangeStart, last), (v) => v + [e.key], ifAbsent: () => [e.key]);
+            rangeStart = dt;
+          }
+          last = dt;
+          i = dt;
+        }
+        var actualEnd = e.key.deadlineAt!.nextOccurrenceAfter(rangeStart)?? last;
+        combined.update((rangeStart, DateTime(actualEnd.year, actualEnd.month, actualEnd.day)), (v) => v + [e.key], ifAbsent: () => [e.key]);
+      }
+
+      return sortedGroupList(combined.entries.map((e) => Group.fromRange(e.key.$1, e.key.$2, e.value,)));
+    }
+  }
+}
+
+
+class _MonthsViewFooter extends StatefulWidget {
+  final MonthsController c;
+  const _MonthsViewFooter(this.c);
+
+  @override State<_MonthsViewFooter> createState() => _MonthsViewFooterState();
+}
+
+class _MonthsViewFooterState extends State<_MonthsViewFooter> {
+  @override Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        const SizedBox(width: 10,),
+        GestureDetector(
+          child: const Icon(Icons.settings,),
+          onTap: () => _showSettingsDialog(),
+        ),
+        const SizedBox(width: 20,),
+        DropdownButton<String>(
+          alignment: Alignment.centerRight,
+          items: ["Show Active", "Show Month"].map((String value) {
+            return DropdownMenuItem<String>(
+              value: value,
+              child: Text(value),
+            );
+          }).toList(),
+          onChanged: (newlySelected) => setState(() {
+            widget.c.parent.showWhat = ShownType.values[["Show Active", "Show Month"].indexOf(newlySelected!)];
+            widget.c.parent.invalidateAllCaches().then((_) => widget.c.notifyContentsChanged());
+          }),
+          value: ["Show Active", "Show Month"][widget.c.parent.showWhat.index],
+        ),
+        const SizedBox(width: 20,),
+        DropdownButton<String>(
+          alignment: Alignment.centerRight,
+          items: ["Hide Daily", "Show Daily"].map((String value) {
+            return DropdownMenuItem<String>(
+              value: value,
+              child: Text(value),
+            );
+          }).toList(),
+          onChanged: (newlySelected) => setState(() {
+            widget.c.showDaily = newlySelected == "Show Daily";
+            widget.c.parent.invalidateAllCaches().then((_) => widget.c.notifyContentsChanged());
+          }),
+          value: widget.c.showDaily ? "Show Daily":"Hide Daily",
+        ),
+      ],
+    );
+  }
+
+  Future<void> _showSettingsDialog() async {
+    await showDialog(context: context, builder: (BuildContext context) {
+      return AlertDialog(
+        title: const Text("Are these settings?"),
+        alignment: Alignment.center,
+        titleTextStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+        actionsAlignment: MainAxisAlignment.center,
+        actionsOverflowAlignment: OverflowBarAlignment.center,
+        actions: [
+          SizedBox(width: double.infinity, child: ElevatedButton(onPressed: () async {
+            widget.c.parent.db.queryDeadlinesActiveAtAllOrTimelessOrAfter(DateTime.now(), requireActive: false).then((all) {
+              for(var d in all) {
+                DeadlineAlarms.updateAlarmsFor(d);
+              }
+            });
+
+            Fluttertoast.showToast(
+                msg: "Reloaded",
+                backgroundColor: Colors.white,
+                textColor: Colors.black,
+                toastLength: Toast.LENGTH_SHORT
+            );
+
+            if(!context.mounted) return;
+            Navigator.of(context).pop();
+          }, child: const Text("reload all alarms"))),
+          SizedBox(width: double.infinity, child: ElevatedButton(onPressed: () async {
+            String builder = "";
+            for (Deadline d in await widget.c.parent.db.selectAll()) {
+              if (!d.activeAtAll) builder += "(\n  ";
+              builder += "${d.title}\n";
+              if(d.description.isNotEmpty) {
+                builder += "    ${d.description}\n";
+              }
+              if (d.isTimeless()) {
+                builder += "    ${d.importance.name}\n";
+              } else {
+                if (d.hasRange()) {
+                  builder += "    ${d.startsAt?.date}-${d.startsAt?.time} -> ${d.deadlineAt?.date}-${d.deadlineAt?.time}\n";
+                } else {
+                  builder += "    ${d.deadlineAt?.date}-${d.deadlineAt?.time}\n";
+                }
+                builder += "    repeats ${d.deadlineAt?.date.repetitionType.name}\n";
+                if(d.removals.isNotEmpty) {
+                  builder += "    removals ${d.removals.where((r) => !r.allFuture).map((r) => "${r.day}")}\n";
+                  if(d.removals.where((r) => r.allFuture).isNotEmpty) {
+                    builder += "    until ${d.removals.where((r) => r.allFuture).firstOrNull?.day}\n";
+                  }
+                }
+              }
+              if (!d.activeAtAll) builder += ")\n";
+              builder += "\n\n";
+            }
+            if(!context.mounted) return;
+            await showDialog(context: context, builder: (context) {
+              return SimpleDialog(
+                title: const Text("Calendar as Text: "),
+                children: [
+                  TextField(
+                    controller: TextEditingController(text: builder),
+                    minLines: 10,
+                    maxLines: 10,
+                  )
+                ],
+              );
+            },);
+
+            if(!context.mounted) return;
+            Navigator.of(context).pop();
+          }, child: const Text("save backup"))),
+        ]
+      );
+    });
   }
 }

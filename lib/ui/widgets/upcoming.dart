@@ -5,14 +5,16 @@ import 'package:deadlines/notifications/alarm_external_wrapper/notify_wrapper.da
 import 'package:deadlines/ui/controller/upcoming_controller.dart';
 import 'package:deadlines/ui/widgets/card_in_list.dart';
 import 'package:deadlines/persistence/model.dart';
+import 'package:deadlines/ui/widgets/deadline_list.dart';
 import 'package:deadlines/ui/widgets/timers.dart';
 import 'package:deadlines/utils/utils.dart';
 import 'package:flutter/material.dart';
 import '../../notifications/deadline_alarm_manager.dart';
 import '../controller/parent_controller.dart';
 
-
+/// Upcoming View, shows list of all relevant deadlines (timeless, active and future)
 class UpcomingView extends StatefulWidget {
+  /// Appropriate UpcomingController (should exist only once per app instance, but only set in one active ui instance)
   final UpcomingController controller;
   const UpcomingView(this.controller, {super.key});
 
@@ -29,7 +31,7 @@ class _UpcomingViewState extends State<UpcomingView> {
       ),
       body: SafeArea(child: Column(
         children: [
-          Expanded(child: UpcomingListView(c)),
+          Expanded(child: _UpcomingListView(c)),
           _UpcomingViewFooter(c),
         ],
       )),
@@ -38,46 +40,52 @@ class _UpcomingViewState extends State<UpcomingView> {
 }
 
 
-class UpcomingListView extends StatefulWidget {
+class _UpcomingListView extends StatefulWidget {
   final UpcomingController controller;
-  const UpcomingListView(this.controller, {super.key});
+  const _UpcomingListView(this.controller);
 
-  @override State<UpcomingListView> createState() => _UpcomingListViewState();
+  @override State<_UpcomingListView> createState() => _UpcomingListViewState();
 }
 
-class _UpcomingListViewState extends State<UpcomingListView> {
+class _UpcomingListViewState extends State<_UpcomingListView> {
   UpcomingController get c => widget.controller;
 
-  late ScrollController listController;
+  late ScrollController _listController;
   @override void initState() {
     super.initState();
-    listController = ScrollController(initialScrollOffset: c.scrollOffset);
-    listController.addListener(() {c.scrollOffset = listController.offset;});
-    c.addContentListener(reload);
+    _listController = ScrollController(initialScrollOffset: c.scrollOffset);
+    _listController.addListener(() {c.scrollOffset = _listController.offset;});
+    c.addContentListener(_reload);
   }
   @override void dispose() {
     super.dispose();
-    listController.dispose();
-    c.removeContentListener(reload);
+    _listController.dispose();
+    c.removeContentListener(_reload);
   }
-  void reload() => setState(() {});
+  void _reload() => setState(() {});
 
-  Future<List<(String, DateTime?, List<Deadline?>)>> buildUpcomingList() async {
-    final List<(String, DateTime?, List<Deadline?>)> upcoming = [];
+  @override Widget build(BuildContext context) {
+    return ListOfGroupedDeadlinesWidget(c.parent, listFuture: _buildUpcomingList(), scrollController: _listController);
+  }
+
+  Future<List<Group>> _buildUpcomingList() async {
     var deadlines = await c.queryRelevantDeadlines();
     var now = DateTime.now();
-    upcoming.clear();
-    upcoming.add((
-      "ToDo (${camel(Importance.critical.name)})", null,
+
+    final List<Group> upcoming = [];
+
+    upcoming.add(Group.fromTimeless(
+      Importance.critical,
       deadlines.where(
         (d) => d.isTimeless() && d.importance == Importance.critical && (d.activeAtAll || c.parent.showWhat == ShownType.showAll)
-      ).toList(growable: false)
+      )
     ));
-    if (upcoming.last.$3.isNotEmpty) upcoming.add(("", null, []));
+    if (upcoming.last.content.isNotEmpty) upcoming.add(Group.emptySpace());
 
-    //todo: improve readability and maintainability of this insanity:
-    List<Deadline> oneTimeEvents = deadlines.where((d) => !d.isTimeless() && !d.isRepeating()).toList();
+
     Map<(DateTime, DateTime), List<Deadline>> eventsOnEachDay = {};
+
+    var oneTimeEvents = deadlines.where((d) => !d.isTimeless() && !d.isRepeating());
     for (var d in oneTimeEvents) {
       if (!(d.isActiveOn(now) || c.parent.showWhat == ShownType.showAll)) continue;
       var cutOff = (d.startsAt ?? d.deadlineAt!).toDateTime();
@@ -90,14 +98,13 @@ class _UpcomingListViewState extends State<UpcomingListView> {
         eventsOnEachDay.update((stripTime(c1), stripTime(c2)), (v) => v + [d], ifAbsent: () => [d]);
       }
     }
-    var potentiallyOverdueRepeating = deadlines.where(
-      (d) => d.isRepeating() && d.activeAfter != null && d.activeAfter!.isBefore(DateTime.now())
-    );
+
+    var potentiallyOverdueRepeating = deadlines.where((d) => d.isRepeating() && d.activeAfter != null && d.activeAfter!.isBefore(now));
     for (var d in potentiallyOverdueRepeating) {
       var dayCounter = d.activeAfter;
-      while (dayCounter != null && dayCounter.isBefore(DateTime.now())) {
+      while (dayCounter != null && dayCounter.isBefore(now)) {
         var cutOff = (d.startsAt ?? d.deadlineAt!).nextOccurrenceAfter(dayCounter);
-        if(cutOff == null || !cutOff.isBefore(DateTime.now())) break;
+        if(cutOff == null || !cutOff.isBefore(now)) break;
         var c1 = stripTimeNullable(cutOff);
         var c2 = c1;
         if (d.startsAt != null && !d.startsAt!.date.isSameDay(d.deadlineAt!.date)) {
@@ -109,84 +116,46 @@ class _UpcomingListViewState extends State<UpcomingListView> {
         dayCounter = cutOff != dayCounter? cutOff : dayCounter.add(const Duration(days: 1));
       }
     }
-    eventsOnEachDay.putIfAbsent((stripTime(now), stripTime(now)), () => []);
-    var eventsOnEachDaySorted = eventsOnEachDay.entries.map((e) => (
-    e.key,
-    sort(e.value, (a, b) {
-      if (a.startsAt != null && a.startsAt!.isOverdue(now)) {
-        return a.deadlineAt!.compareTo(b.deadlineAt!);
-      }
-      return nullableCompare((a.startsAt??a.deadlineAt)?.time, (b.startsAt??b.deadlineAt)?.time);
-    },)
-    )).toList();
-    eventsOnEachDaySorted.sort((a, b) {
-      var compare = (a.$1.$1.isAfter(now) ? 1 : 0).compareTo((b.$1.$1.isAfter(now) ? 1 : 0));
-      if (compare == 0) return a.$1.$2.compareTo(b.$1.$2);
-      if (a.$1.$1.isAfter(now)) {
-        var diffA = a.$1.$1.difference(a.$1.$2).inDays;
-        var diffB = b.$1.$1.difference(b.$1.$2).inDays;
-        if (diffA == diffB) {
-          var compare = a.$1.$2.compareTo(b.$1.$2);
-          if (compare != 0) return compare;
-        }
-        var compare = a.$1.$1.compareTo(b.$1.$1);
-        if (compare == 0) return diffB - diffA;
-        return compare;
-      }
-      compare = a.$1.$1.compareTo(b.$1.$1);
-      if (compare == 0) {
-        var diffA = a.$1.$1.difference(a.$1.$2).inDays;
-        var diffB = b.$1.$1.difference(b.$1.$2).inDays;
-        return diffB - diffA;
-      }
-      return compare;
-    },);
+    eventsOnEachDay.putIfAbsent((stripTime(now), stripTime(now)), () => []); //ensure today exists in list
 
+    var eventsOnEachDaySorted = sortedGroupList(eventsOnEachDay.entries.map((e) => Group.fromRange(e.key.$1, e.key.$2, e.value,)));
     (DateTime, bool, bool)? last;
     upcoming.addAll(eventsOnEachDaySorted.map((e) {
-      var (r1, r2) = e.$1;
-      var list = e.$2;
+      var list = e.content;
       var newList = <Deadline?>[];
       if(last!=null && last!.$3 && isSameDay(last!.$1, now)) {
         newList.add(null);
       }
-      if(isSameDay(r1, now)) {
+      if(isSameDay(e.startDay!, now)) {
         newList.add(null);
         newList.add(null);
         if(list.isEmpty) {
-          last = (r1, false, true);
+          last = (e.startDay!, false, true);
         }
       }
-      for (Deadline d in list) {
-        bool isOverdue = d.isRepeating() || d.isOverdue(now);
+      for (Deadline? d in list) {
+        bool isOverdue = d != null && (d.isRepeating() || d.isOverdue(now));
         if (last != null && last!.$2 != isOverdue) {
           newList.add(null);
         }
-        if (last != null && last!.$1.month != r1.month) {
+        if (last != null && last!.$1.month != e.startDay!.month) {
           newList.add(null);
         }
         newList.add(d);
-        last = (r1, isOverdue, false);
+        last = (e.startDay!, isOverdue, false);
       }
-      return (
-        isSameDay(r1, r2) ?
-          "${pad0(r1.day)}.${pad0(r1.month)}.${r1.year} (${shortWeekdayString(r1)})"
-            :
-          "${pad0(r1.day)}.${pad0(r1.month)}.${r1.year} (${shortWeekdayString(r1)}) - ${pad0(r2.day)}.${pad0(r2.month)}.${r2.year} (${shortWeekdayString(r2)})",
-        r1,
-        newList
-      );
+      return e.copyWithList(newList);
     }));
-    if (upcoming.last.$3.isNotEmpty) upcoming.add(("", null, []));
+    if (upcoming.last.content.isNotEmpty) upcoming.add(Group.emptySpace());
 
-    upcoming.add((
-      "ToDo (${camel(Importance.important.name)})",
-      null,
+
+    upcoming.add(Group.fromTimeless(
+      Importance.important,
       deadlines.where(
         (d) => d.isTimeless() && d.importance == Importance.important && (d.activeAtAll || c.parent.showWhat == ShownType.showAll)
-      ).toList(growable: false)
+      )
     ));
-    if (upcoming.last.$3.isNotEmpty) upcoming.add(("", null, []));
+    if (upcoming.last.content.isNotEmpty) upcoming.add(Group.emptySpace());
 
     List<Deadline> repeating = deadlines.where((d) => d.isRepeating()).toList();
     Map<RepetitionType, List<Deadline>> repeatingByType = {};
@@ -194,66 +163,19 @@ class _UpcomingListViewState extends State<UpcomingListView> {
       if (!d.activeAtAll && c.parent.showWhat != ShownType.showAll) continue;
       repeatingByType.update(d.deadlineAt!.date.repetitionType, (v) => v + [d], ifAbsent: () => [d]);
     }
-    var repeatingByTypeSorted = repeatingByType.entries.map((e) => (e.key, sort(e.value))).toList();
-    repeatingByTypeSorted.sort((a, b) => b.$1.index - a.$1.index,);
-    upcoming.addAll(repeatingByTypeSorted.map((e) => (camel(e.$1.name), null, e.$2)));
-    if (upcoming.last.$3.isNotEmpty) upcoming.add(("", null, []));
+    var repeatingByTypeSorted = sorted(repeatingByType.entries, (a, b) => b.key.index - a.key.index,);
+    upcoming.addAll(repeatingByTypeSorted.map((e) => Group(camel(e.key.name), null, null, e.value)));
+    if (upcoming.last.content.isNotEmpty) upcoming.add(Group.emptySpace());
 
-    upcoming.add((
-      "ToDo (${camel(Importance.normal.name)})",
-      null,
+    upcoming.add(Group.fromTimeless(
+      Importance.normal,
       deadlines.where((d) =>
         d.isTimeless() && d.importance == Importance.normal && (d.activeAtAll || c.parent.showWhat == ShownType.showAll)
-      ).toList(growable: false)
+      )
     ));
-    if (upcoming.last.$3.isNotEmpty) upcoming.add(("", null, []));
+    if (upcoming.last.content.isNotEmpty) upcoming.add(Group.emptySpace());
 
     return upcoming;
-  }
-
-  @override Widget build(BuildContext context) {
-    return FutureBuilder(
-      future: buildUpcomingList(),
-      builder: (context, snapshot) {
-        if(!snapshot.hasData) return Container();
-        return ListView.builder(
-          controller: listController,
-          itemCount: snapshot.data!.length,
-          itemBuilder: (context, index) {
-            var (label, refDt, ds) = snapshot.data![index];
-            var firstNonNullIndex = ds.takeWhile((d) => d == null).length;
-            if(label.isEmpty) {
-              return const SizedBox(height: 25,);
-            } else {
-              return ListView.builder(
-                shrinkWrap: true,
-                physics: const ClampingScrollPhysics(),
-                itemCount: 1 + ds.length,
-                padding: const EdgeInsets.all(5),
-                itemBuilder: (context, index) {
-                  if (index == firstNonNullIndex) {
-                    return Text(label, style: TextStyle(color: refDt != null && isSameDay(refDt, DateTime.now()) ? const Color(0xFFF94144) : null),);
-                  }
-                  var d = ds[index < firstNonNullIndex? index:index - 1];
-                  if(d == null) {
-                    return const SizedBox(height: 25,);
-                  } else {
-                    return DeadlineCard(
-                      d,
-                      refDt?? DateTime.now(),
-                      (d) => c.parent.editDeadline(context, d.id!),
-                      (d) => c.parent.deleteDeadline(context, d, null),
-                      (d) => refDt==null?c.parent.toggleDeadlineActiveAtAll(context, d):c.parent.toggleDeadlineActiveOnOrAfter(context, d, refDt),
-                      (d, nrdt) => c.parent.toggleDeadlineNotificationType(d, nrdt),
-                    );
-                  }
-                }
-              );
-            }
-          },
-        );
-      }
-    );
   }
 }
 

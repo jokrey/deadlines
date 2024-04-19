@@ -6,15 +6,19 @@ import 'package:flutter/cupertino.dart';
 import 'alarm_external_wrapper/model.dart';
 import 'alarm_external_wrapper/notify_wrapper.dart';
 
+/// amends the NotifyWrapper class with deadline app specified functionality
 class DeadlineAlarms {
   static final int deadlineOffset = (NotifyWrapper.userNotificationMaxId / 2).floor();
+  /// builds a deadline id from a notify id which can be used with the deadlines database
   static int toDeadlineId(int notifyId) => notifyId > NotifyWrapper.timerOffset ? -1 : (notifyId % deadlineOffset) - 1;
+  /// Returns a notification id for a deadlines database id (e.g. a specific deadline)
   static int toNotificationId(int deadlineId, bool isForStartsAt) {
     if(deadlineId >= deadlineOffset) throw ArgumentError("cannot have deadlineId > $deadlineOffset");
     if(deadlineId < 0) throw ArgumentError("cannot have deadlineId < 0");
     return (isForStartsAt ? deadlineId : deadlineId + deadlineOffset) + 1;
   }
 
+  /// reset the specified alarms for the given deadline with the static notify wrapper
   static Future<void> updateAlarmsFor(Deadline d) async {
     if(d.startsAt == null) {
       await staticNotify.cancel(toNotificationId(d.id!, true));
@@ -28,6 +32,7 @@ class DeadlineAlarms {
     }
   }
 
+  /// Cancel all alarms for the given deadline
   static Future<void> cancelAlarmsFor(Deadline d) async {
     await staticNotify.cancel(toNotificationId(d.id!, true));
     await staticNotify.cancel(toNotificationId(d.id!, false));

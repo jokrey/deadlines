@@ -4,7 +4,8 @@ import 'package:deadlines/persistence/database.dart';
 import 'package:deadlines/persistence/model.dart';
 import '../controller/parent_controller.dart';
 
-
+/// The Controller for the list of upcoming deadlines display with included cache functionality
+/// Allows simple, efficient and synchronized access for the ui to storage functionality
 class UpcomingController extends ChildController with Cache {
   UpcomingController(super.parent);
 
@@ -34,6 +35,8 @@ class UpcomingController extends ChildController with Cache {
     notifyContentsChanged();
   });
 
+  /// Returns a list of relevant deadlines to the list of upcoming deadlines widget
+  /// Transparently either loaded from database or from cache
   Future<Iterable<Deadline>> queryRelevantDeadlines() => l.synchronized(() async {
     if(!_cacheValid) {
       _cache.clear();

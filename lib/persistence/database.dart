@@ -6,23 +6,30 @@ import 'package:synchronized/synchronized.dart';
 import 'model.dart';
 import 'package:sqflite/sqflite.dart' as sql;
 
+/// The deadlines storage interface, an abstract representation which can be both a cache or the database itself
 abstract class DeadlinesStorage {
-  //no requirement to have id != null, will be calculated and set accordingly
+  ///no requirement to have id != null, will be calculated and set accordingly
   Future<Deadline> add(Deadline d);
-  //Deadline with id of dNew will be replaced with contents of dNew
+  ///Deadline with id of dNew will be replaced with contents of dNew
   Future<void> update(Deadline dOld, Deadline dNew);
-  //Deadline with id will be removed
+  ///Deadline with id will be removed
   Future<void> remove(Deadline d);
 }
 
+/// A cache allowing quick in-memory access to database functionality
+/// Subclasses must allow the mutation functionality of the parent class, but can implement their own queryable lists
+/// must be thread-safe, for which the l lock must be used
 mixin Cache implements DeadlinesStorage {
   Lock l = Lock();
+  /// invalidates the cache and cleans up the underlying data structures
+  /// query functionality must work as before, but must access the underlying database again
   Future<void> invalidate();
 }
 
 
+/// Actual deadlines and occurrence-removals queried from and written to memory
 final class DeadlinesDatabase implements DeadlinesStorage {
-  final Future<sql.Database> db = _initDB();
+  final Future<sql.Database> _db = _initDB();
 
   static Future<sql.Database> _initDB() async {
     String path;
@@ -153,8 +160,8 @@ final class DeadlinesDatabase implements DeadlinesStorage {
     };
   }
 
-  Future<List<Deadline>> withRemovals(List<Map<String, Object?>> rawResults) {
-    return Future.wait(rawResults.map((e) async => _fromSQLMap(e, (await (await db).rawQuery(
+  Future<List<Deadline>> _withRemovals(List<Map<String, Object?>> rawResults) {
+    return Future.wait(rawResults.map((e) async => _fromSQLMap(e, (await (await _db).rawQuery(
         """SELECT *
         FROM removals
         WHERE
@@ -166,45 +173,47 @@ final class DeadlinesDatabase implements DeadlinesStorage {
   }
 
 
-  //overrides:
+  /// load deadline with specified id fully from disk (with removals)
+  /// will return null if no deadline with the specified id is available
   Future<Deadline?> loadById(int id) async {
-    var rawResults = await (await db).query("deadlines", where: "id = ?", whereArgs: [id]);
+    var rawResults = await (await _db).query("deadlines", where: "id = ?", whereArgs: [id]);
     if(rawResults.isEmpty) return null;
-    return (await withRemovals([rawResults.first])).first;
+    return (await _withRemovals([rawResults.first])).first;
   }
 
   @override Future<Deadline> add(Deadline d) async {
-    final id = await (await db).insert("deadlines", _toSQLMapWithoutId(d));
+    final id = await (await _db).insert("deadlines", _toSQLMapWithoutId(d));
     d = d.copyWithId(id);
     for (var r in d.removals) {
-      await (await db).insert("removals", _toSQLMap(d.id!, r), conflictAlgorithm: sql.ConflictAlgorithm.replace);
+      await (await _db).insert("removals", _toSQLMap(d.id!, r), conflictAlgorithm: sql.ConflictAlgorithm.replace);
     }
     return d;
   }
 
   @override Future<void> remove(Deadline d) async {
-    await (await db).delete("deadlines", where: "id = ?", whereArgs: [d.id]);
-    await (await db).delete("removals", where: "rm_id = ?", whereArgs: [d.id]);
+    await (await _db).delete("deadlines", where: "id = ?", whereArgs: [d.id]);
+    await (await _db).delete("removals", where: "rm_id = ?", whereArgs: [d.id]);
   }
 
   @override Future<void> update(Deadline _, Deadline dNew) async {
-    await (await db).update("deadlines", _toSQLMapWithoutId(dNew), where: "id = ?", whereArgs: [dNew.id]);
+    await (await _db).update("deadlines", _toSQLMapWithoutId(dNew), where: "id = ?", whereArgs: [dNew.id]);
 
-    await (await db).delete("removals", where: "rm_id = ?", whereArgs: [dNew.id]);
+    await (await _db).delete("removals", where: "rm_id = ?", whereArgs: [dNew.id]);
     for (var r in dNew.removals) {
-      await (await db).insert("removals", _toSQLMap(dNew.id!, r), conflictAlgorithm: sql.ConflictAlgorithm.replace);
+      await (await _db).insert("removals", _toSQLMap(dNew.id!, r), conflictAlgorithm: sql.ConflictAlgorithm.replace);
     }
   }
 
-  //complex queries::
+  /// Return all stored deadlines
   Future<List<Deadline>> selectAll() async {
-    var rawResults = await (await db).rawQuery("SELECT * FROM deadlines d;", []);
+    var rawResults = await (await _db).rawQuery("SELECT * FROM deadlines d;", []);
 
-    return withRemovals(rawResults);
+    return _withRemovals(rawResults);
   }
 
+  /// Return all deadlines in month and whether they must be active
   Future<List<Deadline>> queryDeadlinesInMonth(int year, int month, {required bool requireActive}) async {
-    var rawResults = await (await db).rawQuery(
+    var rawResults = await (await _db).rawQuery(
       """SELECT *
         FROM deadlines d
         WHERE
@@ -232,11 +241,13 @@ final class DeadlinesDatabase implements DeadlinesStorage {
       ;"""
     );
 
-    return withRemovals(rawResults);
+    return _withRemovals(rawResults);
   }
 
+  /// Return all deadlines deadlines that are active, timeless or after the given minute
+  /// for the non-active deadlines it can be further specified whether they must be active
   Future<List<Deadline>> queryDeadlinesActiveAtAllOrTimelessOrAfter(DateTime minute, {required bool requireActive}) async {
-    var rawResults = await (await db).rawQuery(
+    var rawResults = await (await _db).rawQuery(
         """SELECT *
           FROM deadlines d
           WHERE
@@ -285,11 +296,12 @@ final class DeadlinesDatabase implements DeadlinesStorage {
       ;"""
     );
 
-    return withRemovals(rawResults);
+    return _withRemovals(rawResults);
   }
 
+  /// Return all critical deadlines after the given minute or timeless deadlines and whether they must be active
   Future<List<Deadline>> queryCriticalDeadlinesInYear(int year, {required bool requireActive}) async {
-    var rawResults = await (await db).rawQuery(
+    var rawResults = await (await _db).rawQuery(
         """SELECT *
         FROM deadlines d
         WHERE
@@ -317,6 +329,6 @@ final class DeadlinesDatabase implements DeadlinesStorage {
       ;"""
     );
 
-    return withRemovals(rawResults);
+    return _withRemovals(rawResults);
   }
 }

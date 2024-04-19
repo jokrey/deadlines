@@ -8,72 +8,77 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:deadlines/persistence/model.dart';
 
-class EditDeadlineWidget extends StatefulWidget {
+/// Edit Deadline View
+/// Returns the new state of the given deadline on pop using the save button or null on cancel
+/// If the given and returned deadline's id equals null, the storage process must create a new deadline
+class EditDeadlineView extends StatefulWidget {
+  /// original deadline state at the time of starting the editing
   final Deadline original;
+  /// Whether to autofocus the title input widget on start (should be done for a new deadline)
   final bool autofocusTitle;
-  const EditDeadlineWidget(this.original, {this.autofocusTitle = false, super.key});
+  const EditDeadlineView(this.original, {this.autofocusTitle = false, super.key});
 
-  @override State<StatefulWidget> createState() => EditDeadlineWidgetState();
+  @override State<StatefulWidget> createState() => _EditDeadlineViewState();
 }
 
-class EditDeadlineWidgetState extends State<EditDeadlineWidget> {
-  TextEditingController titleInputController = TextEditingController();
-  bool wasTitleEmpty = true;
-  TextEditingController descriptionInputController = TextEditingController();
-  DateTime? startsAt;
-  NotificationType? startsAtNotifyType;
-  DateTime? deadlineAt;
-  NotificationType? deadlineAtNotifyType;
-  static final repetitionTypeChoices = ["None", "Yearly", "Monthly", "Weekly", "Daily"];
-  RepetitionType? repetitionType;
-  int? repetition;
-  late Color color;
-  late Importance importance;
-  late List<Removal> removals;
+class _EditDeadlineViewState extends State<EditDeadlineView> {
+  final TextEditingController _titleInputController = TextEditingController();
+  bool _wasTitleEmpty = true;
+  final TextEditingController _descriptionInputController = TextEditingController();
+  DateTime? _startsAt;
+  NotificationType? _startsAtNotifyType;
+  DateTime? _deadlineAt;
+  NotificationType? _deadlineAtNotifyType;
+  static final _repetitionTypeChoices = ["None", "Yearly", "Monthly", "Weekly", "Daily"];
+  RepetitionType? _repetitionType;
+  int? _repetition;
+  late Color _color;
+  late Importance _importance;
+  late List<Removal> _removals;
 
   @override void initState() {
     super.initState();
 
-    titleInputController.text = widget.original.title;
-    descriptionInputController.text = widget.original.description;
-    deadlineAt = widget.original.deadlineAt?.toDateTime();
-    deadlineAtNotifyType = widget.original.deadlineAt?.notifyType;
+    _titleInputController.text = widget.original.title;
+    _descriptionInputController.text = widget.original.description;
+    _deadlineAt = widget.original.deadlineAt?.toDateTime();
+    _deadlineAtNotifyType = widget.original.deadlineAt?.notifyType;
     if(widget.original.startsAt != null) {
-      startsAt = widget.original.startsAt!.toDateTime();
-      startsAtNotifyType = widget.original.startsAt!.notifyType;
+      _startsAt = widget.original.startsAt!.toDateTime();
+      _startsAtNotifyType = widget.original.startsAt!.notifyType;
     }
-    color = Color(widget.original.color);
-    repetitionType = widget.original.deadlineAt?.date.repetitionType;
-    repetition = widget.original.deadlineAt?.date.repetition;
+    _color = Color(widget.original.color);
+    _repetitionType = widget.original.deadlineAt?.date.repetitionType;
+    _repetition = widget.original.deadlineAt?.date.repetition;
 
-    importance = widget.original.importance;
-    removals = widget.original.removals.toSet().toList();
-    removals.sort();
+    _importance = widget.original.importance;
+    _removals = widget.original.removals.toSet().toList();
+    _removals.sort();
   }
 
   @override void dispose() {
-    titleInputController.dispose();
-    descriptionInputController.dispose();
+    _titleInputController.dispose();
+    _descriptionInputController.dispose();
     super.dispose();
   }
 
   @override Widget build(BuildContext context) {
-    bool allowSave = titleInputController.text.isNotEmpty && (startsAt==null || deadlineAt==null || deadlineAt!.isAfter(startsAt!));
-    if(startsAt != null && deadlineAt != null) {
-      if (repetitionType == RepetitionType.daily && !isSameDay(startsAt!, deadlineAt!)) allowSave = false;
-      if (repetitionType == RepetitionType.weekly && deadlineAt!.difference(startsAt!).inDays > 6) allowSave = false;
-      if (repetitionType == RepetitionType.monthly && deadlineAt!.difference(startsAt!).inDays > 28) allowSave = false;
-      if (repetitionType == RepetitionType.yearly && deadlineAt!.difference(startsAt!).inDays > 31 * 2.5) allowSave = false;
+    bool allowSave = _titleInputController.text.isNotEmpty && (_startsAt==null || _deadlineAt==null || _deadlineAt!.isAfter(_startsAt!));
+    if(_startsAt != null && _deadlineAt != null) {
+      if (_repetitionType == RepetitionType.daily && !isSameDay(_startsAt!, _deadlineAt!)) allowSave = false;
+      if (_repetitionType == RepetitionType.weekly && _deadlineAt!.difference(_startsAt!).inDays > 6) allowSave = false;
+      if (_repetitionType == RepetitionType.monthly && _deadlineAt!.difference(_startsAt!).inDays > 28) allowSave = false;
+      if (_repetitionType == RepetitionType.yearly && _deadlineAt!.difference(_startsAt!).inDays > 31 * 2.5) allowSave = false;
     }
 
     return Scaffold(
       floatingActionButton: !allowSave?null: FloatingActionButton(
         child: const Icon(Icons.save),
         onPressed: () {
-          var fn = startsAt==null?null:fromDateTime(startsAt!, rep:repetitionType!, notify: startsAtNotifyType!);
-          var ft = deadlineAt==null?null:fromDateTime(deadlineAt!, rep:repetitionType!, notify: deadlineAtNotifyType!);
-          if(fn == null && ft == null) removals.clear();
-          var newD = Deadline(widget.original.id, titleInputController.text, descriptionInputController.text, color.value, DateTime(1970), fn, ft, importance, removals);
+          var fn = _startsAt==null?null:fromDateTime(_startsAt!, rep:_repetitionType!, notify: _startsAtNotifyType!);
+          var ft = _deadlineAt==null?null:fromDateTime(_deadlineAt!, rep:_repetitionType!, notify: _deadlineAtNotifyType!);
+          if(fn == null && ft == null) _removals.clear();
+          var newD = Deadline(widget.original.id, _titleInputController.text, _descriptionInputController.text, _color.value, DateTime(1970), fn, ft, _importance, _removals);
           Navigator.pop(context, newD);
         },
       ),
@@ -86,11 +91,11 @@ class EditDeadlineWidgetState extends State<EditDeadlineWidget> {
           children: [
             const SizedBox(height: 5,),
             TextField(
-              controller: titleInputController,
+              controller: _titleInputController,
               onChanged: (str) {
-                if (str.isEmpty != wasTitleEmpty) {
+                if (str.isEmpty != _wasTitleEmpty) {
                   setState(() {
-                    wasTitleEmpty = str.isEmpty;
+                    _wasTitleEmpty = str.isEmpty;
                   });
                 }
               },
@@ -103,7 +108,7 @@ class EditDeadlineWidgetState extends State<EditDeadlineWidget> {
             Container(
               padding: const EdgeInsets.only(left: 30, right: 30),
               child: TextField(
-                controller: descriptionInputController,
+                controller: _descriptionInputController,
                 minLines: 3,
                 maxLines: 3,
                 maxLength: 100,
@@ -122,7 +127,7 @@ class EditDeadlineWidgetState extends State<EditDeadlineWidget> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                Text(deadlineAt == null?"ToDo:":"Importance:"),
+                Text(_deadlineAt == null?"ToDo:":"Importance:"),
                 DropdownButton<Importance>(
                   items: Importance.values.map((Importance v) {
                     return DropdownMenuItem<Importance>(
@@ -130,8 +135,8 @@ class EditDeadlineWidgetState extends State<EditDeadlineWidget> {
                       child: Text(v.name),
                     );
                   }).toList(),
-                  onChanged: (newlySelected) => setState(() {if(newlySelected != null) importance = newlySelected;}),
-                  value: importance,
+                  onChanged: (newlySelected) => setState(() {if(newlySelected != null) _importance = newlySelected;}),
+                  value: _importance,
                 ),
               ],
             ),
@@ -145,11 +150,11 @@ class EditDeadlineWidgetState extends State<EditDeadlineWidget> {
                   return IconButton(
                     onPressed: () {
                       setState(() {
-                        color = cAtIndex;
+                        _color = cAtIndex;
                       });
                     },
                     style: IconButton.styleFrom(shape: const CircleBorder(), foregroundColor: cAtIndex, backgroundColor: Colors.transparent),
-                    icon: Icon(color.value == cAtIndex.value?Icons.circle: Icons.circle_outlined,),
+                    icon: Icon(_color.value == cAtIndex.value?Icons.circle: Icons.circle_outlined,),
                   );
                 },
               ),
@@ -166,30 +171,30 @@ class EditDeadlineWidgetState extends State<EditDeadlineWidget> {
   Widget buildFromToDateTimePicker() {
     List<Widget> columnChildren = [];
 
-    if(deadlineAt == null) {
+    if(_deadlineAt == null) {
       columnChildren.add(TextButton(
         onPressed: () => setState(() {
           var now = DateTime.now();
-          deadlineAt = DateTime(now.year, now.month, now.day, now.hour + 1);
-          deadlineAtNotifyType = NotificationType.off;
-          repetitionType = RepetitionType.none;
-          repetition = 1;
+          _deadlineAt = DateTime(now.year, now.month, now.day, now.hour + 1);
+          _deadlineAtNotifyType = NotificationType.off;
+          _repetitionType = RepetitionType.none;
+          _repetition = 1;
         }),
         child: const Text("Add Deadline")
       ));
     }
 
-    if(deadlineAt != null) {
+    if(_deadlineAt != null) {
       List<Widget> rowChildren = [];
-      if (startsAt != null) {
+      if (_startsAt != null) {
         rowChildren.add(Column(
           children: [
             Row(
               children: [
-                buildNotificationSelector(
-                  startsAtNotifyType!, () {
+                _buildNotificationSelector(
+                  _startsAtNotifyType!, () {
                     setState(() {
-                      startsAtNotifyType = NotificationType.values[(startsAtNotifyType!.index + 1) % NotificationType.values.length];
+                      _startsAtNotifyType = NotificationType.values[(_startsAtNotifyType!.index + 1) % NotificationType.values.length];
                     });
                   }
                 ),
@@ -198,27 +203,27 @@ class EditDeadlineWidgetState extends State<EditDeadlineWidget> {
                 const SizedBox(width: 10,),
                 GestureDetector(
                   onTap: () => setState(() {
-                    startsAt = null;
-                    startsAtNotifyType = null;
+                    _startsAt = null;
+                    _startsAtNotifyType = null;
                   }),
                   child: const Icon(Icons.remove_circle_rounded, size: 15,),
                 ),
               ],
             ),
             NicerDatePickerWidget(
-              startsAt,
+              _startsAt,
               (result) => setState(() {
                 if (result != null) {
-                  startsAt = startsAt!.copyWith(year: result.year, month: result.month, day: result.day);
+                  _startsAt = _startsAt!.copyWith(year: result.year, month: result.month, day: result.day);
                 }
               })
             ),
             NicerTimePickerWidget(
-              startsAt!.hour, startsAt!.minute,
+              _startsAt!.hour, _startsAt!.minute,
               onChanged: (h, m) {
-                bool beforeWasAfter = deadlineAt!.isAfter(startsAt!);
-                startsAt = startsAt!.copyWith(hour: h, minute: m);
-                if (beforeWasAfter != deadlineAt!.isAfter(startsAt!)) {
+                bool beforeWasAfter = _deadlineAt!.isAfter(_startsAt!);
+                _startsAt = _startsAt!.copyWith(hour: h, minute: m);
+                if (beforeWasAfter != _deadlineAt!.isAfter(_startsAt!)) {
                   setState(() {});
                 }
               },
@@ -228,9 +233,9 @@ class EditDeadlineWidgetState extends State<EditDeadlineWidget> {
       } else {
         rowChildren.add(TextButton(
           onPressed: () => setState(() {
-            startsAt = deadlineAt!.copyWith();
-            deadlineAt = deadlineAt!.add(const Duration(hours: 1));
-            startsAtNotifyType = NotificationType.off;
+            _startsAt = _deadlineAt!.copyWith();
+            _deadlineAt = _deadlineAt!.add(const Duration(hours: 1));
+            _startsAtNotifyType = NotificationType.off;
           }),
           child: const Text("Add Start Date")
         ));
@@ -243,41 +248,41 @@ class EditDeadlineWidgetState extends State<EditDeadlineWidget> {
             GestureDetector(
               onTap: () =>
                 setState(() {
-                  startsAt = null;
-                  startsAtNotifyType = null;
-                  deadlineAt = null;
-                  deadlineAtNotifyType = null;
-                  repetitionType = null;
-                  repetition = null;
-                  removals.clear();
+                  _startsAt = null;
+                  _startsAtNotifyType = null;
+                  _deadlineAt = null;
+                  _deadlineAtNotifyType = null;
+                  _repetitionType = null;
+                  _repetition = null;
+                  _removals.clear();
                 }),
               child: const Icon(Icons.remove_circle_rounded, size: 15,),
             ),
             const SizedBox(width: 10,),
             const Text("Deadline", textAlign: TextAlign.center,),
             const SizedBox(width: 10,),
-            buildNotificationSelector(
-              deadlineAtNotifyType!,
+            _buildNotificationSelector(
+              _deadlineAtNotifyType!,
               () => setState(() {
-                deadlineAtNotifyType = NotificationType.values[(deadlineAtNotifyType!.index + 1) % NotificationType.values.length];
+                _deadlineAtNotifyType = NotificationType.values[(_deadlineAtNotifyType!.index + 1) % NotificationType.values.length];
               }),
             ),
           ]
         ),
         NicerDatePickerWidget(
-          deadlineAt,
+          _deadlineAt,
           (result) => setState(() {
             if (result != null) {
-              deadlineAt = deadlineAt!.copyWith(year: result.year, month: result.month, day: result.day);
+              _deadlineAt = _deadlineAt!.copyWith(year: result.year, month: result.month, day: result.day);
             }
           })
         ),
         NicerTimePickerWidget(
-          deadlineAt!.hour, deadlineAt!.minute,
+          _deadlineAt!.hour, _deadlineAt!.minute,
           onChanged: (h, m) {
-            bool beforeWasAfter = startsAt == null || deadlineAt!.isAfter(startsAt!);
-            deadlineAt = deadlineAt!.copyWith(hour: h, minute: m);
-            if (beforeWasAfter != (startsAt == null || deadlineAt!.isAfter(startsAt!))) {
+            bool beforeWasAfter = _startsAt == null || _deadlineAt!.isAfter(_startsAt!);
+            _deadlineAt = _deadlineAt!.copyWith(hour: h, minute: m);
+            if (beforeWasAfter != (_startsAt == null || _deadlineAt!.isAfter(_startsAt!))) {
               setState(() {});
             }
           },
@@ -294,7 +299,7 @@ class EditDeadlineWidgetState extends State<EditDeadlineWidget> {
           children: [
             const Text("Repeat: "),
             DropdownButton<String>(
-              items: repetitionTypeChoices.map((String value) {
+              items: _repetitionTypeChoices.map((String value) {
                 return DropdownMenuItem<String>(
                   value: value,
                   child: Text(value),
@@ -302,55 +307,55 @@ class EditDeadlineWidgetState extends State<EditDeadlineWidget> {
               }).toList(),
               onChanged: (newlySelected) => setState(() {
                 if (newlySelected == null) return;
-                repetition = 1;
+                _repetition = 1;
                 if (newlySelected == "None") {
-                  repetitionType = RepetitionType.none;
+                  _repetitionType = RepetitionType.none;
                 } else if (newlySelected == "Yearly") {
-                  repetitionType = RepetitionType.yearly;
+                  _repetitionType = RepetitionType.yearly;
                 } else if (newlySelected == "Monthly") {
-                  repetitionType = RepetitionType.monthly;
+                  _repetitionType = RepetitionType.monthly;
                 } else if (newlySelected == "Weekly") {
-                  repetitionType = RepetitionType.weekly;
+                  _repetitionType = RepetitionType.weekly;
                 } else if (newlySelected == "Daily") {
-                  repetitionType = RepetitionType.daily;
+                  _repetitionType = RepetitionType.daily;
                 }
               }),
-              value: repetitionType == RepetitionType.none ? "None" :
-                     repetitionType == RepetitionType.yearly ? "Yearly" :
-                     repetitionType == RepetitionType.monthly ? "Monthly" :
-                     repetitionType == RepetitionType.weekly ? "Weekly" :
+              value: _repetitionType == RepetitionType.none ? "None" :
+                     _repetitionType == RepetitionType.yearly ? "Yearly" :
+                     _repetitionType == RepetitionType.monthly ? "Monthly" :
+                     _repetitionType == RepetitionType.weekly ? "Weekly" :
                      "Daily"
             ),
           ]
           +
           (
-            repetitionType != RepetitionType.none ?
+            _repetitionType != RepetitionType.none ?
             [
               const Text(" -> until: "),
               NicerDatePickerWidget(
-                removals.where((r) => r.allFuture).firstOrNull?.day.toDateTime(),
+                _removals.where((r) => r.allFuture).firstOrNull?.day.toDateTime(),
                 (result) => setState(() {
                   if (result != null) {
                     var newR = Removal(RepeatableDate.from(result), true);
-                    var indexOfAllFuture = removals.indexWhere((r) =>
+                    var indexOfAllFuture = _removals.indexWhere((r) =>
                     r.allFuture);
                     if (indexOfAllFuture == -1) {
-                      removals.add(newR);
+                      _removals.add(newR);
                     } else {
-                      removals[indexOfAllFuture] = newR;
+                      _removals[indexOfAllFuture] = newR;
                     }
                   }
                 })
               ),
               const SizedBox(width: 5,),
               GestureDetector(
-                onTap: () => setState(() => removals.removeWhere((r) => r.allFuture)),
-                child: Icon(Icons.delete, size: 20, color: color,),
+                onTap: () => setState(() => _removals.removeWhere((r) => r.allFuture)),
+                child: Icon(Icons.delete, size: 20, color: _color,),
               ),
             ] : []
           )
       ));
-      if (repetitionType == RepetitionType.monthly) {
+      if (_repetitionType == RepetitionType.monthly) {
         var monthsInYear = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
         columnChildren.add(SingleChildScrollView(
           scrollDirection: Axis.horizontal,
@@ -360,21 +365,21 @@ class EditDeadlineWidgetState extends State<EditDeadlineWidget> {
               var (i, e) = v;
               return CircledTextCheckbox(
                 text: e,
-                initial: removals.indexWhere((r) => !r.allFuture && r.day.isYearly() && r.day.month == i + 1) != -1,
+                initial: _removals.indexWhere((r) => !r.allFuture && r.day.isYearly() && r.day.month == i + 1) != -1,
                 checkedColor: null,
-                notCheckedColor: color,
+                notCheckedColor: _color,
                 callback: (isChecked) {
-                  var newR = Removal(RepeatableDate(deadlineAt!.year, i + 1, deadlineAt!.day, repetitionType: RepetitionType.yearly), false);
-                  var indexOfBefore = removals.indexWhere((r) =>
+                  var newR = Removal(RepeatableDate(_deadlineAt!.year, i + 1, _deadlineAt!.day, repetitionType: RepetitionType.yearly), false);
+                  var indexOfBefore = _removals.indexWhere((r) =>
                   !r.allFuture && r.day.isYearly() && r.day.month == i + 1);
                   if (indexOfBefore == -1) {
-                    if (removals.where(((r) => !r.allFuture && r.day.isYearly())).length >= monthsInYear.length - 1) {
+                    if (_removals.where(((r) => !r.allFuture && r.day.isYearly())).length >= monthsInYear.length - 1) {
                       return false; //cannot unselect ALL
                     }
-                    setState(() => removals.add(newR));
+                    setState(() => _removals.add(newR));
                     return true;
                   } else {
-                    setState(() => removals.removeAt(indexOfBefore));
+                    setState(() => _removals.removeAt(indexOfBefore));
                     return false;
                   }
                 }
@@ -383,7 +388,7 @@ class EditDeadlineWidgetState extends State<EditDeadlineWidget> {
           ),
         ));
       }
-      if (repetitionType == RepetitionType.daily) {
+      if (_repetitionType == RepetitionType.daily) {
         columnChildren.add(SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: Row(
@@ -392,24 +397,24 @@ class EditDeadlineWidgetState extends State<EditDeadlineWidget> {
               var (i, e) = v;
               return CircledTextCheckbox(
                 text: e,
-                initial: removals.indexWhere((r) => !r.allFuture && r.day.isWeekly() && r.day.toDateTime().weekday == i + 1) != -1,
+                initial: _removals.indexWhere((r) => !r.allFuture && r.day.isWeekly() && r.day.toDateTime().weekday == i + 1) != -1,
                 checkedColor: null,
-                notCheckedColor: color,
+                notCheckedColor: _color,
                 callback: (isChecked) {
-                  var d = (startsAt ?? deadlineAt!).copyWith();
+                  var d = (_startsAt ?? _deadlineAt!).copyWith();
                   while (d.weekday != i + 1) {
                     d = d.add(const Duration(days: 1));
                   }
                   var newR = Removal(RepeatableDate(d.year, d.month, d.day, repetitionType: RepetitionType.weekly), false);
-                  var indexOfBefore = removals.indexWhere((r) => !r.allFuture && r.day.isWeekly() && r.day.toDateTime().weekday == i + 1);
+                  var indexOfBefore = _removals.indexWhere((r) => !r.allFuture && r.day.isWeekly() && r.day.toDateTime().weekday == i + 1);
                   if (indexOfBefore == -1) {
-                    if (removals.where(((r) => !r.allFuture && r.day.isWeekly())).length >= weekdayStrings.length - 1) {
+                    if (_removals.where(((r) => !r.allFuture && r.day.isWeekly())).length >= weekdayStrings.length - 1) {
                       return false; //cannot unselect ALL
                     }
-                    setState(() => removals.add(newR));
+                    setState(() => _removals.add(newR));
                     return true;
                   } else {
-                    setState(() => removals.removeAt(indexOfBefore));
+                    setState(() => _removals.removeAt(indexOfBefore));
                     return false;
                   }
                 }
@@ -419,7 +424,7 @@ class EditDeadlineWidgetState extends State<EditDeadlineWidget> {
         ),);
       }
 
-      if (repetitionType != RepetitionType.none) {
+      if (_repetitionType != RepetitionType.none) {
         columnChildren.add(const SizedBox(height: 15,));
         columnChildren.add(
           Row(
@@ -432,24 +437,24 @@ class EditDeadlineWidgetState extends State<EditDeadlineWidget> {
                   var date = await showDatePicker(
                     context: context,
                     locale: const Locale('en', 'GB'),
-                    initialDate: deadlineAt,
+                    initialDate: _deadlineAt,
                     firstDate: DateTime(1990),
                     lastDate: DateTime(2100)
                   );
-                  if (date != null && removals.where((r) => r.day.isOnThisDay(date)).isEmpty) {
+                  if (date != null && _removals.where((r) => r.day.isOnThisDay(date)).isEmpty) {
                     setState(() {
-                      removals.add(Removal(RepeatableDate.from(date), false));
+                      _removals.add(Removal(RepeatableDate.from(date), false));
                     });
                   }
                 },
-                child: Icon(Icons.add, size: 25, color: color),
+                child: Icon(Icons.add, size: 25, color: _color),
               ),
             ]
           ),
         );
 
-        var filteredRemovals = removals.where(
-          (r) => !(r.allFuture || (repetitionType == RepetitionType.monthly && r.day.isYearly()) || (repetitionType == RepetitionType.daily && r.day.isWeekly()))
+        var filteredRemovals = _removals.where(
+          (r) => !(r.allFuture || (_repetitionType == RepetitionType.monthly && r.day.isYearly()) || (_repetitionType == RepetitionType.daily && r.day.isWeekly()))
         ).toList();
         columnChildren.add(ListView.builder(
           shrinkWrap: true,
@@ -463,9 +468,9 @@ class EditDeadlineWidgetState extends State<EditDeadlineWidget> {
                 "${pad0(r.day.day)}.${pad0(r.day.month)}.${pad0(r.day.year)}${r.allFuture ? " ->" : ""}",
               ),
               leading: GestureDetector(
-                child: Icon(Icons.delete, color: color,),
+                child: Icon(Icons.delete, color: _color,),
                 onTap: () => setState(() {
-                  removals.remove(r);
+                  _removals.remove(r);
                 }),
               ),
             );
@@ -477,7 +482,7 @@ class EditDeadlineWidgetState extends State<EditDeadlineWidget> {
     return Column(children: columnChildren,);
   }
 
-  GestureDetector buildNotificationSelector(NotificationType notifyType, Function() onTap) {
+  GestureDetector _buildNotificationSelector(NotificationType notifyType, Function() onTap) {
     return GestureDetector(
       onTap: onTap,
       child: Icon(
@@ -486,8 +491,7 @@ class EditDeadlineWidgetState extends State<EditDeadlineWidget> {
         notifyType == NotificationType.normal ? Icons.notifications_rounded :
         notifyType == NotificationType.fullscreen ? Icons.fullscreen_rounded :
         Icons.notifications_active_rounded,
-        color: color,
-        // d.completed ? Icons.check_box_outlined : Icons.check_box_outline_blank_rounded,
+        color: _color,
       )
     );
   }

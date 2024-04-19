@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 
+/// Widget which shows a different text depending on the available width
 class WidthConditionalText extends StatelessWidget {
   final String text;
   final String otherText;

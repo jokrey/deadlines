@@ -8,6 +8,7 @@ import 'package:fluttertoast/fluttertoast.dart';
 import '../model.dart';
 import '../notify_wrapper.dart';
 
+/// NotifyWrapper using AwesomeNotifications pub
 class AwesomeNotificationsWrapper extends NotifyWrapper {
   static const String _silentChannelName = "silent";
   static const String _normalChannelName = "normal";

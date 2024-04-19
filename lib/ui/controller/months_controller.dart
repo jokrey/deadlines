@@ -5,7 +5,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../controller/parent_controller.dart';
 
-
+/// The Controller for the month display with included cache functionality
+/// Allows simple, efficient and synchronized access for the ui to storage functionality
 class MonthsController extends ChildController with Cache {
   MonthsController(super.parent);
 
@@ -17,6 +18,7 @@ class MonthsController extends ChildController with Cache {
   @override Future<void> init() async {
     ratio = (await SharedPreferences.getInstance()).getDouble("ratio") ?? 0.6;
   }
+  /// stores the current ratio between list and calendar to preferences
   Future<void> safeRatio() async {
     var prefs = await SharedPreferences.getInstance();
     prefs.setDouble("ratio", ratio);
@@ -30,6 +32,7 @@ class MonthsController extends ChildController with Cache {
   DateTime getFirstDayInSelectedMonth() => DateTime(_selectedMonth.year, _selectedMonth.month, 1);
   DateTime? getSelectedDay() => _selectedDay;
 
+  /// set selection and update ui
   void setSelection(DateTime month, DateTime? day) {
     if(_selectedMonth != month || _selectedDay != day) {
       if(_selectedMonth != month) scrollOffset = 0;
@@ -38,6 +41,7 @@ class MonthsController extends ChildController with Cache {
       notifyContentsChanged();
     }
   }
+  /// set selection and update ui
   void setSelectedMonth(DateTime month) {
     if(_selectedMonth != month) {
       scrollOffset = 0;
@@ -45,12 +49,14 @@ class MonthsController extends ChildController with Cache {
       notifyContentsChanged();
     }
   }
+  /// set selection and update ui
   void setSelectedDay(DateTime day) {
     if(_selectedDay != day) {
       _selectedDay = day;
       notifyContentsChanged();
     }
   }
+  /// set selection and update ui
   void setDayUnselected() {
     if(_selectedDay != null) {
       _selectedDay = null;
@@ -93,7 +99,7 @@ class MonthsController extends ChildController with Cache {
     notifyContentsChanged();
   });
 
-
+  /// Returns the specified month or load that month from the database
   Future<Iterable<Deadline>> queryOrRetrieve(int year, int month) => l.synchronized(() async {
     Map<int, Deadline>? res = _cache[(year, month)];
     if(res == null) {
@@ -105,6 +111,7 @@ class MonthsController extends ChildController with Cache {
     }
     return res.values;
   });
+  /// remove those months from cache that are not close to the selection (e.g. previous or next month)
   Future<void> cleanCache() => l.synchronized(() {
     int year = getSelectedMonth().year;
     int month = getSelectedMonth().month;
@@ -116,6 +123,7 @@ class MonthsController extends ChildController with Cache {
           (ky > year && month != 12);
     });
   });
+  /// Return all deadlines currently cached by this controller
   Future<Iterable<Deadline>> getFlatCache() => l.synchronized(() {
     Set<Deadline> l = {};
     for(var v in _cache.values) {
@@ -126,6 +134,7 @@ class MonthsController extends ChildController with Cache {
   Future<Iterable<Deadline>> queryOrRetrieveCurrentMonth() {
     return queryOrRetrieve(getSelectedMonth().year, getSelectedMonth().month);
   }
+  /// updates the cache to the current selection, ensuring that only previous, current and next month are all cached
   Future<void> ensureAllRelevantDeadlinesInCache() async {
     int year = getSelectedMonth().year;
     int month = getSelectedMonth().month;
@@ -135,7 +144,9 @@ class MonthsController extends ChildController with Cache {
     await cleanCache();
   }
 
-  List<Deadline> getDeadlinesOnDay(DateTime day, {required Iterable<Deadline> candidates, bool? showDaily}) {
+  /// Returns the deadlines that should be shown on the specified day, taking into account user choices
+  /// Requires a list of candidates that will be generally equivalent to the currently loaded cache
+  List<Deadline> getDeadlinesShownOnDay(DateTime day, {required Iterable<Deadline> candidates, bool? showDaily}) {
     showDaily ??= this.showDaily;
     var l = candidates.where((d) =>
       !d.isTimeless() && d.isOnThisDay(day) &&

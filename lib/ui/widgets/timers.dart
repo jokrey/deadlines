@@ -7,6 +7,8 @@ import 'package:flutter/material.dart';
 import 'package:numberpicker/numberpicker.dart';
 import '../defaults.dart';
 
+/// Timers View, shows six timers that create a normal or an alarm notification upon completion
+/// Can be used for cooking
 class TimersView extends StatefulWidget {
   const TimersView({super.key});
 
@@ -34,40 +36,40 @@ class _TimerWidget extends StatefulWidget {
 }
 
 class _TimerWidgetState extends State<_TimerWidget> {
-  final H = 0;
-  final M = 1;
-  final S = 2;
-  var timeLeft = [0, 0, 0];
-  bool isTimerSet = false;
-  bool wasCanceled = false;
-  var notifyType = NotificationType.alarm;
+  static const H = 0;
+  static const M = 1;
+  static const S = 2;
+  var _timeLeft = [0, 0, 0];
+  bool _isTimerSet = false;
+  bool _wasCanceled = false;
+  var _notifyType = NotificationType.alarm;
 
-  late Color color;
+  late Color _color;
 
   late Timer _repeatUpdate;
   @override void initState() {
     super.initState();
 
-    color = colors[widget.notifyId % NotifyWrapper.timerOffset];
+    _color = colors[widget.notifyId % NotifyWrapper.timerOffset];
 
     updateFunction(_) async {
       var (d, t) = await staticNotify.getDurationTo(widget.notifyId);
       setState(() {
-        if((t == NotificationType.normal || t == NotificationType.alarm) && notifyType != t) {
-          notifyType = t;
+        if((t == NotificationType.normal || t == NotificationType.alarm) && _notifyType != t) {
+          _notifyType = t;
         }
         if(d == Duration.zero) {
-          isTimerSet = false;
+          _isTimerSet = false;
 
-          if(wasCanceled) {
-            timeLeft = [0, 0, 0];
-            wasCanceled = false;
+          if(_wasCanceled) {
+            _timeLeft = [0, 0, 0];
+            _wasCanceled = false;
           }
         } else {
-          timeLeft[H] = d.inHours;
-          timeLeft[M] = d.inMinutes % 60;
-          timeLeft[S] = d.inSeconds % 60;
-          isTimerSet = true;
+          _timeLeft[H] = d.inHours;
+          _timeLeft[M] = d.inMinutes % 60;
+          _timeLeft[S] = d.inSeconds % 60;
+          _isTimerSet = true;
         }
       });
     }
@@ -81,10 +83,10 @@ class _TimerWidgetState extends State<_TimerWidget> {
 
   Future<void> setAlarm() async {
     await staticNotify.set(
-      widget.notifyId, color, "Timer is Up", "",
+      widget.notifyId, _color, "Timer is Up", "",
       fromDateTime(
-        DateTime.now().add(Duration(hours: timeLeft[H], minutes: timeLeft[M], seconds: timeLeft[S])),
-        notify: notifyType
+        DateTime.now().add(Duration(hours: _timeLeft[H], minutes: _timeLeft[M], seconds: _timeLeft[S])),
+        notify: _notifyType
       ),
       null, null
     );
@@ -98,11 +100,11 @@ class _TimerWidgetState extends State<_TimerWidget> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             IgnorePointer(
-              ignoring: isTimerSet,
+              ignoring: _isTimerSet,
               child: NumberPicker(
-                value: timeLeft[H],
+                value: _timeLeft[H],
                 onChanged: (value) => setState(() {
-                  timeLeft[H] = value;
+                  _timeLeft[H] = value;
                 }),
                 minValue: 0,
                 maxValue: 23,
@@ -115,11 +117,11 @@ class _TimerWidgetState extends State<_TimerWidget> {
               ),
             ),
             IgnorePointer(
-              ignoring: isTimerSet,
+              ignoring: _isTimerSet,
               child: NumberPicker(
-                value: timeLeft[M],
+                value: _timeLeft[M],
                 onChanged: (value) => setState(() {
-                  timeLeft[M] = value;
+                  _timeLeft[M] = value;
                 }),
                 minValue: 0,
                 maxValue: 59,
@@ -132,11 +134,11 @@ class _TimerWidgetState extends State<_TimerWidget> {
               ),
             ),
             IgnorePointer(
-              ignoring: isTimerSet,
+              ignoring: _isTimerSet,
               child: NumberPicker(
-                value: timeLeft[S],
+                value: _timeLeft[S],
                 onChanged: (value) => setState(() {
-                  timeLeft[S] = value;
+                  _timeLeft[S] = value;
                 }),
                 minValue: 0,
                 maxValue: 59,
@@ -155,29 +157,29 @@ class _TimerWidgetState extends State<_TimerWidget> {
           children: [
             GestureDetector(
               onTap: ()  {
-                notifyType = notifyType == NotificationType.alarm? NotificationType.normal: NotificationType.alarm;
+                _notifyType = _notifyType == NotificationType.alarm? NotificationType.normal: NotificationType.alarm;
                 setAlarm().then((_) => setState(() {}));
               },
               child: Icon(
-                notifyType == NotificationType.off    ? Icons.notifications_off_rounded :
-                notifyType == NotificationType.silent ? Icons.notifications_paused_rounded :
-                notifyType == NotificationType.normal ? Icons.notifications_rounded :
-                notifyType == NotificationType.fullscreen ? Icons.fullscreen_rounded :
+                _notifyType == NotificationType.off    ? Icons.notifications_off_rounded :
+                _notifyType == NotificationType.silent ? Icons.notifications_paused_rounded :
+                _notifyType == NotificationType.normal ? Icons.notifications_rounded :
+                _notifyType == NotificationType.fullscreen ? Icons.fullscreen_rounded :
                 Icons.notifications_active_rounded,
-                color: color,
+                color: _color,
               ),
             ),
             TextButton(onPressed: () {
-              if(isTimerSet) {
+              if(_isTimerSet) {
                 staticNotify.cancel(widget.notifyId).then((_) => setState(() {}));
               } else {
                 setAlarm().then((_) => setState(() {}));
               }
-            }, child: Text(!isTimerSet?"Start":"Pause", style: TextStyle(color: color),)),
+            }, child: Text(!_isTimerSet?"Start":"Pause", style: TextStyle(color: _color),)),
             TextButton(onPressed: () {
-              wasCanceled = true;
+              _wasCanceled = true;
               staticNotify.cancel(widget.notifyId).then((_) => setState(() {}));
-            }, child: Text("Cancel", style: TextStyle(color: color),)),
+            }, child: Text("Cancel", style: TextStyle(color: _color),)),
           ],
         )
       ],

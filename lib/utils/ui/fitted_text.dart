@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:flutter/widgets.dart';
 
+/// Text which will neatly fit itself into the given space, downsizing or clipping as required
 class FittedText extends StatelessWidget {
   final String text;
   final Color foreground;

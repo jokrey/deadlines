@@ -2,7 +2,8 @@ import 'package:deadlines/persistence/database.dart';
 import 'package:deadlines/persistence/model.dart';
 import '../controller/parent_controller.dart';
 
-
+/// The Controller for the years display with included cache functionality
+/// Allows simple, efficient and synchronized access for the ui to storage functionality
 class YearsController extends ChildController with Cache {
   YearsController(super.parent);
 
@@ -35,6 +36,8 @@ class YearsController extends ChildController with Cache {
     notifyContentsChanged();
   });
 
+  /// Returns a list of relevant deadlines to the years widget for the given year
+  /// Transparently either loaded from database or from cache
   Future<Iterable<Deadline>> queryRelevantDeadlinesInYear(int year) => l.synchronized(() async {
     if(_cachedYear != year) {
       _cache.clear();

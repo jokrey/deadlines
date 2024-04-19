@@ -14,6 +14,10 @@ import 'package:vibration/vibration.dart';
 
 import 'notify_wrapper.dart';
 
+/// Screen which can be shown on a full screen intent notification
+/// Optional use of sound, vibration
+/// notifyPayload will be used to get ["color"], ["body"] and ["title"] and passed to staticNotify.snooze on snooze
+/// if !wasInForeground, the app will be "minimized" on disposal of this screen
 class AlarmNotificationScreen extends StatefulWidget {
   final Map<String, dynamic> notifyPayload;
   final bool wasInForeground;

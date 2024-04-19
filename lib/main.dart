@@ -13,14 +13,14 @@ import 'package:permission_handler/permission_handler.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Permission.manageExternalStorage.request();
+  await Permission.manageExternalStorage.request(); //not required for public version
 
   runApp(const MainApp());
 }
 
+/// Main App instance
 class MainApp extends StatefulWidget {
   static final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
-
   const MainApp({super.key});
 
   @override State<MainApp> createState() => _MainAppState();
@@ -45,7 +45,6 @@ class _MainAppState extends State<MainApp> {
       darkTheme: ThemeData.dark(),
       debugShowCheckedModeBanner: false,
       themeMode: ThemeMode.system,
-
 
       initialRoute: '/',
       onGenerateRoute: (settings) {

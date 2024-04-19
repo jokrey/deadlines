@@ -1,10 +1,16 @@
 import 'package:flutter/material.dart';
 
+/// A colored circle around a text widget with checkbox functionality
 class CircledTextCheckbox extends StatefulWidget {
+  /// displayed text within the circle
   final String text;
+  /// whether it should be displayed as checked initially
   final bool initial;
+  /// The color of circle and text if the checkbox is checked (or null for a default)
   final Color? checkedColor;
+  /// The color of circle and text if the checkbox is not-checked (or null for a default)
   final Color? notCheckedColor;
+  /// Callback with the new checked-state when the checkbox is tapped
   final bool Function(bool) callback;
   const CircledTextCheckbox({super.key, required this.text, required this.initial, required this.checkedColor, required this.notCheckedColor, required this.callback});
 

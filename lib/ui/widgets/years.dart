@@ -6,8 +6,11 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 
+/// Years View, shows overview of a single year (calendar format) and allows switching between years
 class YearsView extends StatefulWidget {
+  /// Appropriate YearsController (should exist only once per app instance, but only set in one active ui instance)
   final YearsController controller;
+  /// initial year to show
   final int initialYear;
   const YearsView(this.controller, {super.key, required this.initialYear});
 
@@ -15,19 +18,19 @@ class YearsView extends StatefulWidget {
 }
 
 class _YearsViewState extends State<YearsView> {
-  late PageController controller;
+  late PageController _controller;
   @override void initState() {
     super.initState();
-    controller = PageController(initialPage: widget.initialYear);
+    _controller = PageController(initialPage: widget.initialYear);
   }
   @override void dispose() {
     super.dispose();
-    controller.dispose();
+    _controller.dispose();
   }
 
   @override Widget build(BuildContext context) {
     return Scaffold(body: SafeArea(child: PageView.builder(
-      controller: controller,
+      controller: _controller,
       itemBuilder: (context, year) {
         return FutureBuilder(
           future: widget.controller.queryRelevantDeadlinesInYear(year),
@@ -38,11 +41,13 @@ class _YearsViewState extends State<YearsView> {
                 children: [
                   Text(
                     "$year",
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: DateTime.now().year == year ? const Color(0xFFF94144).withAlpha(210) : null),
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      color: DateTime.now().year == year ? const Color(0xFFF94144).withAlpha(210) : null
+                    ),
                   ),
                   Expanded(child: NotDumbGridView(
                     xMargin: 15, yMargin: 2, xCount: 2, yCount: 6,
-                    builder: (i) => TinyMonthView(year: year, month: i+1, deadlines: snapshot.data),//Container(color: Colors.amber,),
+                    builder: (i) => _TinyMonthView(year: year, month: i+1, deadlines: snapshot.data),
                   ),),
                 ]
               ),
@@ -54,22 +59,19 @@ class _YearsViewState extends State<YearsView> {
   }
 }
 
-class TinyMonthView extends StatelessWidget {
-  final int year;
-  final int month;
-  final Iterable<Deadline>? deadlines;
-  const TinyMonthView({super.key, required this.year, required this.month, required this.deadlines});
+class _TinyMonthView extends StatelessWidget {
+  final int _year;
+  final int _month;
+  final Iterable<Deadline>? _deadlines;
+  const _TinyMonthView({required int year, required int month, required Iterable<Deadline>? deadlines}) : _deadlines = deadlines, _month = month, _year = year;
 
   @override Widget build(BuildContext context) {
-    int firstWeekdayDay = DateTime(year, month, 1).weekday;
-    var firstDayInMonth = DateTime(year, month, 1);
+    int firstWeekdayDay = DateTime(_year, _month, 1).weekday;
+    var firstDayInMonth = DateTime(_year, _month, 1);
     var today = DateTime.now();
-    // var lastDayOfMonth = DateTime(year, month+1, 1);
-    // var firstDayOfNextMonth = DateTime(year, month+1, 1);
-    // var numDaysInMonth = (firstWeekdayDay-1) + DateTimeRange(start: firstDayInMonth, end: firstDayOfNextMonth).duration.inDays;
     int dayOfMonth = 1;
 
-    List<Deadline?> lastDrawnAtIndex = [];
+    List<Deadline?> lastDrawnAtIndex = []; //to keep ranged deadlines at their index if they were ever drawn != 0
     return GestureDetector(
       behavior: HitTestBehavior.translucent,
       onTap: () => Navigator.pop(context, firstDayInMonth),
@@ -80,18 +82,20 @@ class TinyMonthView extends StatelessWidget {
           Text(
             "  ${DateFormat.MMMM().format(firstDayInMonth)}",
             textAlign: TextAlign.left,
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(color: isSameMonth(today, firstDayInMonth) ? const Color(0xFFF94144).withAlpha(210) : null),
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+              color: isSameMonth(today, firstDayInMonth) ? const Color(0xFFF94144).withAlpha(210) : null
+            ),
           ),
           Expanded(child: NotDumbGridView(
             xCount: 7,
             yCount: 6, //(numDaysInMonth / 7).ceil(), //if correct size, not all same size which looks bad
             builder: (i) {
-              var day = DateTime(year, month, dayOfMonth);
-              if(i+1 < firstWeekdayDay || day.month != month) {
+              var day = DateTime(_year, _month, dayOfMonth);
+              if(i+1 < firstWeekdayDay || day.month != _month) {
                 return Container();
               } else {
                 var firstDayDrawn = i+1 == firstWeekdayDay;
-                var eventsOnThisDay = sorted(deadlines?.where((d) => d.isOnThisDay(day)).toList(growable: false) ?? []);
+                var eventsOnThisDay = sorted(_deadlines?.where((d) => d.isOnThisDay(day)).toList(growable: false) ?? []);
 
                 for (Deadline d in eventsOnThisDay) {
                   if (d.startsAt == null || d.startsAt!.date.isOnThisDay(day) || (firstDayDrawn && d.startsAt!.date.isBeforeThisDay(day))) {

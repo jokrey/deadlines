@@ -1,10 +1,17 @@
 import 'package:flutter/material.dart';
 
+/// More efficient 2d grid view layout
 class NotDumbGridView extends StatelessWidget {
+  /// Number of widget on the x-axis
   final int xCount;
+  /// Number of widget on the y-axis
   final int yCount;
+  /// margin between elements on the x-axis
   final double xMargin;
+  /// margin between elements on the x-axis
   final double yMargin;
+  /// Builder for the shown elements, will be called xCount * yCount times
+  /// returned widget will be automatically positioned in the grid
   final Widget Function(int) builder;
   const NotDumbGridView({super.key, required this.xCount, required this.yCount, this.xMargin = 0, this.yMargin = 0, required this.builder});
 
