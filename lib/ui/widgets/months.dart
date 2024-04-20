@@ -152,10 +152,22 @@ class _MonthsCalendarViewState extends State<_MonthsCalendarView> {
                     },
                     icon: const Icon(Icons.keyboard_double_arrow_left)
                   ),
-                  Text(
-                    DateFormat.MMMM().format(firstDayInMonth),
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.titleSmall,
+                  Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Text(
+                        "${firstDayInMonth.year}",
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: (Theme.of(context).textTheme.bodySmall?.fontSize??1)*0.6),
+                      ),
+                      Text(
+                        DateFormat.MMMM().format(firstDayInMonth),
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.titleSmall,
+                      ),
+                    ],
                   ),
                   IconButton(
                     onPressed: () {
