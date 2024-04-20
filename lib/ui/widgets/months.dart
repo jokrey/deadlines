@@ -46,6 +46,7 @@ class _MonthsViewState extends State<MonthsView> {
   @override Widget build(BuildContext context) {
     return Scaffold(
       floatingActionButton: FloatingActionButton(
+        backgroundColor: const Color(0xFF5C6BC0),
         child: const Icon(Icons.add),
         onPressed: () async {
           await c.parent.newDeadline(

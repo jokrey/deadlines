@@ -71,6 +71,7 @@ class _EditDeadlineViewState extends State<EditDeadlineView> {
 
     return Scaffold(
       floatingActionButton: !allowSave?null: FloatingActionButton(
+        backgroundColor: const Color(0xFF5C6BC0),
         child: const Icon(Icons.save),
         onPressed: () {
           var fn = _startsAt==null?null:fromDateTime(_startsAt!, rep:_repetitionType!, notify: _startsAtNotifyType!);

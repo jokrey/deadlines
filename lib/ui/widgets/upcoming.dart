@@ -25,6 +25,7 @@ class _UpcomingViewState extends State<UpcomingView> {
   @override Widget build(BuildContext context) {
     return Scaffold(
       floatingActionButton: FloatingActionButton(
+        backgroundColor: const Color(0xFF5C6BC0),
         child: const Icon(Icons.add),
         onPressed: () => c.parent.newDeadline(context, null),
       ),
