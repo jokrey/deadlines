@@ -109,7 +109,7 @@ class _UpcomingListViewState extends State<_UpcomingListView> {
         if (d.startsAt != null && !d.startsAt!.date.isSameDay(d.deadlineAt!.date)) {
           c2 = stripTimeNullable(d.deadlineAt!.date.nextOccurrenceAfter(dayCounter));
         }
-        if (c1 != null && c2 != null && d.isActiveOn(c1)) {
+        if (c1 != null && c2 != null && d.isActiveOn(c1) && d.isOnThisDay(c1)) {
           eventsOnEachDay.update((c1, c2), (v) => v + [d], ifAbsent: () => [d]);
         }
         dayCounter = cutOff != dayCounter? cutOff : dayCounter.add(const Duration(days: 1));
