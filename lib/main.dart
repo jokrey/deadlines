@@ -8,6 +8,7 @@ import 'package:deadlines/ui/widgets/upcoming.dart';
 import 'package:deadlines/ui/widgets/years.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 
@@ -70,7 +71,9 @@ class _MainAppState extends State<MainApp> {
                       },
                     );
                   } else {
-                    return Container();
+                    return Scaffold(body: SafeArea(child: Center(child:
+                      LoadingAnimationWidget.beat(color: const Color(0xFF577590), size: 75)
+                    )));
                   }
                 },
               );
