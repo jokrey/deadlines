@@ -241,7 +241,7 @@ class _BigMonthView extends StatelessWidget {
     List<Widget> children = [];
     children.add(Text("${day.day}", style: TextStyle(fontSize: 14, color: day.weekday >= 6 ? Theme.of(context).hintColor : null),));
     if(day.isBefore(DateTime(1989, 11, 9))) {
-      children.add(Icon(Icons.fence_rounded));
+      children.add(const Icon(Icons.fence_rounded));
     } else if (events.isNotEmpty) {
       List<Deadline> oneDayNormalEvents = sorted(events.where((d) => (d.isOneDay() && d.importance == Importance.normal)));
       List<Deadline> oneDayImportantEvents = sorted(events.where((d) => (d.isOneDay() && d.importance == Importance.important)));
