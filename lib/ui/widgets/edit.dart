@@ -433,7 +433,7 @@ class _EditDeadlineViewState extends State<EditDeadlineView> {
                     context: context,
                     locale: const Locale('en', 'GB'),
                     initialDate: _deadlineAt,
-                    firstDate: DateTime(1990),
+                    firstDate: DateTime(1989, 11, 9),
                     lastDate: DateTime(2100)
                   );
                   if (date != null && _removals.where((r) => r.day.isOnThisDay(date)).isEmpty) {

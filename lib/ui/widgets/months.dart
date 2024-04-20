@@ -168,6 +168,7 @@ class _MonthsCalendarViewState extends State<_MonthsCalendarView> {
             Expanded(child: _BigMonthView(
               c: c, year: year, month: month, deadlines: _deadlines, showWeekdayLabels: true,
               onTapped: (day) {
+                if(day.isBefore(DateTime(1989, 11, 9))) return;
                 if (c.getSelectedDay() != null && isSameDay(c.getSelectedDay()!, day)) return;
                 if(isSameMonth(day, firstDayInMonth)) {
                   c.setSelectedDay(day);
@@ -239,7 +240,9 @@ class _BigMonthView extends StatelessWidget {
 
     List<Widget> children = [];
     children.add(Text("${day.day}", style: TextStyle(fontSize: 14, color: day.weekday >= 6 ? Theme.of(context).hintColor : null),));
-    if (events.isNotEmpty) {
+    if(day.isBefore(DateTime(1989, 11, 9))) {
+      children.add(Icon(Icons.fence_rounded));
+    } else if (events.isNotEmpty) {
       List<Deadline> oneDayNormalEvents = sorted(events.where((d) => (d.isOneDay() && d.importance == Importance.normal)));
       List<Deadline> oneDayImportantEvents = sorted(events.where((d) => (d.isOneDay() && d.importance == Importance.important)));
 

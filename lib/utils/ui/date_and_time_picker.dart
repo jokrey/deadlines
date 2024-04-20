@@ -79,7 +79,7 @@ class NicerDatePickerWidget extends StatelessWidget {
           context: context,
           locale: const Locale('en', 'GB'),
           initialDate: date,
-          firstDate: DateTime(1970),
+          firstDate: DateTime(1989, 11, 9),
           lastDate: DateTime(2100));
       onDateSelected(picked);
     }
