@@ -224,7 +224,7 @@ class _BigMonthView extends StatelessWidget {
         if(_showWeekdayLabels && i < 7) {
           return Center(child: Text(weekdayStrings[i]));
         }
-        var current = firstDayInMonth.add(Duration(days: -firstWeekdayDay + (i-(_showWeekdayLabels?6:0))));
+        var current = DateTime(firstDayInMonth.year, firstDayInMonth.month, firstDayInMonth.day + (-firstWeekdayDay + (i-(_showWeekdayLabels?6:0))) );
         return GestureDetector(
             behavior: HitTestBehavior.translucent,
             onTap: () => _onDayTapped(current),
