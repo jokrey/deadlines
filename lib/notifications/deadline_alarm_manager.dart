@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:deadlines/persistence/model.dart';
+import 'package:deadlines/utils/utils.dart';
 import 'package:flutter/cupertino.dart';
 
 import 'alarm_external_wrapper/model.dart';
@@ -54,14 +55,12 @@ class DeadlineAlarms {
       await staticNotify.cancel(notifyId);
     } else {
       var next = nrdt.nextOccurrenceAfter(DateTime.now());
-      if(next == null) {
-        await staticNotify.cancel(notifyId);
-      } else if(!d.isActiveOn(next)) {
+      if(next == null || !d.activeAtAll) {
         await staticNotify.cancel(notifyId);
       } else {
         await staticNotify.set(
           notifyId, Color(d.color), d.title, d.description,
-          nrdt, (dt) => !d.isOnThisDay(dt), (dt) => !d.willRepeatAfter(dt)//if returns is on this day, then it has not been removed
+          nrdt, (dt) => !d.isActiveOn(stripTime(dt)) || !d.isOnThisDay(dt), (dt) => !d.willRepeatAfter(dt)//if returns is on this day, then it has not been removed
         );
       }
     }
