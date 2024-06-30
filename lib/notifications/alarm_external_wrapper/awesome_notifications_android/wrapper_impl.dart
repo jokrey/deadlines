@@ -379,7 +379,10 @@ class AwesomeNotificationsWrapper extends NotifyWrapper {
         var now = DateTime.now();
         DateTime? atConcrete = at.nextOccurrenceAfter(now);
         while(atConcrete != null && (atConcrete.isBefore(now) || (shouldSkip != null && shouldSkip(atConcrete)))) {
-          var n = at.nextOccurrenceAfter(atConcrete.add(const Duration(days: 1)));
+          var n = at.nextOccurrenceAfter(atConcrete);
+          if(n != null && !n.isAfter(atConcrete)) {
+            n = at.nextOccurrenceAfter(atConcrete.add(const Duration(hours: 24)));
+          }
           if(n != null && shouldStop != null && shouldStop(n)) {
             return false;
           }
