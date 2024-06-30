@@ -231,7 +231,7 @@ class ParentController implements DeadlinesStorage {
   Future<void> _deleteDeadlineAllOccurrences(BuildContext context, Deadline d) async {
     await remove(d);
 
-    if(!context.mounted) return;
+    if(!context.mounted) throw Exception("require context");
     _undoUI(
       "\"${d.title}\" deleted", Color(d.color), context,
       () => add(d),
@@ -248,7 +248,7 @@ class ParentController implements DeadlinesStorage {
     Deadline newD = d.copyToggleActiveAtAll();
     await update(d, newD);
     if(d.activeAtAll) {//was active
-      if(!context.mounted) return;
+      if(!context.mounted) throw Exception("require context");
       _undoUI(
         "\"${d.title}\" is done", Color(d.color), context,
         () => update(newD, d),
@@ -261,7 +261,7 @@ class ParentController implements DeadlinesStorage {
     Deadline newD = d.copyToggleActiveAfter(day);
     await update(d, newD);
     if(d.activeAfter?.isBefore(day) ?? false) {//more was active before
-      if(!context.mounted) return;
+      if(!context.mounted) throw Exception("require context");
       _undoUI(
         "\"${d.title}\" is done", Color(d.color), context,
         () => update(newD, d),

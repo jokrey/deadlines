@@ -10,17 +10,10 @@ import 'package:deadlines/persistence/model.dart';
 /// Users of the deadline card must persist that change and reload this widget
 class DeadlineCard extends StatelessWidget {
   final ParentController parent;
+  final BuildContext stableParentContext;
   final Deadline d;
   final DateTime? day;
-  // /// Show edit screen for this deadline
-  // final Function(Deadline) edit;
-  // /// Remove this deadline from storage
-  // final Function(Deadline) delete;
-  // /// Toggle whether the deadline is active on the given day
-  // final Function(Deadline, DateTime) toggleActive;
-  // /// Toggle the notification type of the given NotifyableRepeatableDateTime (either startsAt or deadlineAt)
-  // final Function(Deadline, NotifyableRepeatableDateTime) toggleNotificationType;
-  const DeadlineCard(this.parent, this.d, this.day, {super.key});
+  const DeadlineCard(this.parent, this.stableParentContext, this.d, this.day, {super.key});
 
   Color get _appropriateColor => Color(d.color);//d.active? Color(d.color) : Color(d.color).withAlpha(150);
 
@@ -37,9 +30,9 @@ class DeadlineCard extends StatelessWidget {
       key: Key(d.toString()),
       confirmDismiss: (_) async {
         if(day==null) {
-          parent.toggleDeadlineActiveAtAll(context, d);
+          parent.toggleDeadlineActiveAtAll(stableParentContext, d);
         } else {
-          parent.toggleDeadlineActiveOnOrAfter(context, d, dayOrNow);
+          parent.toggleDeadlineActiveOnOrAfter(stableParentContext, d, dayOrNow);
         }
         return false; //remains visible
       },
@@ -56,7 +49,7 @@ class DeadlineCard extends StatelessWidget {
               onTap: () => parent.editDeadline(context, d.id!),
               leading: GestureDetector(
                 child: Icon(Icons.delete, color: _appropriateColor,),
-                onTap: () => parent.deleteDeadline(context, d, day),
+                onTap: () => parent.deleteDeadline(stableParentContext, d, day),
               ),
               title: Text(d.title, softWrap: false, maxLines: 1),
               subtitle: d.description.isEmpty ? null : Text(d.description, softWrap: false, maxLines: 3,),

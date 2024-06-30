@@ -91,6 +91,7 @@ class ListOfGroupedDeadlinesWidget extends StatelessWidget {
   const ListOfGroupedDeadlinesWidget(this.parent, {required this.listFuture, required this.scrollController, this.onTappedOutsideItems, super.key});
 
   @override Widget build(BuildContext context) {
+    final stableContext = context;
     return FutureBuilder(
       future: listFuture,
       builder: (context, snapshot) {
@@ -119,7 +120,7 @@ class ListOfGroupedDeadlinesWidget extends StatelessWidget {
                     if(d == null) {
                       return const SizedBox(height: 25,);
                     } else {
-                      return DeadlineCard(parent, d, upcoming.startDay,);
+                      return DeadlineCard(parent, stableContext, d, upcoming.startDay,);
                     }
                   }
                 );
